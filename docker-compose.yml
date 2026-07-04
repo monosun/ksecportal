@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: secportal-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-character-set-client-handshake --default-time-zone=+09:00
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: secportal
+      MYSQL_USER: ${DB_USER:-secportal}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secportal123}
+      TZ: Asia/Seoul
+    ports:
+      - "127.0.0.1:3306:3306"   # 로컬 디버깅용 — 운영 시 이 줄을 제거하세요
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secportal-backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/secportal?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      TZ: Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-secportal}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-secportal123}
+      JWT_SECRET: ${JWT_SECRET:-your-256-bit-secret-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080/api}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
+      JASYPT_ENCRYPTOR_PASSWORD: ${JASYPT_ENCRYPTOR_PASSWORD:-dev-local-key}
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
+      # JMX 모니터링이 필요한 경우: docker exec -it secportal-backend sh 후 로컬에서 접속
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backups:/app/backups
+    # 8080/9999 포트는 외부에 직접 노출하지 않습니다.
+    # nginx가 80포트를 통해 8080으로 프록시합니다.
+    # JMX 모니터링이 필요하면: docker exec -it secportal-backend /bin/sh 후 로컬에서 접속
+    # ports:
+    #   - "127.0.0.1:8080:8080"   # 로컬 디버깅 시만 활성화
+    #   - "127.0.0.1:9999:9999"   # JMX 로컬 디버깅 시만 활성화
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: secportal-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

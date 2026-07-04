@@ -1,0 +1,549 @@
+<template>
+  <div class="p-4">
+
+    <!-- 공지사항 -->
+    <NoticeBar />
+
+    <!-- 헤더 -->
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-bold text-gray-900">{{ $t('dashboard.title') }}</h1>
+        <button v-if="isOrderChanged" @click="resetOrder"
+          class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          순서 초기화
+        </button>
+      </div>
+    </div>
+
+    <!-- 드래그 가능한 위젯 그리드 -->
+    <div class="grid grid-cols-2 gap-3">
+      <div
+        v-for="widgetId in widgetOrder" :key="widgetId"
+        draggable="true"
+        @dragstart="onDragStart($event, widgetId)"
+        @dragover.prevent="onDragOver($event, widgetId)"
+        @dragleave="onDragLeave"
+        @drop.prevent="onDrop($event, widgetId)"
+        @dragend="onDragEnd"
+        class="group relative transition-all duration-200 flex flex-col"
+        :class="{
+          'opacity-40 scale-[0.99]': draggingId === widgetId,
+          'outline outline-2 outline-primary-400 outline-offset-2 rounded-2xl': dragOverId === widgetId && draggingId !== widgetId,
+          'col-span-2': widgetId === 'kpi'
+        }">
+
+        <!-- 드래그 핸들 바 -->
+        <div class="flex items-center gap-2 mb-1 px-1 select-none cursor-grab active:cursor-grabbing">
+          <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors flex-shrink-0"
+            fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+          </svg>
+          <span class="text-xs text-gray-400 group-hover:text-gray-500 transition-colors font-medium">
+            {{ WIDGET_LABELS[widgetId] }}
+          </span>
+        </div>
+
+        <!-- ── 위젯: 보안이벤트 현황 ── -->
+        <template v-if="widgetId === 'securityEvents'">
+          <div class="card flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                </div>
+                <h2 class="text-sm font-semibold text-gray-800">보안이벤트 현황</h2>
+              </div>
+              <RouterLink to="/security-events" class="text-xs text-primary-600 hover:underline font-medium">전체 보기 →</RouterLink>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-gray-50 rounded-xl p-3">
+                    <p class="text-xs text-gray-500 mb-0.5">연동 솔루션</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ metrics.totalIntegrations }}</p>
+                    <p class="text-xs mt-0.5">
+                      <span class="text-green-600 font-semibold">{{ metrics.connectedIntegrations }}</span>
+                      <span class="text-gray-400"> 연결됨</span>
+                    </p>
+                  </div>
+                  <div class="bg-gray-50 rounded-xl p-3">
+                    <p class="text-xs text-gray-500 mb-0.5">24시간 이벤트</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ metrics.events24h }}</p>
+                    <p class="text-xs mt-0.5">
+                      <span class="text-red-600 font-semibold">{{ metrics.criticalEvents24h }}</span>
+                      <span class="text-gray-400"> 심각</span>
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold text-gray-600 mb-2">24시간 심각도 분포</p>
+                  <div class="space-y-2">
+                    <div v-for="s in secEventSeverities" :key="s.key" class="flex items-center gap-2">
+                      <span class="w-14 text-xs text-gray-500 flex-shrink-0">{{ s.label }}</span>
+                      <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+                        <div class="h-1.5 rounded-full transition-all duration-700" :style="{ width: s.pct + '%', background: s.color }"></div>
+                      </div>
+                      <span class="text-xs font-semibold w-6 text-right" :style="{ color: s.color }">{{ s.count }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-2">
+                <p class="text-xs font-semibold text-gray-600 mb-2">최근 이벤트</p>
+                <div v-if="!metrics.recentSecurityEvents?.length"
+                  class="flex items-center justify-center h-24 text-xs text-gray-400 bg-gray-50 rounded-xl">
+                  수신된 이벤트가 없습니다
+                </div>
+                <div v-else class="space-y-1.5 max-h-36 overflow-y-auto">
+                  <RouterLink
+                    v-for="evt in metrics.recentSecurityEvents.slice(0,5)" :key="evt.id"
+                    to="/security-events"
+                    class="flex items-start gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <span class="flex-shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded-md mt-0.5"
+                      :class="severityBadgeClass(evt.severity)">
+                      <span class="w-1.5 h-1.5 rounded-full" :class="severityDotClass(evt.severity)"></span>
+                      {{ severityLabel(evt.severity) }}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-semibold text-gray-700 truncate">{{ evt.eventType }}</span>
+                        <span class="text-gray-300 text-xs">·</span>
+                        <span class="text-xs text-gray-400 truncate">{{ evt.integrationName }}</span>
+                      </div>
+                      <p class="text-xs text-gray-500 truncate mt-0.5">{{ evt.message }}</p>
+                    </div>
+                    <span class="text-[11px] text-gray-400 flex-shrink-0">{{ fmtTime(evt.detectedAt) }}</span>
+                  </RouterLink>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── 위젯: 보안 KPI ── -->
+        <template v-else-if="widgetId === 'kpi'">
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <RouterLink to="/vulnerabilities?status=OPEN" class="card hover:shadow-md transition-shadow">
+              <p class="text-sm text-gray-500">{{ $t('dashboard.openVulnerabilities') }}</p>
+              <p class="text-3xl font-bold text-red-600 mt-1">{{ metrics.openVulns }}</p>
+              <p class="text-xs text-gray-400 mt-1">기한 초과 <span class="text-red-500 font-semibold">{{ metrics.overdueVulns }}</span>건</p>
+            </RouterLink>
+            <RouterLink to="/incidents" class="card hover:shadow-md transition-shadow">
+              <p class="text-sm text-gray-500">진행 중 인시던트</p>
+              <p class="text-3xl font-bold text-orange-600 mt-1">{{ metrics.openIncidents }}</p>
+              <p class="text-xs text-gray-400 mt-1">심각(Critical) <span class="text-red-500 font-semibold">{{ metrics.criticalIncidents }}</span>건</p>
+            </RouterLink>
+            <RouterLink to="/assets" class="card hover:shadow-md transition-shadow">
+              <p class="text-sm text-gray-500">{{ $t('metrics.totalAssets') }}</p>
+              <p class="text-3xl font-bold text-blue-600 mt-1">{{ metrics.totalAssets }}</p>
+              <p class="text-xs text-gray-400 mt-1">고중요도 <span class="text-orange-500 font-semibold">{{ metrics.highCriticalityAssets }}</span>개</p>
+            </RouterLink>
+            <RouterLink to="/training" class="card hover:shadow-md transition-shadow">
+              <p class="text-sm text-gray-500">교육 이수율</p>
+              <p class="text-3xl font-bold text-purple-600 mt-1">{{ metrics.trainingCompletionRate }}%</p>
+              <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                <div class="h-1.5 rounded-full bg-purple-500 transition-all" :style="{ width: metrics.trainingCompletionRate + '%' }"></div>
+              </div>
+            </RouterLink>
+          </div>
+        </template>
+
+        <!-- ── 위젯: 정책 · 취약점 현황 ── -->
+        <template v-else-if="widgetId === 'policy'">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div class="card">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-semibold text-gray-700">정책 인식률</p>
+                <span class="text-xl font-bold text-green-600">{{ metrics.policyAckRate }}%</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2.5">
+                <div class="h-2.5 rounded-full bg-green-500 transition-all duration-700" :style="{ width: metrics.policyAckRate + '%' }"></div>
+              </div>
+              <RouterLink to="/policies" class="block mt-3 text-xs text-primary-600 hover:underline">정책 목록 →</RouterLink>
+            </div>
+            <div class="card">
+              <h2 class="text-sm font-semibold text-gray-700 mb-3">취약점 심각도 분포</h2>
+              <div class="flex items-center gap-3">
+                <canvas ref="doughnutCanvas" width="90" height="90" class="flex-shrink-0"></canvas>
+                <div class="space-y-1 text-xs">
+                  <div v-for="item in severityLegend" :key="item.label" class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{ background: item.color }"></div>
+                      <span class="text-gray-600">{{ item.label }}</span>
+                    </div>
+                    <span class="font-semibold text-gray-800">{{ item.count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <h2 class="text-sm font-semibold text-gray-700 mb-3">빠른 이동</h2>
+              <div class="grid grid-cols-2 gap-2">
+                <RouterLink to="/vulnerabilities/new" class="flex items-center gap-2 p-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium transition-colors">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  취약점 등록
+                </RouterLink>
+                <RouterLink to="/incidents/new" class="flex items-center gap-2 p-2.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-medium transition-colors">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  인시던트 등록
+                </RouterLink>
+                <RouterLink v-if="isManager" to="/policies/new" class="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium transition-colors">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  정책 등록
+                </RouterLink>
+                <RouterLink to="/training" class="flex items-center gap-2 p-2.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium transition-colors">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055"/></svg>
+                  교육 이수
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── 위젯: KRCERT RSS ── -->
+        <template v-else-if="widgetId === 'rss'">
+          <div class="card flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/>
+                  </svg>
+                </div>
+                <h2 class="text-sm font-semibold text-gray-800">KRCERT 보안공지 <span class="text-xs text-gray-400 font-normal ml-1">최근 {{ rssDays }}일</span></h2>
+              </div>
+              <div class="flex gap-1">
+                <button v-for="tab in rssTabList" :key="tab.category"
+                  @click="rssTab = tab.category"
+                  :class="rssTab === tab.category ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                  class="text-xs px-2.5 py-1 rounded-lg font-medium transition-colors">{{ tab.label }}</button>
+              </div>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+              <div v-if="rssLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
+              <div v-else-if="rssError" class="py-8 text-center text-xs text-red-400">{{ rssError }}</div>
+              <template v-else>
+                <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssDays }}일간 게시물이 없습니다</div>
+                <div v-else class="divide-y divide-gray-50">
+                  <a v-for="item in filteredRss.slice(0,8)" :key="item.link"
+                    :href="item.link" target="_blank" rel="noopener noreferrer"
+                    class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.title }}</p>
+                      <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                    </div>
+                    <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">{{ fmtRssDate(item.pubDate) }}</span>
+                  </a>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── 위젯: 월별 트렌드 ── -->
+        <template v-else-if="widgetId === 'trends'">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div class="card">
+              <h2 class="text-sm font-semibold text-gray-700 mb-4">{{ $t('metrics.vulnTrend') }}</h2>
+              <canvas ref="lineCanvas" height="120"></canvas>
+            </div>
+            <div class="card">
+              <h2 class="text-sm font-semibold text-gray-700 mb-4">취약점 처리 현황</h2>
+              <div class="space-y-3">
+                <div v-for="item in statusBars" :key="item.key">
+                  <div class="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>{{ item.label }}</span><span class="font-semibold">{{ item.count }}</span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-2">
+                    <div class="h-2 rounded-full transition-all duration-700" :style="{ width: item.pct + '%', background: item.color }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { RouterLink } from 'vue-router'
+import {
+  Chart, DoughnutController, LineController, ArcElement, LineElement,
+  PointElement, CategoryScale, LinearScale, Tooltip, Filler
+} from 'chart.js'
+import { metricsApi, vulnApi, rssApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import NoticeBar from '@/components/dashboard/NoticeBar.vue'
+
+Chart.register(DoughnutController, LineController, ArcElement, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler)
+
+const auth = useAuthStore()
+const isManager = auth.isManager
+const doughnutCanvas = ref(null)
+const lineCanvas = ref(null)
+
+// ── 위젯 순서 관리 ──
+const DEFAULT_ORDER = ['rss', 'securityEvents', 'kpi', 'policy', 'trends']
+const WIDGET_LABELS = {
+  rss:            'KRCERT 보안공지',
+  securityEvents: '보안이벤트 현황',
+  kpi:            '보안 KPI',
+  policy:         '정책 · 취약점 현황',
+  trends:         '월별 트렌드'
+}
+
+const widgetOrder = ref(
+  JSON.parse(localStorage.getItem('dashboard-widget-order') || 'null') || [...DEFAULT_ORDER]
+)
+
+const isOrderChanged = computed(() =>
+  JSON.stringify(widgetOrder.value) !== JSON.stringify(DEFAULT_ORDER)
+)
+
+function resetOrder() {
+  widgetOrder.value = [...DEFAULT_ORDER]
+  localStorage.removeItem('dashboard-widget-order')
+}
+
+// ── 드래그 앤 드롭 ──
+const draggingId = ref(null)
+const dragOverId = ref(null)
+
+function onDragStart(e, id) {
+  draggingId.value = id
+  e.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(e, id) {
+  if (draggingId.value !== id) dragOverId.value = id
+}
+
+function onDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) dragOverId.value = null
+}
+
+function onDrop(e, targetId) {
+  if (!draggingId.value || draggingId.value === targetId) {
+    draggingId.value = null; dragOverId.value = null; return
+  }
+  const arr = [...widgetOrder.value]
+  const from = arr.indexOf(draggingId.value)
+  const to = arr.indexOf(targetId)
+  arr.splice(from, 1)
+  arr.splice(to, 0, draggingId.value)
+  widgetOrder.value = arr
+  localStorage.setItem('dashboard-widget-order', JSON.stringify(arr))
+  draggingId.value = null
+  dragOverId.value = null
+  // 차트를 포함하는 위젯이 이동했을 때 재초기화
+  nextTick(() => {
+    buildDoughnut(rawSeverity.value)
+    buildLineChart(metrics.value.vulnTrend)
+  })
+}
+
+function onDragEnd() {
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+// ── 메트릭 데이터 ──
+const metrics = ref({
+  openVulns: 0, overdueVulns: 0, totalAssets: 0, highCriticalityAssets: 0,
+  openIncidents: 0, criticalIncidents: 0, policyAckRate: 0,
+  trainingCompletionRate: 0, vulnTrend: [],
+  totalIntegrations: 0, connectedIntegrations: 0,
+  events24h: 0, criticalEvents24h: 0, highEvents24h: 0,
+  recentSecurityEvents: []
+})
+const rawSeverity = ref({})
+
+const SEVERITY_COLORS = { CRITICAL: '#dc2626', HIGH: '#ea580c', MEDIUM: '#d97706', LOW: '#16a34a', INFO: '#6b7280' }
+const STATUS_COLORS   = { OPEN: '#dc2626', IN_PROGRESS: '#d97706', RESOLVED: '#16a34a', ACCEPTED: '#2563eb', FALSE_POSITIVE: '#6b7280' }
+const SEV_META = {
+  CRITICAL: { label: '심각', color: '#dc2626' },
+  HIGH:     { label: '높음', color: '#ea580c' },
+  MEDIUM:   { label: '중간', color: '#d97706' },
+  LOW:      { label: '낮음', color: '#2563eb' },
+  INFO:     { label: '정보', color: '#6b7280' }
+}
+
+const severityLegend = computed(() =>
+  ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(k => ({
+    label: k, count: rawSeverity.value[`severity_${k}`] || 0, color: SEVERITY_COLORS[k]
+  }))
+)
+
+const statusBars = computed(() => {
+  const s = rawSeverity.value
+  const total = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED', 'FALSE_POSITIVE']
+    .reduce((acc, k) => acc + (s[`status_${k}`] || 0), 0) || 1
+  return ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED', 'FALSE_POSITIVE'].map(k => ({
+    key: k, label: k.replace('_', ' '), count: s[`status_${k}`] || 0,
+    color: STATUS_COLORS[k], pct: Math.round(((s[`status_${k}`] || 0) / total) * 100)
+  }))
+})
+
+const secEventSeverities = computed(() => {
+  const total = metrics.value.events24h || 1
+  return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'].map(k => ({
+    key: k, label: SEV_META[k].label, color: SEV_META[k].color,
+    count: k === 'CRITICAL' ? metrics.value.criticalEvents24h
+         : k === 'HIGH'     ? metrics.value.highEvents24h : 0,
+    pct:   k === 'CRITICAL' ? Math.round((metrics.value.criticalEvents24h / total) * 100)
+         : k === 'HIGH'     ? Math.round((metrics.value.highEvents24h / total) * 100) : 0
+  }))
+})
+
+// ── 차트 인스턴스 ──
+let doughnutChart = null
+let lineChart = null
+
+function buildDoughnut(s) {
+  if (!doughnutCanvas.value) return
+  doughnutChart?.destroy()
+  const labels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
+  doughnutChart = new Chart(doughnutCanvas.value, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(k => s[`severity_${k}`] || 0), backgroundColor: labels.map(k => SEVERITY_COLORS[k]), borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: false, plugins: { legend: { display: false } } }
+  })
+}
+
+function buildLineChart(trend) {
+  if (!lineCanvas.value || !trend?.length) return
+  lineChart?.destroy()
+  lineChart = new Chart(lineCanvas.value, {
+    type: 'line',
+    data: {
+      labels: trend.map(p => p.month),
+      datasets: [{
+        label: '등록 건수', data: trend.map(p => p.count),
+        borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)',
+        fill: true, tension: 0.35, pointBackgroundColor: '#2563eb', pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } },
+        x: { grid: { display: false } }
+      }
+    }
+  })
+}
+
+// ── 보안이벤트 헬퍼 ──
+function severityLabel(s)     { return SEV_META[s]?.label || s }
+function severityBadgeClass(s) {
+  return { CRITICAL: 'bg-red-100 text-red-700', HIGH: 'bg-orange-100 text-orange-700',
+           MEDIUM: 'bg-yellow-100 text-yellow-700', LOW: 'bg-blue-100 text-blue-700',
+           INFO: 'bg-gray-100 text-gray-600' }[s] || 'bg-gray-100 text-gray-600'
+}
+function severityDotClass(s) {
+  return { CRITICAL: 'bg-red-500', HIGH: 'bg-orange-500', MEDIUM: 'bg-yellow-500',
+           LOW: 'bg-blue-500', INFO: 'bg-gray-400' }[s] || 'bg-gray-400'
+}
+function fmtTime(dt) {
+  if (!dt) return ''
+  const d = new Date(dt), now = new Date()
+  const m = Math.floor((now - d) / 60000)
+  if (m < 1) return '방금'
+  if (m < 60) return `${m}분 전`
+  if (m < 1440) return `${Math.floor(m / 60)}시간 전`
+  return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+}
+
+// ── RSS ──
+const rssItems = ref([])
+const rssLoading = ref(false)
+const rssError = ref('')
+const rssTab = ref('vuln')
+const rssDays = ref(7)
+const rssTabList = ref([
+  { category: 'vuln',   label: '취약점 정보' },
+  { category: 'notice', label: '보안공지' }
+])
+
+const filteredRss = computed(() =>
+  rssItems.value.filter(item => item.category === rssTab.value)
+)
+
+function fmtRssDate(pubDate) {
+  if (!pubDate) return ''
+  try {
+    const d = new Date(pubDate)
+    if (isNaN(d)) return pubDate
+    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+  } catch {
+    return pubDate
+  }
+}
+
+async function loadRss() {
+  rssLoading.value = true
+  rssError.value = ''
+  try {
+    const res = await rssApi.krcert()
+    rssItems.value = res.data || []
+  } catch {
+    rssError.value = 'RSS 데이터를 불러오지 못했습니다'
+  } finally {
+    rssLoading.value = false
+  }
+}
+
+async function loadRssSettings() {
+  try {
+    const res = await import('@/api').then(m => m.appSettingApi.getAll())
+    const s = res.data || {}
+    if (s['rss.days']) rssDays.value = parseInt(s['rss.days']) || 7
+    if (s['rss.feeds']) {
+      const feeds = JSON.parse(s['rss.feeds'])
+      if (Array.isArray(feeds) && feeds.length > 0) {
+        rssTabList.value = feeds.map(f => ({ category: f.category, label: f.label || f.category }))
+        rssTab.value = rssTabList.value[0]?.category || 'vuln'
+      }
+    }
+  } catch {}
+}
+
+onMounted(async () => {
+  loadRssSettings()
+  loadRss()
+  try {
+    const [metricsRes, vulnStatsRes] = await Promise.all([
+      metricsApi.summary(),
+      vulnApi.stats()
+    ])
+    metrics.value   = metricsRes.data
+    rawSeverity.value = vulnStatsRes.data
+    await nextTick()
+    buildDoughnut(vulnStatsRes.data)
+    buildLineChart(metricsRes.data.vulnTrend)
+  } catch (e) {
+    console.error(e)
+  }
+})
+</script>

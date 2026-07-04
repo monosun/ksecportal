@@ -1,0 +1,86 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables (default: Blue) ─── */
+:root {
+  --color-primary-50:  #E8F1FF;
+  --color-primary-100: #C2D8FF;
+  --color-primary-200: #96BAFF;
+  --color-primary-300: #6A9CFF;
+  --color-primary-400: #3378FF;
+  --color-primary-500: #0064FF;
+  --color-primary-600: #0057EB;
+  --color-primary-700: #0048D4;
+  --color-primary-900: #002B8A;
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  --font-size-base: 14px;
+}
+
+/* ─── Base ─── */
+@layer base {
+  html {
+    font-size: var(--font-size-base);
+  }
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: var(--font-sans);
+    word-break: keep-all;
+    letter-spacing: -0.01em;
+  }
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ─── Components ─── */
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           transition-all font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl
+           hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500
+           transition-all font-semibold text-sm active:scale-[0.98];
+  }
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600
+           focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-semibold text-sm
+           active:scale-[0.98];
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6;
+  }
+  .input {
+    @apply block w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder-gray-300 bg-white transition-shadow;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-red    { @apply badge bg-red-50 text-red-600; }
+  .badge-orange { @apply badge bg-orange-50 text-orange-600; }
+  .badge-yellow { @apply badge bg-yellow-50 text-yellow-700; }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-600; }
+  .badge-blue   { @apply badge bg-primary-50 text-primary-600; }
+  .badge-gray   { @apply badge bg-gray-100 text-gray-500; }
+
+  /* Page header */
+  .page-header {
+    @apply flex items-center justify-between px-8 py-6 bg-white border-b border-gray-100;
+  }
+  .page-title {
+    @apply text-xl font-bold text-gray-900 tracking-tight;
+  }
+  .page-body {
+    @apply p-8 space-y-6;
+  }
+}

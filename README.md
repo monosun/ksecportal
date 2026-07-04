@@ -1,0 +1,542 @@
+# SecPortal — 오픈소스 정보보호 포탈
+
+스타트업·중소기업을 위한 **올인원 정보보안 관리 시스템**입니다.  
+보안 정책, 취약점, 인시던트, 자산, 보안이벤트, 교육을 단일 플랫폼에서 관리합니다.
+
+> **최신 버전: v1.0.0** — 최초 릴리즈 ([릴리즈 노트](release/v1.0.0/RELEASE_NOTES.md))
+
+```bash
+# 빠른 시작
+git clone https://github.com/monosun/ksecportal.git
+cd ksecportal
+docker compose up -d --build
+```
+
+브라우저에서 **http://localhost** 접속  
+기본 관리자: `secportal@monosun.com` / `Ksecurity!!!` (최초 로그인 시 비밀번호 변경 필요)
+
+---
+
+## 주요 기능
+
+| 모듈 | 기능 요약 |
+|------|-----------|
+| **보안 정책** | Markdown 작성, 카테고리·버전 관리, 수신 확인, 배포 워크플로, 엑셀 일괄 등록, PDF/CSV 다운로드 |
+| **취약점 관리** | CVE/CVSS 등록, 심각도·상태 추적, 담당자 배정, 댓글, 기한 알림, 엑셀 일괄 등록, CSV 다운로드, **NVD API 자동 조회(CVE ID 입력 시 CVSS 점수·심각도·설명 자동 입력, NVD 링크)** |
+| **위협 관리** | 위협 카탈로그 CRUD, 위협 유형·발생 가능성·영향도·위험 점수 관리, 색상 코드 위험도 표시, **기본 위협항목 추가(560개 Master Risk Register 일괄 로드, 중복 체크)**, **컬럼별 인라인 필터(이름·유형·카테고리·발생가능성·잠재영향·위험수준·수정일), 결과 건수 요약, 필터 초기화** |
+| **위험평가** | 자산×위협 카르테지안 곱 전수 자동생성(차수 추가 시 1클릭), 위험 등급 자동 계산(발생가능성×영향도), 위험 처리 방안 결정, 스냅샷 격리(자산·위협 변경에 영향 없음), 페이지네이션(10/20/50/100건), **엑셀 다운로드(전체 요약 시트 + 자산별 개별 시트, 위험등급 셀 색상 자동 적용)**, **위험수용 기준 점수 설정(수용 기준 이하 자동선택·일괄 수용완료 처리)**, **체크박스 전체/개별 선택**, **위험점수 범위 검색(최소~최대 점수 필터)** |
+| **위험처리 계획** | 처리 계획 등록, 진행률 프로그레스바, 회피/수용/이전/감소 탭 필터, 담당자·기한 관리 |
+| **ISMS-P 통제항목 매핑** | 도메인·통제항목 2패널 레이아웃, ISMS-P 인증기준 직접 매핑 관리 |
+| **보안 인시던트** | 8가지 유형, 5단계 상태 추적, 대응 타임라인, 엑셀 일괄 등록, PDF 다운로드 |
+| **자산 관리** | IT 자산 인벤토리, 온프레미스+클라우드(AWS/GCP/Azure) 통합, 13가지 유형, 환경·중요도 분류, 월 비용·계약 만료·점검 일정 관리, PDF/CSV 다운로드, **ISMS-P 자산식별 기준(자산유형 6종·기밀성/무결성/가용성 개별 등급·개인정보 포함 여부·보안관리 대상·연계 시스템·운영중/중지/폐기 상태 관리)** |
+| **보안이벤트 관리** | 방화벽·IDS/IPS·WAF·SIEM·EDR 등 10종 보안솔루션 연동, 이벤트 실시간 모니터링, 심각도 필터, 30초 자동 새로고침 |
+| **로그 통합관리** | 개인정보처리시스템·AD·NAC·망연계 로그 조회(연동 준비), 날짜·결과 필터, 통합검색 UI |
+| **IT 및 정보보호 교육** | 코스 관리, 객관식 퀴즈, 이수율·점수 추적 |
+| **모의 악성메일 훈련** | 피싱 이메일 템플릿 CRUD(HTML 편집·변수 치환), 발송대상 관리, 캠페인 생성·실시·완료·취소, 클릭/열람/신고 실시간 추적, 결과 통계 대시보드 |
+| **ISMS-P 증적관리** | 101개 인증항목(관리체계·보호대책·개인정보 3개 섹션), 연도별 증적 CRUD, 준수 상태 4단계, CSV 다운로드, PDF 다운로드, 엑셀 일괄 등록, **다른 항목 증적 파일 참조 등록(파일 중복 업로드 없이 재사용)** |
+| **월간 보안점검** | 정보보호의 날 기준 32개 표준 점검 항목, 년월 네비게이션(←→), 우선순위(상·중·하)·구분 필터, 완료율 프로그레스바, 결과 원클릭 토글, 항목 CRUD, **담당자 지정(사용자 검색·직접입력)**, **증적 파일 관리(파일 첨부·다운로드)**, **기본 항목 불러오기 초기화 경고·중복 체크** |
+| **대시보드** | 위험현황(5×5 히트맵·등급별 통계·고위험 항목), 취약점 현황(심각도 바차트·기한초과 목록), 인시던트 현황(월별 추이·최근 5건), ISMS-P 이행률(코닉 게이지·도메인별 진행바), 증적 제출 현황(도메인별 제출/미제출 테이블), **KRCERT RSS 위젯(취약점 정보·보안공지 탭, 최근 7일치)** — **실 DB 데이터 실시간 반영** |
+| **감사 로그** | 모든 주요 액션 자동 기록, IP 주소 자동 캡처, 날짜·시간 범위 검색, 관리자 조회 |
+| **코드 관리** | 부서·분류 등 공통 코드 그룹/값 관리 (ADMIN), 회원가입 부서 드롭다운 연동, **월간 점검·위협 기본·위협 유형별 목록 20행 페이지네이션**, **개인정보 분류별 항목 코드 초기 데이터(13개 분류·74개 항목: 기본 식별정보·연락처·신분증·단말기·결제·신용·서비스이용·위치·복지·번호이동·미성년자대리인·마케팅·민감정보)** |
+| **사용자 관리** | 계정 추가·삭제·역할 변경, 이메일 승인 워크플로우, 계정 엑셀 일괄 등록, CSV/PDF 다운로드 |
+| **알림 / 수신함** | 이메일·Slack·Both·수신함 방식 승인 알림, 기한 초과 취약점 자동 알림(스케줄러), **수신함 비우기** |
+| **리포트** | 전 메뉴 PDF/CSV, 한/영 파일명·헤더 자동 전환 |
+| **보안문서 관리** | 보안 가이드·정책서·절차서 등 8종 문서 관리, 버전 이력 보관, 파일 첨부·다운로드, 카테고리·키워드 검색, **검색 대상 선택(제목·내용·파일명·버전·제작기관)**, **제작기관 입력(코드관리 SEC_DOC_ORG 선택 또는 직접 입력)** |
+| **법령준수관리** | 업종별 적용 법령 카탈로그(21개 업종·77개 법령), **법령검토(법제처 Open API 실시간 전체 조문 조회·행정규칙 포함)**, 조문별 검토의견 작성, **검토이력(선택 법령 전체 세션 단위·조문 스냅샷·이전 검토 대비 변경 조문 빨간색 표시)**, Excel 검토 보고서(표지·법령정보·법령별 시트, 변경 조문 빨간색·[신설]/[변경] 마커) |
+| **설정관리** | 보안 설정(로그인 잠금), Okta SSO, AI LLM 연동(OpenAI/Claude/Ollama), 업종 설정, 법제처 API 키, **회사정보 등록(회사명·대표자·홈페이지·연락처·주소·소개 — PDF/Excel 보고서에 자동 반영)** |
+| **개인정보보호 — 수탁사 관리** | 개인정보 처리 수탁사 CRUD(수탁사명·사업자번호·대표자·위탁업무·계약기간·담당자 정보), 수탁사별 점검 이력 관리(점검일·점검자·상태·결과), 점검별 증적 파일 업로드·다운로드·삭제 |
+| **개인정보보호 — 수탁사 점검** | 점검항목 관리(기본 20개 템플릿 일괄 로드·CRUD), 연도별·수탁사별 점검 실시(통과/미흡/해당없음/미점검 4단계), 진행률 바, 기본 점검항목과 운영 점검항목 동기화 |
+| **Okta SSO** | OAuth2 PKCE 방식 Okta 연동(클라이언트 시크릿 불필요), 기존 이메일 계정 자동 연동(okta_id 매핑), 신규 사용자 자동 프로비저닝(USER 역할), 관리자 환경설정 UI(활성화 토글·Client ID·Issuer·Redirect URI·연결 테스트), DB 또는 env var(OKTA_ENABLED) 설정 |
+| **RBAC 권한관리** | 메뉴별 읽기·쓰기·삭제 권한 설정, Role 생성·사용자 배정, 다중 Role 권한 합산(OR), ADMIN은 항상 전체 권한 |
+| **MFA / 보안 설정** | TOTP 기반 2단계 인증(Google Authenticator 호환), 로그인 실패 잠금(지수 백오프), ADMIN 전용 최대 실패 횟수·잠금 시간 설정 |
+| **세션 타임아웃** | ADMIN에서 분 단위 만료시간 설정(5~1440분), 만료 2분 전 경고 모달(카운트다운·연장·로그아웃), JWT exp 클레임 기반 정확한 타이머 |
+| **비밀번호 정책** | 최초 로그인 강제 변경(관리자 설정 계정), 강도 규칙 일관 적용(8자 이상·대소문자·숫자·특수문자 각각 포함), 프론트·백엔드 이중 검증 |
+| **정보보호위원회** | 연도별·회차별(제1회·제2회…) 회의 관리, 상태(예정/완료/취소), 안건·회의록·기타 파일 첨부·다운로드 |
+| **내부감사** | 연도별 감사 등록, 점검대상(시스템·서비스) 단위 점검항목 관리, 결과(양호/취약/해당없음)·발견사항·조치사항 기록, 감사 보고서 파일 첨부 |
+| **보안 결함사항** | ISMS-P 인증심사·내부감사 결함 등록, 위험도(4단계)·처리상태 추적, 인증기준 코드·시정조치 계획·조치기한 관리, 증적 파일 첨부 |
+| **백업 관리** | DB 전체 데이터 AES-256-GCM 암호화 백업(PBKDF2 키 파생), 즉시 다운로드·서버 저장 선택, 암호화 파일 복원(비밀번호 검증), 정기 백업 Cron 스케줄(활성화/비활성화), 보관 개수 자동 정리, 백업 이력 조회 |
+| **UI 커스터마이징** | 6가지 컬러 테마(Monosun 포함), 폰트·글자 크기·사이드바 스타일·로고 설정 |
+| **다국어** | 한국어 / 영어 전환 (vue-i18n) |
+
+---
+
+## 빠른 시작
+
+### 사전 요구사항
+
+- Docker Desktop 4.x 이상 (Docker Compose v2 포함)
+
+### 실행
+
+```bash
+git clone https://github.com/monosun/ksecportal.git
+cd secportal
+docker compose up -d --build
+```
+
+브라우저에서 **http://localhost** 접속
+
+**기본 관리자 계정**
+
+| 항목 | 값 |
+|------|----|
+| 이메일 | `secportal@monosun.com` |
+| 초기 비밀번호 | `Ksecurity!!!` |
+
+> 최초 로그인 시 비밀번호 변경을 강제합니다. 새 비밀번호는 8자 이상이며 대·소문자·숫자·특수문자를 각각 포함해야 합니다.
+
+> **주의** 프로덕션 배포 전 반드시 `.env`의 `JWT_SECRET`, `DB_ROOT_PASSWORD`, `DB_PASSWORD`를 변경하세요.
+
+### 업그레이드
+
+```bash
+git pull
+docker compose down
+docker compose up -d --build
+```
+
+---
+
+## 기술 스택
+
+| 레이어 | 기술 |
+|--------|------|
+| **Frontend** | Vue 3, Vite, Pinia, Tailwind CSS, vue-i18n, Chart.js, Axios |
+| **Backend** | Spring Boot 3.3, Spring Security 6 (JWT), Spring Data JPA, Hibernate |
+| **Database** | MySQL 8 |
+| **인프라** | Docker Compose, Nginx (reverse proxy + SPA fallback) |
+| **폰트** | Inter, Noto Sans KR (Google Fonts), Pretendard |
+
+---
+
+## 역할(Role) 정의
+
+| Role | 권한 |
+|------|------|
+| **ADMIN** | 전체 조회·생성·수정·삭제, 사용자 관리, 감사 로그, 코드 관리, RBAC 권한관리, 리포트 |
+| **MANAGER** | 정책·취약점·인시던트·자산·보안이벤트·보안문서 생성·수정, 리포트 다운로드 |
+| **USER** | 조회, 정책 수신 확인, 취약점·인시던트 등록, 교육 이수 |
+
+> RBAC 권한관리로 메뉴별 세분화 권한 추가 설정 가능 (ADMIN 설정)
+
+---
+
+## 환경변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `DB_ROOT_PASSWORD` | `rootpassword` | MySQL root 비밀번호 |
+| `DB_USER` | `secportal` | 앱 DB 사용자 |
+| `DB_PASSWORD` | `secportal123` | 앱 DB 비밀번호 |
+| `JWT_SECRET` | (내장) | 최소 32자 비밀키 |
+| `JWT_EXPIRATION` | `86400000` | 토큰 유효시간 (ms) |
+| `MAIL_HOST` | `smtp.gmail.com` | SMTP 서버 |
+| `MAIL_PORT` | `587` | SMTP 포트 |
+| `MAIL_USERNAME` | — | 발신 이메일 (Gmail 권장) |
+| `MAIL_PASSWORD` | — | Gmail 앱 비밀번호 (비어 있으면 발송 생략) |
+| `APP_BASE_URL` | `http://localhost:8080/api` | 이메일 링크 기준 URL (설정관리 > 시스템 설정의 "이메일 발송 링크 도메인 주소"가 등록되어 있으면 그 값이 우선) |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost,http://localhost:80` | CORS 허용 출처 |
+| `JASYPT_ENCRYPTOR_PASSWORD` | `dev-local-key` | 설정값 암호화 마스터 키 |
+| `OKTA_ENABLED` | `false` | Okta SSO 활성화 여부 (DB 설정 없을 때 폴백) |
+| `OKTA_CLIENT_ID` | — | Okta 애플리케이션 Client ID |
+| `OKTA_ISSUER` | — | Okta 도메인 (예: `https://dev-xxx.okta.com/oauth2/default`) |
+| `OKTA_REDIRECT_URI` | `http://localhost/auth/okta/callback` | Okta 리다이렉트 URI |
+
+---
+
+## API 엔드포인트 요약
+
+모든 API는 `/api` prefix. 인증 API 제외 JWT Bearer 토큰 필요.  
+전체 스펙은 [docs/api.md](docs/api.md) 참고.
+
+```
+# 인증
+POST   /api/auth/login
+POST   /api/auth/register
+GET    /api/auth/me
+POST   /api/auth/refresh              # 세션 연장 (새 JWT 발급)
+
+# 앱 설정
+GET    /api/public/app-settings       # 전체 설정 조회 (인증 불필요)
+PUT    /api/admin/app-settings/{key}  # 설정값 변경 (ADMIN)
+
+# 보안 정책
+GET    /api/policies                      # 목록 (status, category, keyword 필터)
+POST   /api/policies                      # 생성 (MANAGER+)
+GET    /api/policies/:id
+PATCH  /api/policies/:id                  # 수정 (MANAGER+)
+DELETE /api/policies/:id                  # 삭제 (ADMIN)
+POST   /api/policies/:id/acknowledge      # 수신 확인
+
+# 취약점
+GET    /api/vulnerabilities               # 목록 (status, severity, keyword 필터)
+GET    /api/vulnerabilities/stats         # 상태·심각도별 통계
+POST   /api/vulnerabilities
+GET    /api/vulnerabilities/:id
+PATCH  /api/vulnerabilities/:id           # (MANAGER+)
+DELETE /api/vulnerabilities/:id           # (ADMIN)
+GET    /api/vulnerabilities/:id/comments
+POST   /api/vulnerabilities/:id/comments
+
+# 보안 인시던트
+GET    /api/incidents                     # 목록 (keyword, severity, status, type 필터)
+POST   /api/incidents
+GET    /api/incidents/:id
+PATCH  /api/incidents/:id                 # (MANAGER+)
+DELETE /api/incidents/:id                 # (ADMIN)
+
+# 자산 관리
+GET    /api/assets                        # 목록 (keyword, type, criticality, cloudProvider, environment, active, status 필터)
+POST   /api/assets                        # (MANAGER+)
+GET    /api/assets/:id
+PATCH  /api/assets/:id                    # (MANAGER+)
+DELETE /api/assets/:id                    # (ADMIN)
+
+# 보안이벤트 관리
+GET    /api/security-integrations         # 연동 솔루션 목록
+POST   /api/security-integrations         # 연동 추가 (MANAGER+)
+GET    /api/security-integrations/:id
+PATCH  /api/security-integrations/:id     # 연동 수정 (MANAGER+)
+DELETE /api/security-integrations/:id     # 연동 삭제 (MANAGER+)
+GET    /api/security-integrations/:id/events   # 이벤트 목록 (페이지네이션)
+POST   /api/security-integrations/:id/events   # 이벤트 수동 등록 (MANAGER+)
+DELETE /api/security-integrations/events/:id   # 이벤트 삭제 (MANAGER+)
+
+# IT 및 정보보호 교육
+GET    /api/training/courses
+POST   /api/training/courses              # (MANAGER+)
+GET    /api/training/courses/:id
+POST   /api/training/courses/:id/submit
+DELETE /api/training/courses/:id          # (ADMIN)
+
+# 보안 지표 (KPI)
+GET    /api/metrics/summary
+
+# 리포트 (MANAGER+)  ?lang=ko|en 파라미터로 한/영 파일명·헤더 자동 전환
+GET    /api/reports/vulnerabilities/pdf
+GET    /api/reports/training/pdf
+GET    /api/reports/policies/pdf
+GET    /api/reports/assets/pdf
+GET    /api/reports/incidents/pdf
+GET    /api/reports/isms/pdf              # ?year=YYYY 필요
+GET    /api/reports/policies/csv
+GET    /api/reports/vulnerabilities/csv
+GET    /api/reports/assets/csv
+GET    /api/reports/incidents/csv
+GET    /api/reports/users/pdf             # (ADMIN)
+GET    /api/reports/users/csv             # (ADMIN)
+
+# 월간 보안점검
+GET    /api/monthly-checks               # 목록 (?yearMonth=YYYY-MM)
+GET    /api/monthly-checks/summary       # 완료 현황 (?yearMonth=YYYY-MM)
+GET    /api/monthly-checks/months        # 기록이 있는 년월 목록
+POST   /api/monthly-checks               # 항목 등록
+POST   /api/monthly-checks/defaults      # 기본 32개 항목 일괄 등록 (?yearMonth=YYYY-MM)
+PATCH  /api/monthly-checks/:id           # 항목 수정
+DELETE /api/monthly-checks/:id           # 항목 삭제
+
+# 일괄 등록 (MANAGER+)
+GET    /api/assets/bulk/template
+POST   /api/assets/bulk
+GET    /api/policies/bulk/template
+POST   /api/policies/bulk
+GET    /api/vulnerabilities/bulk/template
+POST   /api/vulnerabilities/bulk
+GET    /api/incidents/bulk/template
+POST   /api/incidents/bulk
+
+# 사용자 일괄 등록 (ADMIN)
+GET    /api/admin/users/bulk/template
+POST   /api/admin/users/bulk
+
+# ISMS-P 증적관리
+GET    /api/isms/items                    # 항목 목록 (year, domainCode 필터)
+GET    /api/isms/items/:id
+GET    /api/isms/items/:id/evidences      # 증적 목록 (year 필터)
+POST   /api/isms/items/:id/evidences
+PATCH  /api/isms/evidences/:id
+DELETE /api/isms/evidences/:id
+GET    /api/isms/summary
+GET    /api/isms/export/csv
+GET    /api/isms/import/template
+POST   /api/isms/import
+
+# 코드 관리
+GET    /api/codes/:groupCode              # 코드값 목록 (인증 불필요 — 회원가입 부서 드롭다운)
+GET    /api/admin/codes                   # 코드 그룹 목록 (ADMIN)
+POST   /api/admin/codes                   # 코드 그룹 생성 (ADMIN)
+PATCH  /api/admin/codes/:groupCode        # 코드 그룹 수정 (ADMIN)
+DELETE /api/admin/codes/:groupCode        # 코드 그룹 삭제 (ADMIN)
+GET    /api/admin/codes/:groupCode/values
+POST   /api/admin/codes/:groupCode/values
+PATCH  /api/admin/codes/:groupCode/values/:id
+DELETE /api/admin/codes/:groupCode/values/:id
+
+# 보안문서
+GET    /api/sec-docs                        # 목록 (category, keyword, page, size)
+GET    /api/sec-docs/:id                    # 상세
+GET    /api/sec-docs/:id/versions           # 버전 이력
+POST   /api/sec-docs                        # 등록 (MANAGER+, multipart)
+POST   /api/sec-docs/:id/versions           # 새 버전 추가 (MANAGER+, multipart)
+PATCH  /api/sec-docs/:id                    # 메타 수정 (MANAGER+)
+DELETE /api/sec-docs/:id                    # 전체 버전 삭제 (MANAGER+)
+DELETE /api/sec-docs/:id/version            # 단일 버전 삭제 (MANAGER+)
+GET    /api/sec-docs/:id/download           # 파일 다운로드
+
+# RBAC 권한관리 (ADMIN)
+GET    /api/auth/my-permissions             # 현재 사용자 유효 권한
+GET    /api/admin/roles
+POST   /api/admin/roles
+PUT    /api/admin/roles/:id
+DELETE /api/admin/roles/:id
+GET    /api/admin/roles/:id/users           # Role 배정 사용자 목록
+POST   /api/admin/roles/:id/users/:userId   # 사용자 배정
+DELETE /api/admin/roles/:id/users/:userId   # 사용자 제거
+
+# 관리자 (ADMIN)
+GET    /api/admin/users
+POST   /api/admin/users
+PATCH  /api/admin/users/:id
+DELETE /api/admin/users/:id
+GET    /api/admin/audit-logs              # ?dateFrom=&dateTo= (ISO 8601)
+GET    /api/admin/users/simple            # 활성 사용자 목록 (담당자 선택용, MANAGER+)
+GET    /api/admin/notification-config
+PUT    /api/admin/notification-config
+
+# 정보보호위원회 (MANAGER+ 쓰기)
+GET    /api/committee/years
+GET    /api/committee?year=YYYY
+GET    /api/committee/:id
+POST   /api/committee
+PATCH  /api/committee/:id
+DELETE /api/committee/:id
+POST   /api/committee/:meetingId/files            # 파일 추가 (multipart)
+DELETE /api/committee/files/:fileId
+GET    /api/committee/files/:fileId/download
+
+# 내부감사 (MANAGER+ 쓰기)
+GET    /api/internal-audit/years
+GET    /api/internal-audit?year=YYYY
+GET    /api/internal-audit/:id                    # 상세 (targets+items+files)
+POST   /api/internal-audit
+PATCH  /api/internal-audit/:id
+DELETE /api/internal-audit/:id
+POST   /api/internal-audit/:auditId/targets
+PATCH  /api/internal-audit/targets/:targetId
+DELETE /api/internal-audit/targets/:targetId
+POST   /api/internal-audit/:auditId/items
+PATCH  /api/internal-audit/items/:itemId
+DELETE /api/internal-audit/items/:itemId
+POST   /api/internal-audit/:auditId/files         # 파일 추가 (multipart)
+DELETE /api/internal-audit/files/:fileId
+GET    /api/internal-audit/files/:fileId/download
+
+# 보안 결함사항 (MANAGER+ 쓰기)
+GET    /api/security-findings/years
+GET    /api/security-findings                     # ?year, ?status, ?riskLevel, ?auditType, ?keyword, ?page, ?size
+GET    /api/security-findings/:id
+POST   /api/security-findings                     # (MANAGER+, multipart)
+PATCH  /api/security-findings/:id                 # (MANAGER+, multipart)
+DELETE /api/security-findings/:id
+GET    /api/security-findings/:id/download
+
+# Okta SSO (v1.54.0+)
+GET    /api/auth/okta/config               # Okta 설정 조회 (인증 불필요, enabled 시 반환)
+POST   /api/auth/okta/token               # Okta PKCE 코드 교환 → JWT 발급
+GET    /api/admin/okta/test               # Okta 연결 테스트 (ADMIN)
+
+# 수탁사 점검항목 관리 (MANAGER+, v1.52.0+)
+GET    /api/privacy/contractor-check-items               # 점검항목 목록
+POST   /api/privacy/contractor-check-items               # 점검항목 생성
+PATCH  /api/privacy/contractor-check-items/:id           # 점검항목 수정
+DELETE /api/privacy/contractor-check-items/:id           # 점검항목 삭제
+POST   /api/privacy/contractor-check-items/sync-defaults # 기본항목에서 동기화
+
+# 수탁사 점검 (MANAGER+, v1.52.0+)
+GET    /api/privacy/contractors/:contractorId/checks               # 점검 목록 (?year=YYYY)
+POST   /api/privacy/contractors/:contractorId/checks               # 점검 생성
+GET    /api/privacy/contractors/:contractorId/checks/:checkId      # 점검 상세 (항목+결과)
+PATCH  /api/privacy/contractor-checks/:checkId                     # 점검 수정
+DELETE /api/privacy/contractor-checks/:checkId                     # 점검 삭제
+GET    /api/privacy/contractor-checks/:checkId/results             # 항목별 결과 목록
+PUT    /api/privacy/contractor-checks/:checkId/results/:itemId     # 결과 업데이트
+
+# 이메일 승인 (인증 불필요 — 이메일 링크용)
+GET    /api/admin/approve/:token
+GET    /api/admin/reject/:token
+```
+
+---
+
+## 디렉토리 구조
+
+```
+secportal/
+├── docker-compose.yml
+├── .env.example
+├── nginx/
+│   ├── nginx.conf
+│   └── error-pages/             # HTTP 에러 페이지 (400·403·404·429·500·502·503·504)
+├── db/
+│   └── init/
+│       ├── 01_schema.sql            # 전체 테이블 DDL
+│       ├── 02_seed.sql              # 기본 관리자 + 샘플 데이터
+│       ├── 03_comments.sql
+│       ├── 04_assets.sql
+│       ├── 05_incidents.sql
+│       ├── 06_isms.sql              # ISMS-P 항목 마스터 (101개)
+│       ├── 07_extended_schema.sql   # v1.17.0~v1.42.0 추가 테이블 27개
+│       ├── 08_extended_seed.sql     # 앱 설정 기본값 (로그인 로고, 세션 타임아웃)
+│       └── 09_threat_seed.sql       # 위협 카탈로그 기본 560개 (MRR-0001~MRR-0560)
+├── backend/
+│   ├── build.gradle
+│   └── src/main/java/com/monosun/secportal/
+│       ├── SecPortalApplication.java
+│       ├── auth/                    # JWT 인증, 사용자 엔티티
+│       ├── policy/                  # 보안 정책 관리
+│       ├── vulnerability/           # 취약점 관리 + 댓글
+│       ├── training/                # 교육 코스 + 퀴즈
+│       ├── incident/                # 보안 인시던트
+│       ├── asset/                   # IT 자산 관리
+│       ├── security/                # 보안이벤트 관리 (연동·이벤트)
+│       ├── admin/                   # 사용자 관리 (ADMIN)
+│       ├── audit/                   # 감사 로그
+│       ├── isms/                    # ISMS-P 증적관리
+│       ├── monthlycheck/            # 월간 보안점검
+│       ├── secdoc/                  # 보안문서 관리 (버전 이력)
+│       ├── rbac/                    # RBAC 권한관리
+│       ├── committee/               # 정보보호위원회 (회의·파일)
+│       ├── internalaudit/           # 내부감사 (대상·항목·파일)
+│       ├── secfinding/              # 보안 결함사항 (ISMS-P)
+│       ├── code/                    # 공통 코드 관리
+│       ├── metrics/                 # KPI 집계 API
+│       ├── notification/            # 이메일·Slack 알림 + 스케줄러
+│       ├── report/                  # PDF/CSV 리포트
+│       └── common/                  # 공통 (응답 형식, 예외, 보안 설정)
+└── frontend/
+    └── src/
+        ├── main.js
+        ├── api/index.js             # Axios 클라이언트 + 모든 API 함수
+        ├── stores/
+        │   ├── auth.js              # Pinia 인증 스토어
+        │   └── uiSettings.js        # UI 설정 스토어 (테마·폰트·로고)
+        ├── router/index.js
+        ├── i18n/
+        │   ├── ko.json
+        │   └── en.json
+        ├── components/layout/
+        │   ├── AppLayout.vue        # 사이드바 + 네비게이션
+        │   └── icons.js
+        └── views/
+            ├── auth/                # 로그인, 회원가입
+            ├── dashboard/           # 대시보드 현황 5종 (위험·취약점·인시던트·이행률·증적)
+            ├── policy/              # 정책 목록·상세·폼
+            ├── vulnerability/       # 취약점 목록·상세(댓글)·폼
+            ├── threat/              # 위협 관리 (카탈로그 CRUD)
+            ├── risk/                # 위험평가, 위험처리 계획
+            ├── incident/            # 인시던트 목록·상세·폼
+            ├── asset/               # 자산 목록·상세·폼
+            ├── security/            # 보안이벤트 관리
+            ├── log/                 # 로그 통합관리 (개인정보·AD·NAC·망연계·통합검색)
+            ├── training/            # 교육 목록·상세(퀴즈)
+            ├── isms/                # ISMS-P 증적관리, 통제항목 매핑
+            ├── monthlycheck/        # 월간 보안점검
+            ├── secdoc/              # 보안문서 관리
+            ├── committee/           # 정보보호위원회
+            ├── internalaudit/       # 내부감사
+            ├── secfinding/          # 보안 결함사항
+            ├── settings/            # UI 환경설정 (반응형 2열 그리드)
+            └── admin/               # 사용자·코드·감사 로그·RBAC 관리
+```
+
+---
+
+## 데이터베이스 테이블
+
+| 테이블 | 설명 |
+|--------|------|
+| `users` | 사용자 (ADMIN / MANAGER / USER) |
+| `policies` | 보안 정책 |
+| `policy_acknowledgments` | 정책 수신 확인 기록 |
+| `vulnerabilities` | 취약점 |
+| `vulnerability_comments` | 취약점 댓글 |
+| `training_courses` | 교육 코스 |
+| `quiz_questions` | 퀴즈 문항 |
+| `training_completions` | 교육 이수 기록 |
+| `audit_logs` | 감사 로그 |
+| `assets` | IT 자산 |
+| `incidents` | 보안 인시던트 |
+| `security_integrations` | 보안솔루션 연동 정보 |
+| `security_events` | 보안 이벤트 수집 기록 |
+| `code_groups` | 공통 코드 그룹 |
+| `code_values` | 공통 코드값 |
+| `notification_config` | 알림 방식 설정 |
+| `inbox_messages` | 받은 메시지함 |
+| `notices` | 공지사항 |
+| `pending_admin_actions` | 이메일 승인 대기 중인 관리자 액션 |
+| `isms_items` | ISMS-P 인증 항목 마스터 (101개) |
+| `isms_evidences` | 연도별 증적 기록 |
+| `monthly_check_items` | 월간 보안점검 항목 (년월·우선순위·점검결과) |
+| `monthly_check_evidences` | 월간 보안점검 증적 (파일 첨부) |
+| `sec_docs` | 보안문서 (버전 이력, document_key로 그룹화) |
+| `custom_roles` | RBAC 커스텀 Role |
+| `role_permissions` | Role별 메뉴 권한 (read/write/delete) |
+| `user_custom_roles` | 사용자-Role 매핑 |
+| `committee_meetings` | 정보보호위원회 회의 (연도·회차·개최일·상태) |
+| `committee_files` | 회의 첨부파일 (안건·회의록·기타) |
+| `internal_audits` | 내부감사 (연도·기간·담당자·상태) |
+| `audit_targets` | 감사 점검대상 |
+| `audit_items` | 감사 점검항목 (결과: PASS/FAIL/NA, 발견사항·조치사항) |
+| `audit_files` | 감사 첨부파일 (보고서 등) |
+| `security_findings` | 보안 결함사항 (ISMS-P 인증기준·위험도·시정조치·처리상태) |
+| `threats` | 위협 카탈로그 (유형·카테고리·자산분류·발생가능성·잠재영향·위험점수) |
+| `threat_defaults` | 위협 기본항목 마스터 (Master Risk Register 560개, 기본 로드용 참조 테이블, name+type+category UNIQUE) |
+| `monthly_check_defaults` | 월간 보안점검 기본 항목 마스터 |
+| `risk_assessment_rounds` | 위험평가 차수 (연도·차수번호·평가일·제목·상태) |
+| `risk_assessments` | 위험평가 항목 (자산·위협 스냅샷, 발생가능성·영향도·등급·처리방안) |
+| `app_settings` | 앱 전역 설정 키-값 저장소 (로그인 로고·세션 타임아웃 등) |
+| `isms_policy_mappings` | ISMS-P 통제항목 × 보안 정책 매핑 (N:N, isms_item_id+policy_id UNIQUE) |
+| `privacy_contractors` | 개인정보 처리 수탁사 기본 정보 |
+| `contractor_inspections` | 수탁사별 점검 이력 (v1.51.0) |
+| `contractor_inspection_files` | 수탁사 점검 증적 파일 (v1.51.0) |
+| `contractor_check_item_defaults` | 수탁사 점검항목 기본 템플릿 (20개 초기값, v1.52.0) |
+| `contractor_check_items` | 조직 운영 점검항목 목록 (v1.52.0) |
+| `contractor_checks` | 연도별·수탁사별 점검 헤더 (v1.52.0) |
+| `contractor_check_results` | 점검항목별 결과 (통과/미흡/해당없음/미점검, v1.52.0) |
+
+---
+
+## 릴리즈 히스토리
+
+| 버전 | 주요 변경 |
+|------|-----------|
+| [v1.0.0](release/v1.0.0/RELEASE_NOTES.md) | 최초 릴리즈 — 정보보호 포탈 전 기능 (아래 주요 기능 참조) |
+
+---
+
+## 관련 문서
+
+| 문서 | 설명 |
+|------|------|
+| [INSTALL.md](INSTALL.md) | 최초 설치 단계별 가이드 |
+| [security-guide.md](security-guide.md) | nginx·Spring Boot·Docker 보안 설정 상세 설명, HTTPS 적용 방법 |
+| [jmx-setup-guide.md](jmx-setup-guide.md) | JMX 모니터링 활성화 방법 (로컬·운영 서버·SSH 터널·인증) |
+| [java-monitoring-setup-guide.md](java-monitoring-setup-guide.md) | java-monitor 대시보드 연동 가이드 |
+| [aws-deployment.md](aws-deployment.md) | AWS EC2 배포 가이드 |
+| [api.md](api.md) | REST API 전체 명세 |
+
+---
+
+## 기여
+
+PR과 이슈를 환영합니다.
+
+1. `feature/기능명` 브랜치 생성
+2. 구현 후 PR 요청
+3. 리뷰 후 main 병합
+
+---
+
+## 라이선스
+
+[MIT License](LICENSE) © 2025 Monosun — [한국어 번역본](LICENSE.ko.md)

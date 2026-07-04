@@ -1,0 +1,18 @@
+# 빌드 컨텍스트: 프로젝트 루트 (.)
+# 사용법: docker build -f frontend/Dockerfile.release -t secportal-frontend .
+#
+# 기존 frontend/Dockerfile은 context=./frontend 로 빌드 시
+# COPY ../nginx/nginx.conf 가 컨텍스트 밖을 참조하는 문제가 있음.
+# 이 파일은 루트를 컨텍스트로 사용해 해당 문제를 해결한 CI/릴리즈용 Dockerfile.
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY frontend/package.json ./
+RUN npm install --prefer-offline
+COPY frontend/ .
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

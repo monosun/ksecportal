@@ -1,0 +1,106 @@
+﻿spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/secportal?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:secportal}
+    password: ${SPRING_DATASOURCE_PASSWORD:secportal123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: HikariPool-secportal
+      register-mbeans: true
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:10}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${HIKARI_IDLE_TIMEOUT:600000}
+      max-lifetime: ${HIKARI_MAX_LIFETIME:1800000}
+      keepalive-time: ${HIKARI_KEEPALIVE_TIME:60000}
+      validation-timeout: 5000
+      connection-test-query: SELECT 1
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:noreply@secportal.io}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
+notification:
+  overdue-check-cron: ${NOTIFICATION_CRON:0 0 9 * * MON-FRI}
+  from-address: ${MAIL_USERNAME:noreply@secportal.io}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080/api}
+  upload:
+    dir: ${APP_UPLOAD_DIR:uploads}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost,http://localhost:80,http://localhost:5173}
+
+backup:
+  directory: ${BACKUP_DIR:./backups}
+
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:dev-local-key}
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+    string-output-type: base64
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  server:
+    port: -1
+
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-minimum-32-chars}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+okta:
+  enabled: ${OKTA_ENABLED:false}
+  client-id: ${OKTA_CLIENT_ID:}
+  issuer: ${OKTA_ISSUER:}
+  redirect-uri: ${OKTA_REDIRECT_URI:http://localhost:5173/auth/okta/callback}
+
+logging:
+  level:
+    com.monosun.secportal: INFO
+    org.springframework.security: WARN

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 — SecPortal</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F9FAFB;
+      font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; color: #111827;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { text-align: center; padding: 2rem; max-width: 460px; width: 100%; }
+    .icon-box {
+      width: 80px; height: 80px; border-radius: 24px;
+      background: #FEF2F2; display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .icon-box svg { width: 40px; height: 40px; }
+    .code { font-size: 3rem; font-weight: 800; color: #0064FF; line-height: 1; margin-bottom: 0.5rem; letter-spacing: -0.03em; }
+    .title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.625rem; color: #111827; }
+    .desc { color: #6B7280; font-size: 0.875rem; line-height: 1.7; margin-bottom: 2rem; }
+    .btn {
+      display: inline-block; background: #0064FF; color: #fff;
+      padding: 0.75rem 1.75rem; border-radius: 0.75rem;
+      font-weight: 600; font-size: 0.875rem; text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:hover { background: #0057EB; }
+    .btn:active { transform: scale(0.98); }
+    .divider { width: 40px; height: 3px; background: #E5E7EB; border-radius: 9px; margin: 1.5rem auto; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+      </svg>
+    </div>
+    <div class="code">403</div>
+    <h1 class="title">접근이 제한된 페이지입니다</h1>
+    <p class="desc">요청하신 페이지에 접근할 권한이 없습니다.<br>로그인 상태를 확인하거나 관리자에게 문의하세요.</p>
+    <div class="divider"></div>
+    <a href="/" class="btn">홈으로 돌아가기</a>
+  </div>
+</body>
+</html>

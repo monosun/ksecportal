@@ -1,0 +1,24 @@
+# 기본: 텍스트 파일은 저장소에 LF로 보관
+* text=auto eol=lf
+
+# 셸 스크립트는 항상 LF (Windows에서 체크아웃해도 CRLF 변환 안 함)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows 전용 파일은 CRLF 허용
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 바이너리 파일은 변환 금지
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.xlsx binary
+*.pdf binary

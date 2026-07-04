@@ -1,0 +1,45 @@
+# Env
+.env
+.env.local
+
+# Claude Code
+.claude/
+
+# Java
+*.class
+*.jar
+!frontend/node_modules/.cache
+backend/build/
+backend/.gradle/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+db_data/
+
+# Release artifacts (아카이브 파일만 제외, 릴리즈 디렉토리는 커밋)
+secportal-v*.tar.gz
+
+# Backup files
+release/*/backups/
+backups/
+
+# Uploads (runtime generated)
+uploads/
+
+# Docker image archives
+*.tar
+
+# IDE build output
+backend/bin/

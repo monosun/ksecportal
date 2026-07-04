@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>보안 인식 - 악성메일 주의</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      max-width: 560px;
+      width: 100%;
+      padding: 48px 40px 40px;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+    }
+    .icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #fef3c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .icon-wrap svg { width: 44px; height: 44px; }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .alert-box {
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: left;
+      margin-bottom: 28px;
+    }
+    .alert-box h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #c2410c;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .alert-box ul {
+      padding-left: 18px;
+      color: #374151;
+      font-size: 13.5px;
+      line-height: 1.8;
+    }
+    .tips {
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: left;
+      margin-bottom: 28px;
+    }
+    .tips h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tips ul {
+      padding-left: 18px;
+      color: #374151;
+      font-size: 13.5px;
+      line-height: 1.8;
+    }
+    .badge {
+      display: inline-block;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+      letter-spacing: 0.04em;
+    }
+    .footer {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg fill="none" stroke="#d97706" stroke-width="1.8" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+      </svg>
+    </div>
+
+    <span class="badge">모의 훈련 — 실제 피싱 아님</span>
+    <h1>악성메일 링크를 클릭하셨습니다</h1>
+    <p class="subtitle">
+      이 메일은 정보보안팀이 실시한 <strong>모의 피싱 훈련</strong>의 일환이었습니다.<br>
+      실제 공격이 아니므로 걱정하지 않으셔도 됩니다.<br>
+      하지만 이 훈련은 매우 중요한 교훈을 담고 있습니다.
+    </p>
+
+    <div class="alert-box">
+      <h2>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+        </svg>
+        실제 공격이었다면 어떻게 됐을까요?
+      </h2>
+      <ul>
+        <li>계정 정보(아이디/비밀번호) 탈취</li>
+        <li>악성코드(랜섬웨어·스파이웨어) 감염</li>
+        <li>개인정보 및 기업 기밀 유출</li>
+        <li>금전적 피해 및 법적 책임 발생 가능</li>
+      </ul>
+    </div>
+
+    <div class="tips">
+      <h2>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+        </svg>
+        피싱 메일 의심 방법
+      </h2>
+      <ul>
+        <li>발신자 이메일 주소를 꼼꼼히 확인하세요</li>
+        <li>긴박함을 조장하는 메일("즉시", "24시간 이내")은 의심하세요</li>
+        <li>링크를 클릭하기 전 마우스를 올려 URL을 확인하세요</li>
+        <li>첨부파일은 열기 전에 발신자에게 직접 확인하세요</li>
+        <li>의심스러운 메일은 즉시 정보보안팀에 신고하세요</li>
+      </ul>
+    </div>
+
+    <p class="footer">
+      이 훈련에 대한 문의는 정보보안팀으로 연락해 주세요.<br>
+      Powered by <strong>SecPortal</strong> — 모의 악성메일 훈련 시스템
+    </p>
+  </div>
+</body>
+</html>
