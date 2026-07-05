@@ -122,6 +122,40 @@
         <p class="text-gray-500 mb-4">{{ result.correctCount }} / {{ result.totalCount }} 정답</p>
         <button v-if="!result.passed" @click="retryQuiz" class="btn-secondary">다시 도전</button>
       </div>
+
+      <!-- 오답 리뷰: 제출 직후 틀린 문항의 선택 답·정답·해설 확인 -->
+      <div v-if="result && wrongQuestions.length" class="card mt-6">
+        <h2 class="font-semibold text-gray-900 mb-4">오답 리뷰 ({{ wrongQuestions.length }}문항)</h2>
+        <div class="space-y-6">
+          <div v-for="q in wrongQuestions" :key="q.id">
+            <p class="font-medium text-gray-900 mb-2">{{ q.number }}. {{ q.question }}</p>
+            <div class="space-y-1.5">
+              <div v-for="opt in options(q)" :key="opt.key"
+                class="flex items-center gap-3 p-2.5 rounded-lg border text-sm"
+                :class="opt.key === q.correctAnswer
+                  ? 'border-green-500 bg-green-50'
+                  : opt.key === q.myAnswer
+                    ? 'border-red-400 bg-red-50'
+                    : 'border-gray-200'">
+                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                  :class="opt.key === q.correctAnswer
+                    ? 'border-green-500 bg-green-500 text-white'
+                    : opt.key === q.myAnswer
+                      ? 'border-red-400 bg-red-400 text-white'
+                      : 'border-gray-300 text-gray-400'">
+                  {{ opt.key }}
+                </div>
+                <span class="flex-1">{{ opt.text }}</span>
+                <span v-if="opt.key === q.correctAnswer" class="text-xs font-semibold text-green-600 flex-shrink-0">정답</span>
+                <span v-else-if="opt.key === q.myAnswer" class="text-xs font-semibold text-red-500 flex-shrink-0">내가 선택한 답</span>
+              </div>
+            </div>
+            <div v-if="q.explanation" class="mt-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+              <span class="font-semibold">해설</span> — {{ q.explanation }}
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -154,6 +188,14 @@ const answeredCount = computed(() =>
 const allAnswered = computed(() =>
   course.value?.questions?.every(q => answers.value[q.id]) ?? false
 )
+
+// 제출 직후 오답 리뷰용 — 백엔드 채점(equalsIgnoreCase)과 동일 기준으로 비교
+const wrongQuestions = computed(() => {
+  if (!result.value || !course.value?.questions) return []
+  return course.value.questions
+    .map((q, idx) => ({ ...q, number: idx + 1, myAnswer: answers.value[q.id] || null }))
+    .filter(q => (q.myAnswer || '').toUpperCase() !== (q.correctAnswer || '').toUpperCase())
+})
 
 function options(q) {
   const opts = [{ key: 'A', text: q.optionA }, { key: 'B', text: q.optionB }]

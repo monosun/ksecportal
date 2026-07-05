@@ -1192,7 +1192,21 @@ erDiagram
         varchar option_c
         varchar option_d
         char correct_answer
+        varchar difficulty
+        text explanation
         int sort_order
+    }
+    quiz_bank_questions {
+        bigint id PK
+        varchar category
+        varchar difficulty
+        text question
+        varchar option_a
+        varchar option_b
+        varchar option_c
+        varchar option_d
+        char correct_answer
+        text explanation
     }
     training_completions {
         bigint id PK

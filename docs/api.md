@@ -457,6 +457,8 @@ ISMS-P 인증 항목 목록 조회.
       "optionC": "영수증",
       "optionD": "명함",
       "correctAnswer": "A",
+      "difficulty": "중",
+      "explanation": "개인정보 수집 시 정보주체의 동의가 필요합니다.",
       "sortOrder": 1
     }
   ]
@@ -472,6 +474,65 @@ ISMS-P 인증 항목 목록 조회.
 // Response
 { "score": 100, "passed": true, "correctCount": 3, "totalCount": 3 }
 ```
+
+### GET /training/results *(MANAGER+)*
+
+코스별 이수 현황 요약 (이수 인원·합격 인원·평균 점수·전체 사용자 수).
+
+### GET /training/results/completions *(MANAGER+)*
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `courseId` | Long | 코스별 필터 (생략 시 전체) |
+
+사용자별 이수 내역 (이름·부서·점수·합격 여부·이수 일시).
+
+---
+
+## 문제은행 (Quiz Bank) *(MANAGER+)*
+
+교육 코스와 독립적으로 퀴즈 문항을 관리합니다.
+
+### GET /quiz-bank
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `category` | String | 분류 필터 |
+| `difficulty` | String | 난이도 필터 (상/중/하) |
+| `keyword` | String | 문제·선택지 검색 |
+| `page`, `size` | int | 페이지네이션 (기본 0, 20) |
+
+### GET /quiz-bank/categories
+
+등록된 분류 목록.
+
+### POST /quiz-bank
+
+```json
+{
+  "category": "개인정보보호",
+  "difficulty": "중",
+  "question": "개인정보 수집 시 필요한 것은?",
+  "optionA": "동의서",
+  "optionB": "계약서",
+  "optionC": "영수증",
+  "optionD": "명함",
+  "correctAnswer": "A",
+  "explanation": "개인정보 수집 시 정보주체의 동의가 필요합니다."
+}
+```
+
+### PATCH /quiz-bank/:id
+
+### DELETE /quiz-bank/:id
+
+### GET /quiz-bank/bulk/template
+
+엑셀 일괄 등록 템플릿 다운로드.
+
+### POST /quiz-bank/bulk
+
+`multipart/form-data`의 `file`로 엑셀 업로드 — 성공/실패 건수와 행별 오류 반환.
 
 ---
 

@@ -79,12 +79,14 @@ secportal/
 │
 ├── training/                     IT 및 정보보호 교육
 │   ├── entity/TrainingCourse     ContentType enum
-│   ├── entity/QuizQuestion
+│   ├── entity/QuizQuestion       난이도·해설(explanation) 포함
 │   ├── entity/TrainingCompletion  unique(course_id, user_id)
+│   ├── entity/QuizBankQuestion   문제은행 (코스 독립, quiz_bank_questions)
 │   ├── repository/
-│   ├── dto/TrainingDto
-│   ├── service/TrainingService
-│   └── controller/TrainingController
+│   ├── dto/TrainingDto, QuizBankDto
+│   ├── service/TrainingService, QuizBankService
+│   ├── service/QuizBankDataInitializer  기본 샘플 문항 시드
+│   └── controller/TrainingController, QuizBankController
 │
 ├── audit/                        감사 로그
 │   ├── entity/AuditLog           REQUIRES_NEW 트랜잭션, SecurityContext에서 사용자 추출
@@ -229,6 +231,8 @@ users
 training_courses
   └─1:N── quiz_questions
   └─1:N── training_completions (course_id)
+
+quiz_bank_questions  (독립 테이블 — 문제은행, JPA 자동 생성)
 
 assets  (독립 테이블)
 ```
