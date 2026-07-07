@@ -33,6 +33,9 @@ public class SbomDto {
     public static class ComponentRequest {
         @NotBlank private String libraryName;
         private String libraryVersion;
+        private String componentType;
+        private String groupName;
+        private String purl;
         private String license;
         private String remarks;
     }
@@ -41,8 +44,11 @@ public class SbomDto {
     @Builder
     public static class ComponentResponse {
         private Long id;
+        private String componentType;
+        private String groupName;
         private String libraryName;
         private String libraryVersion;
+        private String purl;
         private String license;
         private String remarks;
         private LocalDateTime createdAt;
@@ -50,8 +56,11 @@ public class SbomDto {
         public static ComponentResponse from(SbomComponent c) {
             return ComponentResponse.builder()
                     .id(c.getId())
+                    .componentType(c.getComponentType())
+                    .groupName(c.getGroupName())
                     .libraryName(c.getLibraryName())
                     .libraryVersion(c.getLibraryVersion())
+                    .purl(c.getPurl())
                     .license(c.getLicense())
                     .remarks(c.getRemarks())
                     .createdAt(c.getCreatedAt())

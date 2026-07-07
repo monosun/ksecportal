@@ -4,6 +4,7 @@ import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.sbom.dto.SbomBulkUploadResult;
 import com.monosun.secportal.sbom.dto.SbomDto;
 import com.monosun.secportal.sbom.service.SbomBulkService;
+import com.monosun.secportal.sbom.service.SbomCycloneDxService;
 import com.monosun.secportal.sbom.service.SbomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SbomController {
 
     private final SbomService sbomService;
     private final SbomBulkService sbomBulkService;
+    private final SbomCycloneDxService sbomCycloneDxService;
 
     @GetMapping("/software")
     public ApiResponse<Page<SbomDto.Response>> list(
@@ -86,6 +88,25 @@ public class SbomController {
     public ApiResponse<Void> deleteComponent(@PathVariable Long componentId) {
         sbomService.deleteComponent(componentId);
         return ApiResponse.noContent();
+    }
+
+    @GetMapping("/software/{id}/cyclonedx")
+    public ResponseEntity<byte[]> exportCycloneDx(@PathVariable Long id) throws IOException {
+        SbomDto.DetailResponse sw = sbomService.get(id);
+        byte[] data = sbomCycloneDxService.export(id);
+        String filename = (sw.getName() + "-" + sw.getVersion() + ".cdx.json")
+                .replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @PostMapping("/import/cyclonedx")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<SbomBulkUploadResult> importCycloneDx(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return ApiResponse.ok(sbomCycloneDxService.importBom(file));
     }
 
     @GetMapping("/bulk/template")

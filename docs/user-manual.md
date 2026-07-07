@@ -1,6 +1,6 @@
 # SecPortal 사용자 매뉴얼
 
-**버전**: v1.2.0  
+**버전**: v1.3.0  
 **최종 업데이트**: 2026-07-08
 
 ---
@@ -107,7 +107,8 @@
 
 ## 3.1. SBOM 관리
 
-**자산 관리** 메뉴 아래의 **SBOM 관리**에서 소프트웨어(SW)별 버전과 포함된 라이브러리 구성요소(SBOM: Software Bill of Materials)를 관리합니다.
+**자산 관리** 메뉴 아래의 **SBOM 관리**에서 소프트웨어(SW)별 버전과 포함된 라이브러리 구성요소(SBOM: Software Bill of Materials)를 **CycloneDX 1.5 표준 기준**으로 관리합니다.
+구성요소 필드는 CycloneDX component에 대응합니다 — 유형(type)·그룹(group)·라이브러리명(name)·버전(version)·PURL·라이선스(SPDX ID).
 
 ### SW 등록
 
@@ -119,8 +120,15 @@
 ### 라이브러리(구성요소) 관리
 
 1. SW 목록에서 행 클릭 또는 **구성요소** 버튼 클릭
-2. 모달 상단 입력란에 라이브러리명(필수)·버전·라이선스·비고 입력 후 **추가**
+2. 모달 상단 입력란에 유형·그룹·라이브러리명(필수)·버전·PURL·라이선스·비고 입력 후 **추가**
 3. 각 행의 수정/삭제 버튼으로 개별 관리
+
+### CycloneDX 내보내기 / 가져오기
+
+- **내보내기**: SW 목록 행의 **CycloneDX** 버튼 클릭 → `{SW명}-{버전}.cdx.json` 다운로드 (CycloneDX 1.5 JSON)
+- **가져오기**: 우상단 **CycloneDX 가져오기** 버튼 → syft·cdxgen·trivy 등 SCA 도구가 생성한 CycloneDX JSON 업로드
+  - metadata.component가 SW 정보로, components가 라이브러리로 등록됩니다
+  - 동일 SW명+버전이 이미 있으면 라이브러리가 병합됩니다
 
 ### 엑셀 일괄 등록
 

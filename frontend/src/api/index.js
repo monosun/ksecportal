@@ -154,6 +154,13 @@ export const sbomApi = {
     const fd = new FormData()
     fd.append('file', file)
     return api.post('/sbom/bulk', fd)
+  },
+  exportCdx: (id, name, version) =>
+    downloadBlob(`/sbom/software/${id}/cyclonedx`, `${name}-${version}.cdx.json`.replace(/[\\/:*?"<>|\s]+/g, '_')),
+  importCdx: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/sbom/import/cyclonedx', fd)
   }
 }
 

@@ -435,7 +435,8 @@ ISMS-P 인증 항목 목록 조회.
 
 ## SBOM 관리 (SBOM)
 
-소프트웨어(SW명+버전)별로 포함된 라이브러리·버전·라이선스를 관리합니다.
+소프트웨어(SW명+버전)별로 포함된 라이브러리·버전·라이선스를 **CycloneDX 1.5 표준 기준**으로 관리합니다.
+컴포넌트 필드는 CycloneDX component에 대응합니다: `componentType`(type), `groupName`(group), `libraryName`(name), `libraryVersion`(version), `purl`, `license`(SPDX ID).
 
 ### GET /sbom/software
 
@@ -475,21 +476,41 @@ SW 삭제 시 포함 라이브러리가 함께 삭제되고, 해당 SW에 맵핑
 
 ```json
 {
+  "componentType": "library",
+  "groupName": "org.springframework.boot",
   "libraryName": "spring-boot-starter-web",
-  "libraryVersion": "3.2.4",
+  "libraryVersion": "3.3.5",
+  "purl": "pkg:maven/org.springframework.boot/spring-boot-starter-web@3.3.5",
   "license": "Apache-2.0",
   "remarks": ""
 }
 ```
 
+`componentType`은 CycloneDX 1.5 component.type 허용값만 사용 가능:
+`application`, `framework`, `library`(기본), `container`, `platform`, `operating-system`, `device`, `device-driver`, `firmware`, `file`, `machine-learning-model`, `data`
+
 ### PATCH /sbom/components/:componentId *(MANAGER+)*
 
 ### DELETE /sbom/components/:componentId *(MANAGER+)*
 
+### GET /sbom/software/:id/cyclonedx
+
+SW의 SBOM을 **CycloneDX 1.5 JSON**으로 내보냅니다 (`{SW명}-{버전}.cdx.json` 다운로드).
+`metadata.component`에 SW 정보(type: application, name, version, supplier, description),
+`components[]`에 라이브러리 목록(type, group, name, version, purl, licenses)이 포함됩니다.
+
+### POST /sbom/import/cyclonedx *(MANAGER+, multipart)*
+
+CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·trivy 등 SCA 도구 산출물을 그대로 사용할 수 있습니다.
+
+- `bomFormat: "CycloneDX"` 검증, `metadata.component` → SW(name+version), `components[]` → 라이브러리
+- 동일 SW명+버전이 이미 있으면 라이브러리 병합(동일 name+version 컴포넌트는 갱신)
+- 응답 형식은 `POST /sbom/bulk`와 동일 (`total`/`success`/`failed`/`softwareCount`/`errors` — errors.row는 components 배열 인덱스)
+
 ### GET /sbom/bulk/template *(MANAGER+)*
 
 엑셀 일괄등록 템플릿 다운로드 (`sbom-upload-template.xlsx`).
-컬럼: `SW명*`, `SW버전*`, `공급업체`, `SW설명`, `라이브러리명*`, `라이브러리 버전`, `라이선스`, `비고`
+컬럼: `SW명*`, `SW버전*`, `공급업체`, `SW설명`, `라이브러리명*`, `라이브러리 버전`, `그룹(네임스페이스)`, `PURL`, `컴포넌트 유형`, `라이선스(SPDX ID)`, `비고`
 — 한 행에 라이브러리 1건씩 입력하며, 같은 SW명+버전 행은 하나의 SW로 묶여 등록됩니다.
 
 ### POST /sbom/bulk *(MANAGER+, multipart)*

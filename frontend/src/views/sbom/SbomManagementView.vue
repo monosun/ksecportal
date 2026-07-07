@@ -3,9 +3,16 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">SBOM 관리</h1>
-        <p class="text-sm text-gray-500 mt-1">소프트웨어(SW)별 버전과 포함된 라이브러리 구성요소를 관리합니다. SW 자산 등록 시 여기에 등록된 SW를 맵핑할 수 있습니다.</p>
+        <p class="text-sm text-gray-500 mt-1">소프트웨어(SW)별 버전과 포함된 라이브러리 구성요소를 CycloneDX 표준 기준으로 관리합니다. SW 자산 등록 시 여기에 등록된 SW를 맵핑할 수 있습니다.</p>
       </div>
       <div class="flex gap-2">
+        <button v-if="isManager" @click="showCdxModal = true"
+          class="btn-secondary flex items-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/>
+          </svg>
+          CycloneDX 가져오기
+        </button>
         <button v-if="isManager" @click="showUploadModal = true"
           class="btn-secondary flex items-center gap-2 text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,8 +62,9 @@
                 <span class="badge-blue">{{ s.componentCount }}개</span>
               </td>
               <td class="px-5 py-3 text-gray-500 text-xs">{{ formatDate(s.createdAt) }}</td>
-              <td class="px-5 py-3" @click.stop>
+              <td class="px-5 py-3 whitespace-nowrap" @click.stop>
                 <button class="text-blue-600 hover:underline text-xs mr-3" @click="openDetail(s)">구성요소</button>
+                <button class="text-blue-600 hover:underline text-xs mr-3" @click="exportCdx(s)">CycloneDX</button>
                 <button v-if="isManager" class="text-blue-600 hover:underline text-xs mr-3" @click="openSwForm(s)">{{ $t('common.edit') }}</button>
                 <button v-if="isManager" class="text-red-500 hover:underline text-xs" @click="confirmDeleteSw(s)">{{ $t('common.delete') }}</button>
               </td>
@@ -120,7 +128,7 @@
 
     <!-- 구성요소(라이브러리) 관리 모달 -->
     <div v-if="detail" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between px-6 py-4 border-b">
           <div>
             <h2 class="text-lg font-semibold text-gray-900">
@@ -138,19 +146,33 @@
         <div class="px-6 py-4 overflow-y-auto flex-1">
           <!-- 라이브러리 추가 -->
           <form v-if="isManager" @submit.prevent="submitComponent" class="flex flex-wrap gap-2 mb-4 items-end bg-gray-50 rounded-lg p-3">
+            <div class="w-36">
+              <label class="block text-xs font-medium text-gray-500 mb-1">유형 (type)</label>
+              <select v-model="componentForm.componentType" class="input w-full text-sm">
+                <option v-for="t in cdxTypes" :key="t" :value="t">{{ t }}</option>
+              </select>
+            </div>
+            <div class="flex-1 min-w-36">
+              <label class="block text-xs font-medium text-gray-500 mb-1">그룹 (group)</label>
+              <input v-model="componentForm.groupName" class="input w-full text-sm font-mono" placeholder="org.springframework.boot" />
+            </div>
             <div class="flex-1 min-w-40">
-              <label class="block text-xs font-medium text-gray-500 mb-1">라이브러리명 *</label>
+              <label class="block text-xs font-medium text-gray-500 mb-1">라이브러리명 (name) *</label>
               <input v-model="componentForm.libraryName" required class="input w-full text-sm" placeholder="spring-boot-starter-web" />
             </div>
-            <div class="w-28">
+            <div class="w-24">
               <label class="block text-xs font-medium text-gray-500 mb-1">버전</label>
-              <input v-model="componentForm.libraryVersion" class="input w-full text-sm font-mono" placeholder="3.2.4" />
+              <input v-model="componentForm.libraryVersion" class="input w-full text-sm font-mono" placeholder="3.3.5" />
+            </div>
+            <div class="flex-1 min-w-48">
+              <label class="block text-xs font-medium text-gray-500 mb-1">PURL</label>
+              <input v-model="componentForm.purl" class="input w-full text-sm font-mono" placeholder="pkg:maven/org.apache.poi/poi-ooxml@5.2.5" />
             </div>
             <div class="w-32">
-              <label class="block text-xs font-medium text-gray-500 mb-1">라이선스</label>
+              <label class="block text-xs font-medium text-gray-500 mb-1">라이선스 (SPDX)</label>
               <input v-model="componentForm.license" class="input w-full text-sm" placeholder="Apache-2.0" />
             </div>
-            <div class="flex-1 min-w-32">
+            <div class="flex-1 min-w-28">
               <label class="block text-xs font-medium text-gray-500 mb-1">비고</label>
               <input v-model="componentForm.remarks" class="input w-full text-sm" />
             </div>
@@ -167,8 +189,10 @@
           <table v-else class="w-full text-sm">
             <thead class="bg-gray-50 border-b">
               <tr>
-                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">라이브러리명</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">유형</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">그룹 / 라이브러리명</th>
                 <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">버전</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">PURL</th>
                 <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">라이선스</th>
                 <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">비고</th>
                 <th v-if="isManager" class="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">{{ $t('common.actions') }}</th>
@@ -176,14 +200,19 @@
             </thead>
             <tbody class="divide-y divide-gray-50">
               <tr v-for="c in detail.components" :key="c.id" class="hover:bg-gray-50">
-                <td class="px-4 py-2 font-medium text-gray-800">{{ c.libraryName }}</td>
+                <td class="px-4 py-2"><span class="badge-blue">{{ c.componentType || 'library' }}</span></td>
+                <td class="px-4 py-2">
+                  <p v-if="c.groupName" class="text-xs text-gray-400 font-mono">{{ c.groupName }}</p>
+                  <p class="font-medium text-gray-800">{{ c.libraryName }}</p>
+                </td>
                 <td class="px-4 py-2 font-mono text-gray-600">{{ c.libraryVersion || '-' }}</td>
+                <td class="px-4 py-2 font-mono text-xs text-gray-500 break-all max-w-56">{{ c.purl || '-' }}</td>
                 <td class="px-4 py-2">
                   <span v-if="c.license" class="badge-gray">{{ c.license }}</span>
                   <span v-else class="text-gray-400">-</span>
                 </td>
                 <td class="px-4 py-2 text-gray-500 text-xs">{{ c.remarks || '-' }}</td>
-                <td v-if="isManager" class="px-4 py-2">
+                <td v-if="isManager" class="px-4 py-2 whitespace-nowrap">
                   <button class="text-blue-600 hover:underline text-xs mr-3" @click="editComponent(c)">{{ $t('common.edit') }}</button>
                   <button class="text-red-500 hover:underline text-xs" @click="confirmDeleteComponent(c)">{{ $t('common.delete') }}</button>
                 </td>
@@ -194,6 +223,77 @@
 
         <div class="px-6 py-4 border-t flex justify-end">
           <button @click="detail = null" class="btn-secondary text-sm">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CycloneDX 가져오기 모달 -->
+    <div v-if="showCdxModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold text-gray-900">CycloneDX 가져오기</h2>
+          <button @click="closeCdxModal" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="px-6 py-5 space-y-4">
+          <div class="bg-blue-50 rounded-lg p-4 flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="text-sm text-blue-800">
+              <p class="font-medium mb-1">CycloneDX JSON 파일(*.cdx.json, *.json)을 업로드하세요.</p>
+              <p class="text-blue-600 text-xs">
+                syft, cdxgen, trivy 등 SCA 도구가 생성한 CycloneDX BOM을 그대로 가져올 수 있습니다.
+                metadata.component가 SW 정보로, components가 라이브러리로 등록됩니다.
+                동일 SW명+버전이 이미 있으면 라이브러리가 병합됩니다.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">CycloneDX JSON 파일 선택</label>
+            <input ref="cdxFileInput" type="file" accept=".json"
+              @change="onCdxFileChange" class="block w-full text-sm text-gray-600
+              file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
+              file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700
+              hover:file:bg-blue-100 cursor-pointer border border-gray-200 rounded-lg p-1" />
+            <p v-if="cdxFile" class="text-xs text-gray-500 mt-1">
+              선택된 파일: {{ cdxFile.name }} ({{ (cdxFile.size / 1024).toFixed(1) }} KB)
+            </p>
+          </div>
+
+          <div v-if="cdxResult" class="rounded-lg border text-sm">
+            <div class="flex gap-4 p-3 border-b bg-gray-50 rounded-t-lg font-medium">
+              <span>컴포넌트 총 {{ cdxResult.total }}건</span>
+              <span class="text-green-600">성공 {{ cdxResult.success }}건</span>
+              <span v-if="cdxResult.failed > 0" class="text-red-600">실패 {{ cdxResult.failed }}건</span>
+              <span class="text-blue-600">신규 SW {{ cdxResult.softwareCount }}건</span>
+            </div>
+            <ul v-if="cdxResult.errors?.length" class="divide-y max-h-40 overflow-y-auto">
+              <li v-for="e in cdxResult.errors" :key="e.row" class="px-3 py-2 text-red-600 text-xs">
+                <span class="font-medium">components[{{ e.row }}]:</span> {{ e.message }}
+              </li>
+            </ul>
+            <p v-else class="px-3 py-2 text-green-600 text-xs font-medium">모든 컴포넌트를 성공적으로 가져왔습니다.</p>
+          </div>
+
+          <div v-if="cdxError" class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{{ cdxError }}</div>
+        </div>
+
+        <div class="px-6 py-4 border-t flex justify-end gap-3">
+          <button @click="closeCdxModal" class="btn-secondary text-sm">닫기</button>
+          <button @click="importCdx" :disabled="!cdxFile || cdxUploading"
+            class="btn-primary text-sm flex items-center gap-2">
+            <svg v-if="cdxUploading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+            {{ cdxUploading ? '가져오는 중...' : '가져오기' }}
+          </button>
         </div>
       </div>
     </div>
@@ -346,8 +446,13 @@ async function confirmDeleteSw(sw) {
 }
 
 // ── 구성요소(라이브러리) 관리 ────────────────────────────────────
+// CycloneDX 1.5 component.type
+const cdxTypes = ['library', 'framework', 'application', 'container', 'platform',
+  'operating-system', 'device', 'device-driver', 'firmware', 'file',
+  'machine-learning-model', 'data']
+
 const detail = ref(null)
-const componentForm = ref({ libraryName: '', libraryVersion: '', license: '', remarks: '' })
+const componentForm = ref({ componentType: 'library', groupName: '', libraryName: '', libraryVersion: '', purl: '', license: '', remarks: '' })
 const editingComponentId = ref(null)
 const componentSubmitting = ref(false)
 const componentError = ref(null)
@@ -359,7 +464,7 @@ async function openDetail(sw) {
 }
 
 function resetComponentForm() {
-  componentForm.value = { libraryName: '', libraryVersion: '', license: '', remarks: '' }
+  componentForm.value = { componentType: 'library', groupName: '', libraryName: '', libraryVersion: '', purl: '', license: '', remarks: '' }
   editingComponentId.value = null
   componentError.value = null
 }
@@ -367,8 +472,11 @@ function resetComponentForm() {
 function editComponent(c) {
   editingComponentId.value = c.id
   componentForm.value = {
+    componentType: c.componentType || 'library',
+    groupName: c.groupName || '',
     libraryName: c.libraryName,
     libraryVersion: c.libraryVersion || '',
+    purl: c.purl || '',
     license: c.license || '',
     remarks: c.remarks || ''
   }
@@ -447,6 +555,48 @@ async function uploadExcel() {
     uploadError.value = e || '업로드 중 오류가 발생했습니다.'
   } finally {
     uploading.value = false
+  }
+}
+
+// ── CycloneDX 내보내기 / 가져오기 ─────────────────────────────────
+const showCdxModal = ref(false)
+const cdxFile = ref(null)
+const cdxFileInput = ref(null)
+const cdxUploading = ref(false)
+const cdxResult = ref(null)
+const cdxError = ref(null)
+
+async function exportCdx(sw) {
+  await sbomApi.exportCdx(sw.id, sw.name, sw.version)
+}
+
+function onCdxFileChange(e) {
+  cdxFile.value = e.target.files[0] || null
+  cdxResult.value = null
+  cdxError.value = null
+}
+
+function closeCdxModal() {
+  showCdxModal.value = false
+  cdxFile.value = null
+  cdxResult.value = null
+  cdxError.value = null
+  if (cdxFileInput.value) cdxFileInput.value.value = ''
+}
+
+async function importCdx() {
+  if (!cdxFile.value) return
+  cdxUploading.value = true
+  cdxResult.value = null
+  cdxError.value = null
+  try {
+    const res = await sbomApi.importCdx(cdxFile.value)
+    cdxResult.value = res.data
+    if (res.data?.success > 0) load()
+  } catch (e) {
+    cdxError.value = e || '가져오기 중 오류가 발생했습니다.'
+  } finally {
+    cdxUploading.value = false
   }
 }
 

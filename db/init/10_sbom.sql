@@ -14,13 +14,16 @@ CREATE TABLE IF NOT EXISTS sbom_software (
     CONSTRAINT uk_sbom_software_name_version UNIQUE (name, version)
 );
 
--- SBOM 관리: SW 버전에 포함된 라이브러리(구성요소)
+-- SBOM 관리: SW 버전에 포함된 라이브러리(구성요소) — CycloneDX component 필드 기준
 CREATE TABLE IF NOT EXISTS sbom_components (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     software_id     BIGINT NOT NULL,
-    library_name    VARCHAR(200) NOT NULL,
-    library_version VARCHAR(100),
-    license         VARCHAR(100),
+    component_type  VARCHAR(30) NOT NULL DEFAULT 'library',  -- CycloneDX component.type
+    group_name      VARCHAR(200),                            -- CycloneDX component.group
+    library_name    VARCHAR(200) NOT NULL,                   -- CycloneDX component.name
+    library_version VARCHAR(100),                            -- CycloneDX component.version
+    purl            VARCHAR(500),                            -- CycloneDX component.purl
+    license         VARCHAR(100),                            -- SPDX ID (CycloneDX licenses.license.id)
     remarks         TEXT,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_sbom_components_software FOREIGN KEY (software_id)

@@ -16,10 +16,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class SbomService {
+
+    // CycloneDX 1.5 component.type 허용값
+    public static final Set<String> CDX_COMPONENT_TYPES = Set.of(
+            "application", "framework", "library", "container", "platform",
+            "operating-system", "device", "device-driver", "firmware", "file",
+            "machine-learning-model", "data");
 
     private final SbomSoftwareRepository softwareRepository;
     private final SbomComponentRepository componentRepository;
@@ -95,8 +102,11 @@ public class SbomService {
         SbomSoftware software = findById(softwareId);
         SbomComponent component = SbomComponent.builder()
                 .software(software)
+                .componentType(normalizeComponentType(req.getComponentType()))
+                .groupName(req.getGroupName())
                 .libraryName(req.getLibraryName().trim())
                 .libraryVersion(req.getLibraryVersion())
+                .purl(req.getPurl())
                 .license(req.getLicense())
                 .remarks(req.getRemarks())
                 .build();
@@ -111,10 +121,23 @@ public class SbomService {
         SbomComponent component = componentRepository.findById(componentId)
                 .orElseThrow(() -> new ResourceNotFoundException("SbomComponent", componentId));
         if (req.getLibraryName() != null) component.setLibraryName(req.getLibraryName().trim());
+        component.setComponentType(normalizeComponentType(req.getComponentType()));
+        component.setGroupName(req.getGroupName());
         component.setLibraryVersion(req.getLibraryVersion());
+        component.setPurl(req.getPurl());
         component.setLicense(req.getLicense());
         component.setRemarks(req.getRemarks());
         return SbomDto.ComponentResponse.from(component);
+    }
+
+    public static String normalizeComponentType(String type) {
+        if (type == null || type.isBlank()) return "library";
+        String normalized = type.trim().toLowerCase();
+        if (!CDX_COMPONENT_TYPES.contains(normalized)) {
+            throw new BusinessException("유효하지 않은 컴포넌트 유형: " + type
+                    + " (허용값: " + String.join(", ", CDX_COMPONENT_TYPES.stream().sorted().toList()) + ")");
+        }
+        return normalized;
     }
 
     @Transactional
