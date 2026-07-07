@@ -144,6 +144,11 @@ const routes = [
         component: () => import('@/views/asset/AssetFormView.vue')
       },
       {
+        path: 'sbom',
+        name: 'SbomManagement',
+        component: () => import('@/views/sbom/SbomManagementView.vue')
+      },
+      {
         path: 'isms',
         name: 'IsmsList',
         component: () => import('@/views/isms/IsmsListView.vue')

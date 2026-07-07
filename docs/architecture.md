@@ -71,11 +71,19 @@ secportal/
 │   └── controller/IncidentController
 │
 ├── asset/                        IT 자산 관리
-│   ├── entity/Asset              AssetType, Criticality enum
+│   ├── entity/Asset              AssetType, Criticality enum, sbomSoftware N:1 맵핑
 │   ├── repository/AssetRepository
 │   ├── dto/AssetDto
-│   ├── service/AssetService
+│   ├── service/AssetService, AssetBulkService
 │   └── controller/AssetController
+│
+├── sbom/                         SBOM 관리 (SW·라이브러리 구성)
+│   ├── entity/SbomSoftware       name+version UNIQUE
+│   ├── entity/SbomComponent      SW 1:N 라이브러리
+│   ├── repository/
+│   ├── dto/SbomDto, SbomBulkUploadResult
+│   ├── service/SbomService, SbomBulkService  엑셀 템플릿·일괄등록
+│   └── controller/SbomController  /sbom/software, /sbom/components, /sbom/bulk
 │
 ├── training/                     IT 및 정보보호 교육
 │   ├── entity/TrainingCourse     ContentType enum
@@ -234,7 +242,11 @@ training_courses
 
 quiz_bank_questions  (독립 테이블 — 문제은행, JPA 자동 생성)
 
-assets  (독립 테이블)
+sbom_software
+  └─1:N── sbom_components (software_id, ON DELETE CASCADE)
+
+assets
+  └─N:1── sbom_software (sbom_software_id, nullable — SW 자산 SBOM 맵핑)
 ```
 
 ### 초기화 파일 실행 순서
@@ -246,6 +258,11 @@ assets  (독립 테이블)
 | `03_comments.sql` | `vulnerability_comments` 테이블 |
 | `04_assets.sql` | `assets` 테이블 + 샘플 5건 |
 | `05_incidents.sql` | `incidents` 테이블 + 샘플 3건 |
+| `06_isms.sql` | ISMS-P 인증항목·증적 테이블 |
+| `07_extended_schema.sql` | 확장 스키마 (RBAC·위원회·내부감사 등) |
+| `08_extended_seed.sql` | 확장 기능 기본 데이터 |
+| `09_threat_seed.sql` | 위협 카탈로그 기본 560개 |
+| `10_sbom.sql` | `sbom_software`·`sbom_components` 테이블 + `assets.sbom_software_id` 컬럼 |
 
 ---
 

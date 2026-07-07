@@ -301,6 +301,7 @@ const navGroups = [
     items: [
       { to: '/policies',          label: 'nav.policies',       icon: DocumentTextIcon,      menuKey: 'policies' },
       { to: '/assets',            label: 'nav.assets',          icon: DocumentTextIcon,      menuKey: 'assets' },
+      { to: '/sbom',              label: 'nav.sbom',            icon: DocumentTextIcon,      menuKey: 'sbom' },
       { to: '/threat-management', label: 'nav.threats',         icon: ShieldExclamationIcon, menuKey: 'threats' },
       { to: '/vulnerabilities',   label: 'nav.vulnerabilities', icon: ShieldExclamationIcon, menuKey: 'vulnerabilities' },
       { to: '/risk-assessment',   label: 'nav.riskAssessment',  icon: ShieldExclamationIcon, menuKey: 'risk_assessment' },

@@ -106,6 +106,12 @@ public class Asset {
     @Column(columnDefinition = "TEXT")
     private String linkedSystems;
 
+    // ── SBOM 맵핑 (SW 자산 전용) ─────────────────────────────────────────────
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sbom_software_id")
+    private com.monosun.secportal.sbom.entity.SbomSoftware sbomSoftware;
+
     // ── 보안 관리 ─────────────────────────────────────────────────────────────
 
     @Column(nullable = false)

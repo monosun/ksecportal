@@ -22,6 +22,7 @@
     "training": "IT 및 정보보호 교육",
     "admin": "관리",
     "assets": "자산 관리",
+    "sbom": "SBOM 관리",
     "securityEvents": "보안이벤트 관리",
     "incidents": "보안 인시던트",
     "isms": "ISMS-P 증적관리",

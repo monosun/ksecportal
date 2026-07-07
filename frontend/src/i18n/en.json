@@ -22,6 +22,7 @@
     "training": "IT & Information Security Training",
     "admin": "Admin",
     "assets": "Asset Management",
+    "sbom": "SBOM Management",
     "securityEvents": "Security Events",
     "incidents": "Security Incidents",
     "isms": "ISMS-P Evidence",

@@ -44,6 +44,8 @@ public class AssetDto {
 
         private String linkedSystems;
 
+        private Long sbomSoftwareId;
+
         private Boolean accessControlTarget;
         private Boolean backupTarget;
         private Boolean logManagementTarget;
@@ -88,6 +90,9 @@ public class AssetDto {
         private Boolean personalInfoProcessing;
 
         private String linkedSystems;
+
+        // 0 이하 값은 매핑 해제로 처리
+        private Long sbomSoftwareId;
 
         private Boolean accessControlTarget;
         private Boolean backupTarget;
@@ -138,6 +143,11 @@ public class AssetDto {
 
         private String linkedSystems;
 
+        private Long sbomSoftwareId;
+        private String sbomSoftwareName;
+        private String sbomSoftwareVersion;
+        private Integer sbomComponentCount;
+
         private boolean accessControlTarget;
         private boolean backupTarget;
         private boolean logManagementTarget;
@@ -180,6 +190,10 @@ public class AssetDto {
                     .personalInfoType(a.getPersonalInfoType())
                     .personalInfoProcessing(a.isPersonalInfoProcessing())
                     .linkedSystems(a.getLinkedSystems())
+                    .sbomSoftwareId(a.getSbomSoftware() != null ? a.getSbomSoftware().getId() : null)
+                    .sbomSoftwareName(a.getSbomSoftware() != null ? a.getSbomSoftware().getName() : null)
+                    .sbomSoftwareVersion(a.getSbomSoftware() != null ? a.getSbomSoftware().getVersion() : null)
+                    .sbomComponentCount(a.getSbomSoftware() != null ? a.getSbomSoftware().getComponents().size() : null)
                     .accessControlTarget(a.isAccessControlTarget())
                     .backupTarget(a.isBackupTarget())
                     .logManagementTarget(a.isLogManagementTarget())

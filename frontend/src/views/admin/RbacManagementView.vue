@@ -211,6 +211,7 @@ const MENUS = [
   // 정보보호 관리체계
   { key: 'policies',          label: '보안 정책' },
   { key: 'assets',            label: '자산 관리' },
+  { key: 'sbom',              label: 'SBOM 관리' },
   { key: 'threats',           label: '위협 관리' },
   { key: 'vulnerabilities',   label: '취약점 관리' },
   { key: 'risk_assessment',   label: '위험평가' },

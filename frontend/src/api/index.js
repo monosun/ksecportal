@@ -139,6 +139,24 @@ export const assetApi = {
   delete: (id) => api.delete(`/assets/${id}`)
 }
 
+export const sbomApi = {
+  list: (params) => api.get('/sbom/software', { params }),
+  listAll: () => api.get('/sbom/software/all'),
+  get: (id) => api.get(`/sbom/software/${id}`),
+  create: (data) => api.post('/sbom/software', data),
+  update: (id, data) => api.patch(`/sbom/software/${id}`, data),
+  delete: (id) => api.delete(`/sbom/software/${id}`),
+  addComponent: (id, data) => api.post(`/sbom/software/${id}/components`, data),
+  updateComponent: (componentId, data) => api.patch(`/sbom/components/${componentId}`, data),
+  deleteComponent: (componentId) => api.delete(`/sbom/components/${componentId}`),
+  template: () => downloadBlob('/sbom/bulk/template', 'sbom-upload-template.xlsx'),
+  upload: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/sbom/bulk', fd)
+  }
+}
+
 export const metricsApi = {
   summary: () => api.get('/metrics/summary')
 }

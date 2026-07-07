@@ -5,6 +5,8 @@ import com.monosun.secportal.asset.entity.Asset;
 import com.monosun.secportal.asset.repository.AssetRepository;
 import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
+import com.monosun.secportal.sbom.entity.SbomSoftware;
+import com.monosun.secportal.sbom.repository.SbomSoftwareRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AssetService {
 
     private final AssetRepository assetRepository;
+    private final SbomSoftwareRepository sbomSoftwareRepository;
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
@@ -59,6 +62,7 @@ public class AssetService {
                 .personalInfoType(req.getPersonalInfoType())
                 .personalInfoProcessing(Boolean.TRUE.equals(req.getPersonalInfoProcessing()))
                 .linkedSystems(req.getLinkedSystems())
+                .sbomSoftware(resolveSbomSoftware(req.getSbomSoftwareId()))
                 .accessControlTarget(Boolean.TRUE.equals(req.getAccessControlTarget()))
                 .backupTarget(Boolean.TRUE.equals(req.getBackupTarget()))
                 .logManagementTarget(Boolean.TRUE.equals(req.getLogManagementTarget()))
@@ -101,6 +105,7 @@ public class AssetService {
         if (req.getPersonalInfoType() != null) asset.setPersonalInfoType(req.getPersonalInfoType());
         if (req.getPersonalInfoProcessing() != null) asset.setPersonalInfoProcessing(req.getPersonalInfoProcessing());
         if (req.getLinkedSystems() != null) asset.setLinkedSystems(req.getLinkedSystems());
+        if (req.getSbomSoftwareId() != null) asset.setSbomSoftware(resolveSbomSoftware(req.getSbomSoftwareId()));
         if (req.getAccessControlTarget() != null) asset.setAccessControlTarget(req.getAccessControlTarget());
         if (req.getBackupTarget() != null) asset.setBackupTarget(req.getBackupTarget());
         if (req.getLogManagementTarget() != null) asset.setLogManagementTarget(req.getLogManagementTarget());
@@ -120,6 +125,13 @@ public class AssetService {
         Asset asset = findById(id);
         auditLogService.log("ASSET_DELETED", "ASSET", id, asset.getName());
         assetRepository.delete(asset);
+    }
+
+    // 0 이하 값은 매핑 해제
+    private SbomSoftware resolveSbomSoftware(Long sbomSoftwareId) {
+        if (sbomSoftwareId == null || sbomSoftwareId <= 0) return null;
+        return sbomSoftwareRepository.findById(sbomSoftwareId)
+                .orElseThrow(() -> new ResourceNotFoundException("SbomSoftware", sbomSoftwareId));
     }
 
     private Asset findById(Long id) {

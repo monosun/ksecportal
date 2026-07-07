@@ -3,7 +3,7 @@
 스타트업·중소기업을 위한 **올인원 정보보안 관리 시스템**입니다.  
 보안 정책, 취약점, 인시던트, 자산, 보안이벤트, 교육을 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.1.0** — 문제은행·퀴즈 오답 리뷰·교육·훈련 결과 화면 ([릴리즈 노트](release/v1.1.0/RELEASE_NOTES.md))
+> **최신 버전: v1.2.0** — SBOM 관리(SW별 라이브러리 구성 관리·엑셀 일괄등록·자산 맵핑) ([릴리즈 노트](release/v1.2.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -29,6 +29,7 @@ docker compose up -d --build
 | **ISMS-P 통제항목 매핑** | 도메인·통제항목 2패널 레이아웃, ISMS-P 인증기준 직접 매핑 관리 |
 | **보안 인시던트** | 8가지 유형, 5단계 상태 추적, 대응 타임라인, 엑셀 일괄 등록, PDF 다운로드 |
 | **자산 관리** | IT 자산 인벤토리, 온프레미스+클라우드(AWS/GCP/Azure) 통합, 13가지 유형, 환경·중요도 분류, 월 비용·계약 만료·점검 일정 관리, PDF/CSV 다운로드, **ISMS-P 자산식별 기준(자산유형 6종·기밀성/무결성/가용성 개별 등급·개인정보 포함 여부·보안관리 대상·연계 시스템·운영중/중지/폐기 상태 관리)** |
+| **SBOM 관리** | 소프트웨어(SW명+버전)별 포함 라이브러리·버전·라이선스 구성 관리, 엑셀 템플릿 일괄등록(동일 SW 자동 병합·재업로드 시 중복 없이 갱신), SW 자산 등록 시 SBOM 맵핑(자산유형 SW 선택 시 등록된 SW 선택), 자산 상세에 맵핑 SW·라이브러리 수 표시 |
 | **보안이벤트 관리** | 방화벽·IDS/IPS·WAF·SIEM·EDR 등 10종 보안솔루션 연동, 이벤트 실시간 모니터링, 심각도 필터, 30초 자동 새로고침 |
 | **로그 통합관리** | 개인정보처리시스템·AD·NAC·망연계 로그 조회(연동 준비), 날짜·결과 필터, 통합검색 UI |
 | **IT 및 정보보호 교육** | 코스 관리, 객관식 퀴즈(한 문항씩 풀이·진행률 바·문항 번호 점프·미답변 안내), **퀴즈 오답 리뷰(내가 선택한 답·정답·해설 표시)**, **문제은행(분류·난이도·키워드 검색, 엑셀 일괄 업로드, 난이도별 랜덤 출제, 기본 샘플 문항)**, **교육·훈련 결과 화면(교육 이수 현황·모의훈련 결과 탭)**, 이수율·점수 추적 |
@@ -192,6 +193,17 @@ GET    /api/assets/:id
 PATCH  /api/assets/:id                    # (MANAGER+)
 DELETE /api/assets/:id                    # (ADMIN)
 
+# SBOM 관리
+GET    /api/sbom/software                 # SW 목록 (keyword 필터, 페이징)
+GET    /api/sbom/software/all             # SW 전체 간략 목록 (자산 맵핑용)
+GET    /api/sbom/software/:id             # SW 상세 (라이브러리 목록 포함)
+POST   /api/sbom/software                 # SW 등록 (MANAGER+)
+PATCH  /api/sbom/software/:id             # SW 수정 (MANAGER+)
+DELETE /api/sbom/software/:id             # SW 삭제 — 맵핑된 자산은 자동 해제 (MANAGER+)
+POST   /api/sbom/software/:id/components  # 라이브러리 추가 (MANAGER+)
+PATCH  /api/sbom/components/:id           # 라이브러리 수정 (MANAGER+)
+DELETE /api/sbom/components/:id           # 라이브러리 삭제 (MANAGER+)
+
 # 보안이벤트 관리
 GET    /api/security-integrations         # 연동 솔루션 목록
 POST   /api/security-integrations         # 연동 추가 (MANAGER+)
@@ -238,6 +250,8 @@ DELETE /api/monthly-checks/:id           # 항목 삭제
 # 일괄 등록 (MANAGER+)
 GET    /api/assets/bulk/template
 POST   /api/assets/bulk
+GET    /api/sbom/bulk/template
+POST   /api/sbom/bulk
 GET    /api/policies/bulk/template
 POST   /api/policies/bulk
 GET    /api/vulnerabilities/bulk/template
@@ -398,6 +412,7 @@ secportal/
 │       ├── training/                # 교육 코스 + 퀴즈
 │       ├── incident/                # 보안 인시던트
 │       ├── asset/                   # IT 자산 관리
+│       ├── sbom/                    # SBOM 관리 (SW·라이브러리 구성)
 │       ├── security/                # 보안이벤트 관리 (연동·이벤트)
 │       ├── admin/                   # 사용자 관리 (ADMIN)
 │       ├── audit/                   # 감사 로그
@@ -436,6 +451,7 @@ secportal/
             ├── risk/                # 위험평가, 위험처리 계획
             ├── incident/            # 인시던트 목록·상세·폼
             ├── asset/               # 자산 목록·상세·폼
+            ├── sbom/                # SBOM 관리 (SW·라이브러리·엑셀 일괄등록)
             ├── security/            # 보안이벤트 관리
             ├── log/                 # 로그 통합관리 (개인정보·AD·NAC·망연계·통합검색)
             ├── training/            # 교육 목록·상세(퀴즈)
@@ -464,7 +480,9 @@ secportal/
 | `quiz_questions` | 퀴즈 문항 |
 | `training_completions` | 교육 이수 기록 |
 | `audit_logs` | 감사 로그 |
-| `assets` | IT 자산 |
+| `assets` | IT 자산 (sbom_software_id로 SBOM SW 맵핑) |
+| `sbom_software` | SBOM SW 정보 (name+version UNIQUE) |
+| `sbom_components` | SW별 포함 라이브러리 (이름·버전·라이선스) |
 | `incidents` | 보안 인시던트 |
 | `security_integrations` | 보안솔루션 연동 정보 |
 | `security_events` | 보안 이벤트 수집 기록 |
@@ -510,6 +528,8 @@ secportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.2.0](release/v1.2.0/RELEASE_NOTES.md) | SBOM 관리 — SW별 라이브러리 구성 관리, 엑셀 일괄등록, SW 자산 SBOM 맵핑 |
+| [v1.1.0](release/v1.1.0/RELEASE_NOTES.md) | 문제은행, 퀴즈 한 문항씩 풀이·오답 리뷰, 교육·훈련 결과 화면 |
 | [v1.0.0](release/v1.0.0/RELEASE_NOTES.md) | 최초 릴리즈 — 정보보호 포탈 전 기능 (아래 주요 기능 참조) |
 
 ---

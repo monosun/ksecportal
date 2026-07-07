@@ -33,6 +33,25 @@
           </div>
         </div>
 
+        <!-- SW 자산 → SBOM 맵핑 -->
+        <div v-if="form.assetCategory === 'SW'" class="bg-blue-50 rounded-lg p-4 space-y-2">
+          <label class="block text-sm font-medium text-gray-700">SBOM 맵핑</label>
+          <template v-if="sbomLoaded && sbomList.length">
+            <select v-model="form.sbomSoftwareId" class="input w-full">
+              <option value="">맵핑 안함</option>
+              <option v-for="s in sbomList" :key="s.id" :value="s.id">
+                {{ s.name }} {{ s.version }}{{ s.vendor ? ` — ${s.vendor}` : '' }} (라이브러리 {{ s.componentCount }}개)
+              </option>
+            </select>
+            <p class="text-xs text-blue-700">SBOM 관리에 등록된 SW를 선택하면 이 자산과 라이브러리 구성 정보가 연결됩니다.</p>
+          </template>
+          <p v-else-if="sbomLoaded" class="text-sm text-gray-500">
+            SBOM 관리에 등록된 SW가 없습니다.
+            <RouterLink to="/sbom" class="text-blue-600 hover:underline">SBOM 관리</RouterLink>에서 먼저 SW를 등록하세요.
+          </p>
+          <p v-else class="text-sm text-gray-400">SBOM 목록 확인 중...</p>
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('asset.description') }}</label>
           <textarea v-model="form.description" rows="2" class="input w-full resize-none" placeholder="용도 및 역할" />
@@ -268,9 +287,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { assetApi, adminApi, codeApi } from '@/api'
+import { assetApi, adminApi, codeApi, sbomApi } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -305,7 +324,7 @@ const form = ref({
   ipAddress: '', osType: '', spec: '',
   criticality: 'MEDIUM', confidentiality: 'MEDIUM', integrity: 'MEDIUM', availability: 'MEDIUM',
   personalInfoIncluded: false, personalInfoType: '', personalInfoProcessing: false,
-  linkedSystems: '',
+  linkedSystems: '', sbomSoftwareId: '',
   accessControlTarget: false, backupTarget: false, logManagementTarget: false,
   monthlyCost: '', contractExpiry: '', lastInspectionDate: '', nextInspectionDate: '',
   lastReviewDate: '', remarks: ''
@@ -315,6 +334,22 @@ const submitting = ref(false)
 const error = ref(null)
 
 const isCloudAsset = computed(() => cloudTypeValues.includes(form.value.type))
+
+// ── SBOM 맵핑 (자산유형 SW 선택 시 SBOM 등록 항목 조회) ─────────────
+const sbomList = ref([])
+const sbomLoaded = ref(false)
+
+watch(() => form.value.assetCategory, async (category) => {
+  if (category !== 'SW' || sbomLoaded.value) return
+  try {
+    const res = await sbomApi.listAll()
+    sbomList.value = res.data || []
+  } catch {
+    sbomList.value = []
+  } finally {
+    sbomLoaded.value = true
+  }
+}, { immediate: true })
 
 onMounted(async () => {
   try {
@@ -351,6 +386,7 @@ onMounted(async () => {
       personalInfoType: a.personalInfoType || '',
       personalInfoProcessing: a.personalInfoProcessing || false,
       linkedSystems: a.linkedSystems || '',
+      sbomSoftwareId: a.sbomSoftwareId || '',
       accessControlTarget: a.accessControlTarget || false,
       backupTarget: a.backupTarget || false,
       logManagementTarget: a.logManagementTarget || false,
@@ -380,6 +416,12 @@ async function submit() {
     if (!payload.nextInspectionDate) payload.nextInspectionDate = null
     if (!payload.lastReviewDate) payload.lastReviewDate = null
     if (!payload.assetCategory) payload.assetCategory = null
+    // SW가 아니거나 선택 해제 시: 수정에서는 0(매핑 해제), 등록에서는 null
+    if (payload.assetCategory === 'SW' && payload.sbomSoftwareId) {
+      payload.sbomSoftwareId = Number(payload.sbomSoftwareId)
+    } else {
+      payload.sbomSoftwareId = isEdit.value ? 0 : null
+    }
     if (isEdit.value) {
       await assetApi.update(route.params.id, payload)
       router.push(`/assets/${route.params.id}`)

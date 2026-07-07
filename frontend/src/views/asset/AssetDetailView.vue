@@ -39,6 +39,13 @@
             <p class="text-gray-500 mb-1">{{ $t('asset.type') }}</p>
             <p class="font-medium">{{ $t(`asset.type_label.${asset.type}`) }}</p>
           </div>
+          <div v-if="asset.sbomSoftwareId" class="col-span-2">
+            <p class="text-gray-500 mb-1">SBOM 맵핑</p>
+            <RouterLink to="/sbom" class="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium">
+              {{ asset.sbomSoftwareName }} <span class="font-mono">{{ asset.sbomSoftwareVersion }}</span>
+              <span class="badge-blue">라이브러리 {{ asset.sbomComponentCount ?? 0 }}개</span>
+            </RouterLink>
+          </div>
           <div v-if="asset.description" class="col-span-2">
             <p class="text-gray-500 mb-1">{{ $t('asset.description') }}</p>
             <p class="text-gray-700 whitespace-pre-wrap">{{ asset.description }}</p>

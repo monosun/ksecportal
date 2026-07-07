@@ -4,6 +4,7 @@ import com.monosun.secportal.asset.entity.Asset;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -33,4 +34,8 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
 
     long countByActive(boolean active);
     long countByCriticality(Asset.Criticality criticality);
+
+    @Modifying
+    @Query("UPDATE Asset a SET a.sbomSoftware = null WHERE a.sbomSoftware.id = :sbomSoftwareId")
+    void clearSbomSoftware(@Param("sbomSoftwareId") Long sbomSoftwareId);
 }

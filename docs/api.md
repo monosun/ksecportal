@@ -427,6 +427,79 @@ ISMS-P 인증 항목 목록 조회.
 
 ### DELETE /assets/:id *(ADMIN)*
 
+> 자산유형(`assetCategory`)이 `SW`인 자산은 `sbomSoftwareId`로 SBOM 관리에 등록된 SW를 맵핑할 수 있습니다.
+> 등록/수정 요청에 `sbomSoftwareId`(SW id)를 포함하면 맵핑되고, 수정 시 `0` 이하 값을 보내면 맵핑이 해제됩니다.
+> 응답에는 `sbomSoftwareId`, `sbomSoftwareName`, `sbomSoftwareVersion`, `sbomComponentCount`가 포함됩니다.
+
+---
+
+## SBOM 관리 (SBOM)
+
+소프트웨어(SW명+버전)별로 포함된 라이브러리·버전·라이선스를 관리합니다.
+
+### GET /sbom/software
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `keyword` | String | SW명 / 버전 / 공급업체 검색 |
+| `page`, `size` | int | 페이징 (기본 20건) |
+
+### GET /sbom/software/all
+
+자산 맵핑 드롭다운용 전체 SW 간략 목록 (`id`, `name`, `version`, `vendor`, `componentCount`).
+
+### GET /sbom/software/:id
+
+SW 상세 + 포함 라이브러리(`components`) 목록.
+
+### POST /sbom/software *(MANAGER+)*
+
+```json
+{
+  "name": "KSecPortal Backend",
+  "version": "1.2.0",
+  "vendor": "Monosun",
+  "description": "보안포털 백엔드 서비스"
+}
+```
+
+`name`+`version` 조합은 중복 등록할 수 없습니다.
+
+### PATCH /sbom/software/:id *(MANAGER+)*
+
+### DELETE /sbom/software/:id *(MANAGER+)*
+
+SW 삭제 시 포함 라이브러리가 함께 삭제되고, 해당 SW에 맵핑된 자산은 맵핑이 자동 해제됩니다.
+
+### POST /sbom/software/:id/components *(MANAGER+)*
+
+```json
+{
+  "libraryName": "spring-boot-starter-web",
+  "libraryVersion": "3.2.4",
+  "license": "Apache-2.0",
+  "remarks": ""
+}
+```
+
+### PATCH /sbom/components/:componentId *(MANAGER+)*
+
+### DELETE /sbom/components/:componentId *(MANAGER+)*
+
+### GET /sbom/bulk/template *(MANAGER+)*
+
+엑셀 일괄등록 템플릿 다운로드 (`sbom-upload-template.xlsx`).
+컬럼: `SW명*`, `SW버전*`, `공급업체`, `SW설명`, `라이브러리명*`, `라이브러리 버전`, `라이선스`, `비고`
+— 한 행에 라이브러리 1건씩 입력하며, 같은 SW명+버전 행은 하나의 SW로 묶여 등록됩니다.
+
+### POST /sbom/bulk *(MANAGER+, multipart)*
+
+```json
+{ "total": 5, "success": 5, "failed": 0, "softwareCount": 2, "errors": [] }
+```
+
+이미 등록된 SW명+버전이면 기존 SW에 라이브러리가 추가되고, 동일 라이브러리명+버전은 라이선스/비고만 갱신됩니다(재업로드 시 중복 없음).
+
 ---
 
 ## IT 및 정보보호 교육 (Training)
