@@ -179,6 +179,23 @@
           </button>
         </RouterLink>
 
+        <!-- 도움말 -->
+        <RouterLink to="/help" custom v-slot="{ isActive, navigate }">
+          <button @click="navigate"
+            :class="[
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium text-left',
+              isActive
+                ? (isDark ? 'bg-primary-500 text-white' : 'bg-primary-50 text-primary-600')
+                : (isDark ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')
+            ]">
+            <svg class="w-[17px] h-[17px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>{{ $t('nav.help') }}</span>
+          </button>
+        </RouterLink>
+
         <!-- 프로필 -->
         <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mt-1"
           :class="isDark ? 'bg-gray-800' : 'bg-gray-50'">

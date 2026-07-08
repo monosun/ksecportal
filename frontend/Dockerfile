@@ -3,6 +3,9 @@ WORKDIR /app
 COPY frontend/package.json ./
 RUN npm install
 COPY frontend/ .
+# 도움말 메뉴에서 서빙되는 사용자 매뉴얼 — docs/ 가 단일 원본
+COPY docs/user-manual.md ./public/help/user-manual.md
+COPY docs/images/ ./public/help/images/
 RUN npm run build
 
 FROM debian:bookworm-slim

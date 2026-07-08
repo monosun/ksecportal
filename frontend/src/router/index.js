@@ -311,6 +311,11 @@ const routes = [
         component: () => import('@/views/settings/UISettingsView.vue')
       },
       {
+        path: 'help',
+        name: 'Help',
+        component: () => import('@/views/help/HelpView.vue')
+      },
+      {
         path: 'phishing',
         name: 'Phishing',
         component: () => import('@/views/phishing/PhishingView.vue')
