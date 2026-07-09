@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.monosun.secportal'
-version = '1.5.0'
+version = '1.6.0'
 sourceCompatibility = '17'
 
 configurations {
@@ -41,6 +41,9 @@ dependencies {
 
     // Excel (Apache POI)
     implementation 'org.apache.poi:poi-ooxml:5.2.5'
+
+    // 소스 취약점 점검 — GitHub 저장소 tarball(.tar.gz) 해제용
+    implementation 'org.apache.commons:commons-compress:1.26.2'
 
     // TOTP (MFA)
     implementation 'dev.samstevens.totp:totp:1.7.1'

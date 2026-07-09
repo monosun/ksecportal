@@ -616,6 +616,20 @@ export const aiApi = {
   analyze:        (data) => api.post('/ai/analyze', data, { timeout: 120000 }),
 }
 
+export const githubConfigApi = {
+  get: () => api.get('/admin/github-config'),
+  save: (data) => api.put('/admin/github-config', data),
+  test: () => api.post('/admin/github-config/test'),
+}
+
+export const sourceScanApi = {
+  repos: () => api.get('/source-scan/repos'),
+  run: (repository) => api.post('/source-scan/run', { repository }, { timeout: 120000 }),
+  scans: (params) => api.get('/source-scan/scans', { params }),
+  scan: (id) => api.get(`/source-scan/scans/${id}`),
+  delete: (id) => api.delete(`/source-scan/scans/${id}`),
+}
+
 export const backupApi = {
   download: (password) =>
     api.post('/admin/backup/download', { password }, { responseType: 'blob' }),

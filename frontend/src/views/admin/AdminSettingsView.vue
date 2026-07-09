@@ -602,7 +602,67 @@
 
     <!-- ── 탭: API 연동 ── -->
     <div v-show="activeTab === 'api'" class="page-body">
-      <div class="max-w-xl">
+      <div class="max-w-xl space-y-6">
+        <!-- GitHub 연동 -->
+        <div class="card">
+          <h2 class="text-base font-bold text-gray-800 mb-1">GitHub 연동</h2>
+          <p class="text-sm text-gray-400 mb-5">
+            <strong>소스 취약점 점검</strong> 메뉴에서 GitHub 저장소의 Dependabot·Code scanning·Secret scanning 알림을 조회합니다.<br>
+            Personal Access Token은 <strong>github.com → Settings → Developer settings</strong>에서 발급하세요.
+            (필요 권한: repo 읽기, Dependabot alerts·Code scanning alerts·Secret scanning alerts 읽기)
+          </p>
+
+          <div v-if="ghCfg.tokenStored" class="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            토큰 등록됨 — <code class="font-mono">{{ ghCfg.tokenMasked }}</code>
+          </div>
+          <div v-else class="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            토큰 미등록 — 소스 취약점 점검을 사용할 수 없습니다
+          </div>
+
+          <div class="space-y-4 max-w-sm">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">
+                {{ ghCfg.tokenStored ? '새 토큰으로 교체' : 'Personal Access Token' }}
+              </label>
+              <input v-model="ghTokenInput" type="password" class="input text-sm font-mono"
+                :placeholder="ghCfg.tokenStored ? '새 토큰을 입력하면 교체됩니다' : 'ghp_... 또는 github_pat_...'"
+                autocomplete="new-password" />
+              <p class="text-xs text-gray-400 mt-1">토큰은 서버에만 저장되며 화면에는 마스킹되어 표시됩니다.</p>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">기본 Owner / 조직 (선택)</label>
+              <input v-model="ghCfg.owner" type="text" class="input text-sm font-mono" placeholder="예: monosun" />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">API Base URL (선택 — GitHub Enterprise)</label>
+              <input v-model="ghCfg.apiBaseUrl" type="text" class="input text-sm font-mono" placeholder="기본: https://api.github.com" />
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+              <button @click="saveGithubConfig" :disabled="ghSaving"
+                class="btn-primary px-6 py-2 text-sm rounded-xl disabled:opacity-50">
+                {{ ghSaving ? '저장 중...' : '저장' }}
+              </button>
+              <button @click="testGithubConnection" :disabled="ghTesting || !ghCfg.tokenStored"
+                class="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                {{ ghTesting ? '테스트 중...' : '연결 테스트' }}
+              </button>
+              <button v-if="ghCfg.tokenStored" @click="clearGithubToken" :disabled="ghSaving"
+                class="px-4 py-2 text-sm border border-red-300 text-red-600 rounded-xl hover:bg-red-50 disabled:opacity-50 transition-colors">
+                토큰 삭제
+              </button>
+            </div>
+            <p v-if="ghMsg" class="text-sm font-semibold" :class="ghOk ? 'text-green-600' : 'text-red-500'">
+              {{ ghMsg }}
+            </p>
+          </div>
+        </div>
+
         <div class="card">
           <h2 class="text-base font-bold text-gray-800 mb-1">법제처 Open API 키</h2>
           <p class="text-sm text-gray-400 mb-5">
@@ -676,7 +736,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUiSettingsStore } from '@/stores/uiSettings'
-import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi } from '@/api/index.js'
+import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi } from '@/api/index.js'
 import { INDUSTRIES, CATEGORIES } from '@/data/legalIndustries.js'
 import { setLawApiKeySet } from '@/services/legalApiService.js'
 
@@ -701,6 +761,84 @@ const showApiKey      = ref(false)
 const lawApiKeyMsg    = ref('')
 const lawApiKeyOk     = ref(false)
 const lawApiKeySaving = ref(false)
+
+// ── GitHub 연동 설정 ─────────────────────────────
+const ghCfg = ref({ tokenStored: false, tokenMasked: '', owner: '', apiBaseUrl: '' })
+const ghTokenInput = ref('')
+const ghSaving = ref(false)
+const ghTesting = ref(false)
+const ghMsg = ref('')
+const ghOk = ref(false)
+
+async function loadGithubConfig() {
+  try {
+    const res = await githubConfigApi.get()
+    const d = res.data || {}
+    ghCfg.value = {
+      tokenStored: !!d.tokenStored,
+      tokenMasked: d.tokenMasked || '',
+      owner: d.owner || '',
+      apiBaseUrl: d.apiBaseUrl || ''
+    }
+  } catch {}
+}
+
+async function saveGithubConfig() {
+  ghSaving.value = true
+  ghMsg.value = ''
+  try {
+    const res = await githubConfigApi.save({
+      token: ghTokenInput.value.trim() || null,
+      owner: ghCfg.value.owner ?? '',
+      apiBaseUrl: ghCfg.value.apiBaseUrl ?? ''
+    })
+    const d = res.data || {}
+    ghCfg.value.tokenStored = !!d.tokenStored
+    ghCfg.value.tokenMasked = d.tokenMasked || ''
+    ghTokenInput.value = ''
+    ghOk.value = true
+    ghMsg.value = '저장되었습니다.'
+    setTimeout(() => { ghMsg.value = '' }, 3000)
+  } catch {
+    ghOk.value = false
+    ghMsg.value = '저장에 실패했습니다.'
+  } finally {
+    ghSaving.value = false
+  }
+}
+
+async function clearGithubToken() {
+  if (!confirm('GitHub 토큰을 삭제하시겠습니까? 소스 취약점 점검을 사용할 수 없게 됩니다.')) return
+  ghSaving.value = true
+  try {
+    await githubConfigApi.save({ token: '-' })
+    ghCfg.value.tokenStored = false
+    ghCfg.value.tokenMasked = ''
+    ghOk.value = false
+    ghMsg.value = '토큰이 삭제되었습니다.'
+    setTimeout(() => { ghMsg.value = '' }, 3000)
+  } catch {
+    ghMsg.value = '삭제에 실패했습니다.'
+  } finally {
+    ghSaving.value = false
+  }
+}
+
+async function testGithubConnection() {
+  ghTesting.value = true
+  ghMsg.value = ''
+  try {
+    const res = await githubConfigApi.test()
+    const d = res.data || {}
+    ghOk.value = !!d.success
+    ghMsg.value = d.message || (d.success ? '연결 성공' : '연결 실패')
+  } catch (e) {
+    ghOk.value = false
+    ghMsg.value = e || '연결 테스트에 실패했습니다.'
+  } finally {
+    ghTesting.value = false
+  }
+}
 
 async function loadLawApiKeyStatus() {
   try {
@@ -1047,6 +1185,7 @@ onMounted(async () => {
   loadSecurityConfig()
   loadOktaConfig()
   loadLawApiKeyStatus()
+  loadGithubConfig()
   try { const data = await notificationConfigApi.get(); notifyCfg.value = { ...notifyCfg.value, ...data } } catch {}
   loadRssConfig()
 })

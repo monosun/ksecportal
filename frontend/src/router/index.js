@@ -219,6 +219,11 @@ const routes = [
         name: 'SecurityFindings',
         component: () => import('@/views/secfinding/SecFindingView.vue')
       },
+      {
+        path: 'source-scan',
+        name: 'SourceScan',
+        component: () => import('@/views/sourcescan/SourceScanView.vue')
+      },
       // 위협 관리
       {
         path: 'threat-management',

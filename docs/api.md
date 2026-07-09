@@ -949,6 +949,54 @@ HTTP 403 Forbidden
 
 ---
 
+## 소스 취약점 점검 (Source Scan / SAST)
+
+GitHub 저장소를 대상으로 의존성(Dependabot)·코드(Code scanning)·시크릿(Secret scanning) 알림과 내장 OWASP 정적분석(SAST)을 수행합니다.
+
+### GET /admin/github-config *(ADMIN)*
+
+GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenStored`, `tokenMasked`, `apiBaseUrl`, `owner`).
+
+### PUT /admin/github-config *(ADMIN)*
+
+연동 설정 저장. `token`이 빈 값이면 기존 토큰 유지, `"-"`이면 삭제.
+
+```json
+{ "token": "ghp_xxx", "apiBaseUrl": "https://api.github.com", "owner": "monosun" }
+```
+
+### POST /admin/github-config/test *(ADMIN)*
+
+토큰으로 GitHub 연결을 시험하고 로그인 계정을 반환.
+
+### GET /source-scan/repos *(MANAGER+)*
+
+토큰으로 접근 가능한 저장소 목록 (`fullName`, `privateRepo`, `defaultBranch` 등).
+
+### POST /source-scan/run *(MANAGER+)*
+
+점검 실행. 4개 카테고리(의존성·코드·시크릿·SAST)를 함께 점검하고 상세 결과를 반환.
+
+```json
+{ "repository": "owner/repo" }
+```
+
+응답 `scan`에 카테고리별 발견 수(`dependencyCount`·`codeCount`·`secretCount`·`sastCount`)와 심각도별 집계, `findings[]`에 항목별 상세(`category`·`severity`·`title`·`identifier`(OWASP·CWE)·`location`(파일:라인)·`htmlUrl`)가 포함됩니다.
+
+### GET /source-scan/scans
+
+점검 이력 (페이지네이션).
+
+### GET /source-scan/scans/:id
+
+점검 상세 (scan + findings).
+
+### DELETE /source-scan/scans/:id *(MANAGER+)*
+
+점검 이력 삭제.
+
+---
+
 ## 관련 문서
 
 - [FAQ — 자주 묻는 오류](faq.md)

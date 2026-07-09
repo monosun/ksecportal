@@ -31,6 +31,7 @@
     "committee": "정보보호위원회",
     "internalAudit": "내부감사",
     "secFindings": "보안 결함사항",
+    "sourceScan": "소스 취약점 점검",
     "logout": "로그아웃",
     "profile": "내 정보",
     "settings": "환경설정",
