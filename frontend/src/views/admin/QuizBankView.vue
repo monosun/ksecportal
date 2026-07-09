@@ -55,6 +55,36 @@
       <span class="text-xs text-gray-400 ml-auto pb-2">총 {{ totalElements }}문항</span>
     </div>
 
+    <!-- 분류별 문제 현황 -->
+    <div class="card mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-gray-800 text-sm">분류별 문제 현황</h2>
+        <span class="text-xs text-gray-400">분류를 클릭하면 해당 분류로 필터링됩니다 · 휴지통으로 분류 전체 삭제</span>
+      </div>
+      <div v-if="categoryStats.length === 0" class="text-xs text-gray-400 py-1">등록된 문제가 없습니다.</div>
+      <div v-else class="flex flex-wrap gap-2">
+        <div v-for="s in categoryStats" :key="s.category ?? '__none__'"
+          class="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-lg border transition-colors"
+          :class="filters.category === (s.category ?? '') && s.category !== null
+            ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-gray-50'">
+          <button @click="filterByCategory(s.category)" class="flex items-center gap-2">
+            <span class="text-sm font-medium" :class="s.category ? 'text-gray-700' : 'text-gray-400 italic'">
+              {{ s.category || '미분류' }}
+            </span>
+            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">{{ s.count }}</span>
+          </button>
+          <button @click="deleteCategory(s)" :disabled="deletingCategory"
+            class="text-gray-400 hover:text-red-500 rounded p-0.5 disabled:opacity-40"
+            :title="`'${s.category || '미분류'}' 분류의 문제 전체 삭제`">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 목록 -->
     <div class="card">
       <div v-if="loading" class="text-center py-10 text-gray-500">로딩 중...</div>
@@ -225,6 +255,8 @@ import { useDebounceFn } from '@vueuse/core'
 
 const questions = ref([])
 const categories = ref([])
+const categoryStats = ref([])
+const deletingCategory = ref(false)
 const loading = ref(true)
 const page = ref(0)
 const totalPages = ref(0)
@@ -323,6 +355,34 @@ async function loadCategories() {
   try { categories.value = (await quizBankApi.categories()).data ?? [] } catch { categories.value = [] }
 }
 
+async function loadStats() {
+  try { categoryStats.value = (await quizBankApi.categoryStats()).data ?? [] } catch { categoryStats.value = [] }
+}
+
+function filterByCategory(category) {
+  // 미분류(null)는 서버 필터가 없으므로 전체만 토글
+  const target = category ?? ''
+  filters.value.category = filters.value.category === target ? '' : target
+  search()
+}
+
+async function deleteCategory(stat) {
+  const label = stat.category || '미분류'
+  if (!confirm(`'${label}' 분류의 문제 ${stat.count}개를 모두 삭제하시겠습니까?\n삭제된 문제는 복구할 수 없습니다.`)) return
+  deletingCategory.value = true
+  try {
+    const res = await quizBankApi.deleteByCategory(stat.category ?? '')
+    if (filters.value.category === (stat.category ?? '')) filters.value.category = ''
+    page.value = 0
+    await Promise.all([load(), loadCategories(), loadStats()])
+    alert(`'${label}' 분류의 문제 ${res.data ?? stat.count}개를 삭제했습니다.`)
+  } catch (e) {
+    alert(e || '삭제에 실패했습니다.')
+  } finally {
+    deletingCategory.value = false
+  }
+}
+
 function openCreate() { form.value = emptyForm(); showForm.value = true }
 function openEdit(q) {
   form.value = { id: q.id, category: q.category ?? '', difficulty: q.difficulty || '중', question: q.question, optionA: q.optionA, optionB: q.optionB,
@@ -337,7 +397,7 @@ async function submitForm() {
     if (id) await quizBankApi.update(id, data)
     else await quizBankApi.create(data)
     showForm.value = false
-    load(); loadCategories()
+    load(); loadCategories(); loadStats()
   } catch (e) {
     alert(e || '저장에 실패했습니다.')
   } finally {
@@ -347,7 +407,7 @@ async function submitForm() {
 
 async function confirmDelete(q) {
   if (!confirm(`문제 #${q.id}를 삭제하시겠습니까?`)) return
-  try { await quizBankApi.delete(q.id); load(); loadCategories() }
+  try { await quizBankApi.delete(q.id); load(); loadCategories(); loadStats() }
   catch (e) { alert(e || '삭제에 실패했습니다.') }
 }
 
@@ -362,15 +422,16 @@ async function handleBulkUpload(file, resolve, reject) {
     const d = res.data ?? {}
     // BulkImportModal 결과 형식({total, success, failed, errors:[{row,message}]})으로 변환
     resolve({
-      total: (d.successCount ?? 0) + (d.failCount ?? 0),
+      total: (d.successCount ?? 0) + (d.failCount ?? 0) + (d.skippedCount ?? 0),
       success: d.successCount ?? 0,
       failed: d.failCount ?? 0,
+      skipped: d.skippedCount ?? 0,
       errors: (d.errors ?? []).map(msg => {
         const m = String(msg).match(/^(\d+)행:\s*(.*)$/)
         return m ? { row: m[1], message: m[2] } : { row: '-', message: msg }
       }),
     })
-    load(); loadCategories()
+    load(); loadCategories(); loadStats()
   } catch (e) {
     reject(typeof e === 'string' ? e : '업로드 중 오류가 발생했습니다.')
   }
@@ -378,5 +439,5 @@ async function handleBulkUpload(file, resolve, reject) {
 
 function formatDate(dt) { return dt ? new Date(dt).toLocaleDateString() : '-' }
 
-onMounted(() => { load(); loadCategories() })
+onMounted(() => { load(); loadCategories(); loadStats() })
 </script>

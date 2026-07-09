@@ -18,8 +18,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +50,27 @@ public class QuizBankService {
     @Transactional(readOnly = true)
     public List<String> categories() {
         return repository.findDistinctCategories();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizBankDto.CategoryStat> categoryStats() {
+        return repository.countByCategory().stream()
+                .map(c -> QuizBankDto.CategoryStat.builder()
+                        .category(c.getCategory())
+                        .count(c.getTotal())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /** 분류 단위 일괄 삭제. category가 비어 있으면 미분류 문항을 삭제한다. */
+    @Transactional
+    public int deleteByCategory(String category) {
+        String cat = (category == null) ? null : category.trim();
+        boolean uncategorized = (cat == null || cat.isEmpty());
+        int deleted = uncategorized ? repository.deleteUncategorized() : repository.deleteByCategory(cat);
+        auditLogService.log("QUIZ_BANK_CATEGORY_DELETED", "QUIZ_BANK", null,
+                "category=" + (uncategorized ? "(미분류)" : cat) + ", count=" + deleted);
+        return deleted;
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────
@@ -139,6 +162,12 @@ public class QuizBankService {
     public QuizBankDto.BulkResult upload(MultipartFile file) throws IOException {
         List<String> errors = new ArrayList<>();
         List<QuizBankQuestion> toSave = new ArrayList<>();
+        int skipped = 0;
+
+        // 이미 등록된 문제 텍스트 + 이번 파일에서 이미 본 문제 텍스트 — 동일 문제는 등록하지 않는다.
+        Set<String> known = repository.findAllQuestionTexts().stream()
+                .map(s -> s == null ? "" : s.trim())
+                .collect(Collectors.toCollection(HashSet::new));
 
         try (Workbook wb = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -165,6 +194,8 @@ public class QuizBankService {
                         errors.add(rowNo + "행: 정답 보기가 비어 있습니다.");
                         continue;
                     }
+                    // 동일 문제(기존 등록분 또는 파일 내 중복)는 등록하지 않고 건너뛴다.
+                    if (!known.add(question.trim())) { skipped++; continue; }
                     toSave.add(QuizBankQuestion.builder()
                             .category(blankToNull(str(row, 0)))
                             .difficulty(difficulty.isBlank() ? "중" : difficulty)
@@ -184,10 +215,11 @@ public class QuizBankService {
 
         repository.saveAll(toSave);
         auditLogService.log("QUIZ_BANK_BULK_UPLOADED", "QUIZ_BANK", null,
-                "success=" + toSave.size() + ", fail=" + errors.size());
+                "success=" + toSave.size() + ", fail=" + errors.size() + ", skipped=" + skipped);
         return QuizBankDto.BulkResult.builder()
                 .successCount(toSave.size())
                 .failCount(errors.size())
+                .skippedCount(skipped)
                 .errors(errors)
                 .build();
     }

@@ -64,6 +64,14 @@ public class QuizBankDto {
     public static class BulkResult {
         private int successCount;
         private int failCount;
+        private int skippedCount;   // 동일 문제(중복)로 등록 제외된 건수
         private List<String> errors;
+    }
+
+    @Getter
+    @Builder
+    public static class CategoryStat {
+        private String category;    // 미분류는 null
+        private long count;
     }
 }

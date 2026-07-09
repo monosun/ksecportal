@@ -600,6 +600,18 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 
 등록된 분류 목록.
 
+### GET /quiz-bank/categories/stats
+
+분류별 문제 수. `[{ "category": "개인정보보호", "count": 12 }, ...]` — 미분류 문항은 `category: null` 버킷으로 반환.
+
+### DELETE /quiz-bank/by-category
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `category` | String | 삭제할 분류. 비어 있으면 미분류 문항을 삭제 |
+
+해당 분류의 문항을 일괄 삭제하고 삭제 건수를 반환.
+
 ### POST /quiz-bank
 
 ```json
@@ -626,7 +638,7 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 
 ### POST /quiz-bank/bulk
 
-`multipart/form-data`의 `file`로 엑셀 업로드 — 성공/실패 건수와 행별 오류 반환.
+`multipart/form-data`의 `file`로 엑셀 업로드 — 성공(`successCount`)·실패(`failCount`)·중복 제외(`skippedCount`) 건수와 행별 오류(`errors`) 반환. 이미 등록된 문항이나 파일 내 중복 등 **동일한 문제(문제 텍스트 일치)는 등록하지 않고 제외**합니다.
 
 ---
 

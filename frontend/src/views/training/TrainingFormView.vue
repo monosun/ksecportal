@@ -445,11 +445,12 @@ async function randomPick() {
 }
 
 function addFromBank() {
-  const seen = new Set(existingQuestions.value)
+  // 코스에 이미 있는 문제(텍스트)만 최초 1회 스냅샷으로 제외한다.
+  // 선택한 문항끼리 문제 텍스트가 같더라도(예: O/X·공통 지문) 서로 다른 문제은행 항목이므로 모두 추가한다.
+  const existing = new Set(existingQuestions.value)
   for (const q of bankSelected.value.values()) {
     const key = (q.question ?? '').trim()
-    if (seen.has(key)) continue   // 이미 추가된 문제는 건너뜀
-    seen.add(key)
+    if (existing.has(key)) continue   // 코스에 이미 등록된 문제만 건너뜀
     questions.value.push({
       question: q.question,
       optionA: q.optionA,

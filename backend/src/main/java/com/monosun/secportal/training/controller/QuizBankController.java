@@ -40,6 +40,18 @@ public class QuizBankController {
         return ApiResponse.ok(service.categories());
     }
 
+    @GetMapping("/categories/stats")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<List<QuizBankDto.CategoryStat>> categoryStats() {
+        return ApiResponse.ok(service.categoryStats());
+    }
+
+    @DeleteMapping("/by-category")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<Integer> deleteByCategory(@RequestParam(required = false) String category) {
+        return ApiResponse.ok(service.deleteByCategory(category));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ApiResponse<QuizBankDto.Response> create(@Valid @RequestBody QuizBankDto.Request req) {

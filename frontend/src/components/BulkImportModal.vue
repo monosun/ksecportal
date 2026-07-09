@@ -46,6 +46,7 @@
           <div class="flex gap-4 p-3 border-b bg-gray-50 rounded-t-lg font-medium">
             <span>{{ $t('isms.importTotal') }} {{ result.total }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
             <span class="text-green-600">{{ $t('isms.importSuccess') }} {{ result.success }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
+            <span v-if="result.skipped > 0" class="text-amber-600">{{ $t('common.loading') === '로딩 중...' ? '중복 제외' : 'Skipped' }} {{ result.skipped }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
             <span v-if="result.failed > 0" class="text-red-600">{{ $t('isms.importFailed') }} {{ result.failed }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
           </div>
           <ul v-if="result.errors?.length" class="divide-y max-h-40 overflow-y-auto">
@@ -53,6 +54,11 @@
               <span class="font-medium">{{ e.row }}행:</span> {{ e.message }}
             </li>
           </ul>
+          <p v-else-if="result.skipped > 0" class="px-3 py-2 text-amber-600 text-xs font-medium">
+            {{ $t('common.loading') === '로딩 중...'
+              ? `동일한 문제 ${result.skipped}건은 중복으로 제외되었습니다.`
+              : `${result.skipped} duplicate row(s) were skipped.` }}
+          </p>
           <p v-else class="px-3 py-2 text-green-600 text-xs font-medium">
             {{ $t('common.loading') === '로딩 중...' ? '모든 행이 성공적으로 등록되었습니다.' : 'All rows imported successfully.' }}
           </p>
@@ -63,7 +69,7 @@
 
       <div class="px-6 py-4 border-t flex justify-end gap-3">
         <button @click="$emit('close')" class="btn-secondary text-sm">{{ $t('common.cancel') }}</button>
-        <button @click="doUpload" :disabled="!selectedFile || uploading"
+        <button @click="doUpload" :disabled="!selectedFile || uploading || !!result"
           class="btn-primary text-sm flex items-center gap-2">
           <svg v-if="uploading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
