@@ -384,7 +384,6 @@ const navGroups = [
     icon: ShieldExclamationIcon,
     items: [
       { to: '/privacy/contractors',            label: 'nav.privacyContractors',   icon: ClipboardCheckIcon, menuKey: 'privacy_contractors' },
-      { to: '/privacy/contractor-check-items', label: 'nav.contractorCheckItems', icon: ClipboardCheckIcon, menuKey: 'privacy_contractors' },
       { to: '/privacy/contractor-checks',      label: 'nav.contractorChecks',     icon: ClipboardCheckIcon, menuKey: 'privacy_contractors' },
       { to: '/privacy/legal-compliance',        label: 'nav.legalCompliance',      icon: DocumentTextIcon,   menuKey: 'privacy_contractors' },
     ]

@@ -21,6 +21,7 @@ public class ContractorCheckService {
     private final ContractorCheckRepository checkRepository;
     private final ContractorCheckResultRepository resultRepository;
     private final ContractorCheckItemRepository itemRepository;
+    private final ContractorCheckItemDefaultRepository defaultRepository;
     private final ContractorRepository contractorRepository;
 
     @Transactional(readOnly = true)
@@ -47,34 +48,51 @@ public class ContractorCheckService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 수탁사 점검을 <b>항상 새 건으로</b> 생성한다. 같은 수탁사·연도라도 별도 이력으로 보관된다.
+     * 생성 시 코드관리(수탁사 기본점검항목)의 항목을 운영 점검항목으로 반영한 뒤 점검 결과를 초기화한다.
+     */
     @Transactional
-    public ContractorCheckDto.CheckResponse createOrGet(ContractorCheckDto.CheckRequest req) {
+    public ContractorCheckDto.CheckResponse create(ContractorCheckDto.CheckRequest req) {
         Contractor contractor = contractorRepository.findById(req.getContractorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Contractor", req.getContractorId()));
 
-        return checkRepository.findByContractorIdAndCheckYear(req.getContractorId(), req.getCheckYear())
-                .map(existing -> {
-                    if (req.getCheckDate() != null) existing.setCheckDate(req.getCheckDate());
-                    if (req.getInspector() != null) existing.setInspector(req.getInspector());
-                    if (req.getStatus() != null) existing.setStatus(ContractorCheck.Status.valueOf(req.getStatus()));
-                    if (req.getNotes() != null) existing.setNotes(req.getNotes());
-                    return ContractorCheckDto.CheckResponse.from(checkRepository.save(existing));
-                })
-                .orElseGet(() -> {
-                    ContractorCheck check = ContractorCheck.builder()
-                            .contractor(contractor)
-                            .checkYear(req.getCheckYear())
-                            .checkDate(req.getCheckDate())
-                            .inspector(req.getInspector())
-                            .status(req.getStatus() != null
-                                    ? ContractorCheck.Status.valueOf(req.getStatus())
-                                    : ContractorCheck.Status.PLANNED)
-                            .notes(req.getNotes())
-                            .build();
-                    ContractorCheck saved = checkRepository.save(check);
-                    initResults(saved);
-                    return ContractorCheckDto.CheckResponse.from(saved);
-                });
+        syncItemsFromDefaults();
+
+        ContractorCheck check = ContractorCheck.builder()
+                .contractor(contractor)
+                .checkYear(req.getCheckYear())
+                .checkDate(req.getCheckDate())
+                .inspector(req.getInspector())
+                .status(req.getStatus() != null
+                        ? ContractorCheck.Status.valueOf(req.getStatus())
+                        : ContractorCheck.Status.PLANNED)
+                .notes(req.getNotes())
+                .build();
+        ContractorCheck saved = checkRepository.save(check);
+        initResults(saved);
+        return ContractorCheckDto.CheckResponse.from(saved);
+    }
+
+    /** 코드관리 > 수탁사 기본점검항목에 있는데 운영 점검항목에 없는 항목을 추가한다(이름 기준, 삭제는 하지 않음). */
+    private void syncItemsFromDefaults() {
+        List<ContractorCheckItemDefault> defaults = defaultRepository.findAllByOrderBySortOrderAscIdAsc();
+        if (defaults.isEmpty()) return;
+        java.util.Set<String> existingNames = itemRepository.findAllByOrderBySortOrderAscIdAsc().stream()
+                .map(ContractorCheckItem::getItemName)
+                .collect(Collectors.toSet());
+        List<ContractorCheckItem> toAdd = defaults.stream()
+                .filter(d -> !existingNames.contains(d.getItemName()))
+                .map(d -> ContractorCheckItem.builder()
+                        .category(d.getCategory())
+                        .itemName(d.getItemName())
+                        .checkMethod(d.getCheckMethod())
+                        .checkStandard(d.getCheckStandard())
+                        .isRequired(true)
+                        .sortOrder(d.getSortOrder())
+                        .build())
+                .collect(Collectors.toList());
+        if (!toAdd.isEmpty()) itemRepository.saveAll(toAdd);
     }
 
     private void initResults(ContractorCheck check) {

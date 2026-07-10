@@ -36,9 +36,9 @@ public class ContractorCheckController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
-    public ApiResponse<ContractorCheckDto.CheckResponse> createOrGet(
+    public ApiResponse<ContractorCheckDto.CheckResponse> create(
             @Valid @RequestBody ContractorCheckDto.CheckRequest request) {
-        return ApiResponse.ok(service.createOrGet(request));
+        return ApiResponse.ok(service.create(request));
     }
 
     @PatchMapping("/{id}")

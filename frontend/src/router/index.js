@@ -349,11 +349,6 @@ const routes = [
         component: () => import('@/views/privacy/ContractorView.vue')
       },
       {
-        path: 'privacy/contractor-check-items',
-        name: 'ContractorCheckItems',
-        component: () => import('@/views/privacy/ContractorCheckItemView.vue')
-      },
-      {
         path: 'privacy/contractor-checks',
         name: 'ContractorChecks',
         component: () => import('@/views/privacy/ContractorCheckView.vue')

@@ -13,10 +13,8 @@ import java.util.List;
         indexes = {
                 @Index(name = "idx_check_contractor", columnList = "contractor_id"),
                 @Index(name = "idx_check_year", columnList = "check_year")
-        },
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_contractor_year", columnNames = {"contractor_id", "check_year"})
         })
+// 한 수탁사에 대해 점검 건별로 이력을 남기므로 (contractor_id, check_year) 유니크 제약을 두지 않는다.
 @Getter
 @Setter
 @NoArgsConstructor

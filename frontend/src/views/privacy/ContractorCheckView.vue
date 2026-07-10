@@ -50,6 +50,7 @@
                   {{ statusLabel(check.status) }}
                 </span>
               </div>
+              <p class="mt-0.5 text-xs text-gray-400">점검일 {{ check.checkDate || '미지정' }}</p>
               <div class="mt-1 flex items-center gap-2">
                 <div v-if="check.totalItems > 0" class="flex items-center gap-1 text-xs text-gray-500">
                   <span class="text-green-600 font-semibold">{{ check.passCount }}통과</span>
@@ -173,7 +174,7 @@
             </div>
 
             <div v-else-if="!detail || detail.results.length === 0" class="px-4 py-8 text-center">
-              <p class="text-sm text-gray-400">점검항목이 없습니다. 수탁사 점검항목 관리에서 항목을 먼저 추가하세요.</p>
+              <p class="text-sm text-gray-400">점검항목이 없습니다. 관리 &gt; 코드관리 &gt; 수탁사 기본점검항목에서 항목을 먼저 추가하세요.</p>
             </div>
 
             <div v-else-if="searchKeyword && filteredTotal === 0" class="px-4 py-8 text-center">
@@ -511,7 +512,7 @@ function openCreateCheck() {
   Object.assign(checkForm, {
     contractorId: '',
     checkYear: selectedYear.value,
-    checkDate: '',
+    checkDate: new Date().toISOString().slice(0, 10),
     inspector: '',
     status: 'PLANNED',
     notes: ''
@@ -546,7 +547,7 @@ async function saveCheck() {
     if (editingCheck.value) {
       await contractorCheckApi.update(selectedCheck.value.id, payload)
     } else {
-      await contractorCheckApi.createOrGet(payload)
+      await contractorCheckApi.create(payload)
       if (!years.value.includes(checkForm.checkYear)) {
         selectedYear.value = checkForm.checkYear
       }

@@ -39,7 +39,7 @@ CREATE TABLE contractor_checks (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (contractor_id) REFERENCES privacy_contractors(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_contractor_year (contractor_id, check_year),
+    -- 수탁사별 점검을 건별 이력으로 보관하므로 (contractor_id, check_year) 유니크 제약을 두지 않는다.
     INDEX idx_check_contractor (contractor_id),
     INDEX idx_check_year (check_year)
 );

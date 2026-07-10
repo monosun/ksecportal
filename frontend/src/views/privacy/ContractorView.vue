@@ -659,7 +659,7 @@ async function saveCheck() {
     if (checkModal.isEdit) {
       await contractorCheckApi.update(checkModal.editId, payload)
     } else {
-      const res = await contractorCheckApi.createOrGet(payload)
+      const res = await contractorCheckApi.create(payload)
       savedId = (res.data ?? res)?.id
     }
     checkModal.open = false
