@@ -24,12 +24,12 @@
           </svg>
           {{ $t('policy.bulkImport') }}
         </button>
-        <RouterLink v-if="isManager" to="/policies/new" class="btn-primary flex items-center gap-2">
+        <button v-if="isManager" @click="openCreate" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           {{ $t('policy.create') }}
-        </RouterLink>
+        </button>
       </div>
     </div>
 
@@ -75,7 +75,7 @@
         <tbody class="divide-y divide-gray-50">
           <tr v-for="p in policies" :key="p.id"
             class="hover:bg-gray-50 cursor-pointer transition-colors"
-            @click="$router.push(`/policies/${p.id}`)">
+            @click="openDetail(p)">
             <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ p.title }}</td>
             <td class="px-6 py-4"><span class="badge-blue">{{ $t(`policy.category_label.${p.category}`) }}</span></td>
             <td class="px-6 py-4"><span :class="statusBadgeClass(p.status)">{{ $t(`policy.status.${p.status}`) }}</span></td>
@@ -91,19 +91,37 @@
       <button v-for="n in totalPages" :key="n" @click="page = n - 1; loadPolicies()"
         :class="page === n - 1 ? 'btn-primary' : 'btn-secondary'" class="px-3 py-1 text-sm">{{ n }}</button>
     </div>
+
+    <!-- 정책 상세 모달 -->
+    <PolicyDetailModal :open="showDetailModal" :item-id="detailId"
+      @close="showDetailModal = false" @edit="onDetailEdit" @changed="loadPolicies" />
+
+    <!-- 정책 등록 모달 -->
+    <PolicyFormModal :open="showFormModal" :edit-id="editId" @close="showFormModal = false" @saved="onFormSaved" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { policyApi, exportApi, policyBulkApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
 import BulkImportModal from '@/components/BulkImportModal.vue'
+import PolicyFormModal from './PolicyFormModal.vue'
+import PolicyDetailModal from './PolicyDetailModal.vue'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
+
+const showFormModal = ref(false)
+const editId = ref(null)
+function openCreate() { editId.value = null; showFormModal.value = true }
+function onFormSaved() { showFormModal.value = false; page.value = 0; loadPolicies() }
+
+const showDetailModal = ref(false)
+const detailId = ref(null)
+function openDetail(p) { detailId.value = p.id; showDetailModal.value = true }
+function onDetailEdit(id) { showDetailModal.value = false; editId.value = id; showFormModal.value = true }
 const csvLoading = ref(false)
 const pdfLoading = ref(false)
 const showBulkModal = ref(false)

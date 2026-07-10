@@ -29,4 +29,7 @@ public interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, 
     long countByRoundId(Long roundId);
 
     void deleteByRoundId(Long roundId);
+
+    /** 처리방법이 특정 값인 항목 (위험 처리 계획 — '감소' 항목 조회용) */
+    List<RiskAssessment> findByRoundIdAndTreatment(Long roundId, RiskAssessment.Treatment treatment);
 }

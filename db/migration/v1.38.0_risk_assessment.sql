@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS risk_assessments (
     likelihood INT NOT NULL DEFAULT 3,
     impact INT NOT NULL DEFAULT 3,
     risk_grade ENUM('HIGH', 'MEDIUM', 'LOW') NOT NULL DEFAULT 'MEDIUM',
-    treatment ENUM('수용', '경감', '회피', '이전') DEFAULT '경감',
+    treatment ENUM('수용', '감소', '회피', '이전') DEFAULT '감소',
     notes TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

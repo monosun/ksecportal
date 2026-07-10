@@ -3,6 +3,7 @@ package com.monosun.secportal.risk.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,10 +46,18 @@ public class RiskAssessment {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Treatment treatment = Treatment.경감;
+    private Treatment treatment = Treatment.감소;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    // ── 위험 처리 계획 (완료 차수의 '감소' 항목 대상 — 연도/차수별 스냅샷) ──
+    @Column(columnDefinition = "TEXT")
+    private String plan;            // 조치 계획
+    private String planAssignee;    // 담당자
+    private LocalDate planDueDate;  // 완료 기한
+    private Integer planProgress;   // 진행률 0~100
+    private String planStatus;      // 계획중/진행중/완료/기한초과
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -61,5 +70,5 @@ public class RiskAssessment {
 
     public enum Grade { HIGH, MEDIUM, LOW }
 
-    public enum Treatment { 수용, 경감, 회피, 이전 }
+    public enum Treatment { 수용, 감소, 회피, 이전 }
 }

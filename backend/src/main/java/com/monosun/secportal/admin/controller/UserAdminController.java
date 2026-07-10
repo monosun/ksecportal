@@ -61,6 +61,12 @@ public class UserAdminController {
         return ApiResponse.ok(userAdminService.update(id, request));
     }
 
+    @PostMapping("/{id}/unlock")
+    public ApiResponse<UserAdminDto.Response> unlock(@PathVariable Long id) {
+        return ApiResponse.ok("비밀번호 오류 횟수를 초기화하고 잠금을 해제했습니다.",
+                userAdminService.resetFailedAttempts(id));
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<UserAdminDto.PendingResponse> delete(
             @AuthenticationPrincipal User currentUser,

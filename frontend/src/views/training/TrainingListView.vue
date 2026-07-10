@@ -10,12 +10,12 @@
           </svg>
           {{ pdfLoading ? '...' : 'PDF' }}
         </button>
-        <RouterLink v-if="isManager" to="/training/new" class="btn-primary flex items-center gap-2">
+        <button v-if="isManager" @click="openCreate" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           {{ $t('training.create') }}
-        </RouterLink>
+        </button>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div v-for="course in courses" :key="course.id"
         class="card hover:shadow-md transition-shadow cursor-pointer"
-        @click="$router.push(`/training/${course.id}`)">
+        @click="openDetail(course)">
         <div class="flex items-start justify-between mb-3">
           <div class="flex gap-2">
             <span :class="course.mandatory ? 'badge-red' : 'badge-gray'">
@@ -47,18 +47,36 @@
         </div>
       </div>
     </div>
+
+    <!-- 교육 상세 모달 -->
+    <TrainingDetailModal :open="showDetailModal" :item-id="detailId"
+      @close="showDetailModal = false" @edit="onDetailEdit" @changed="loadCourses" />
+
+    <!-- 교육 등록 모달 -->
+    <TrainingFormModal :open="showFormModal" :edit-id="editId" @close="showFormModal = false" @saved="onFormSaved" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { trainingApi, exportApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
+import TrainingFormModal from './TrainingFormModal.vue'
+import TrainingDetailModal from './TrainingDetailModal.vue'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
+
+const showFormModal = ref(false)
+const editId = ref(null)
+function openCreate() { editId.value = null; showFormModal.value = true }
+function onFormSaved() { showFormModal.value = false; loadCourses() }
+
+const showDetailModal = ref(false)
+const detailId = ref(null)
+function openDetail(course) { detailId.value = course.id; showDetailModal.value = true }
+function onDetailEdit(id) { showDetailModal.value = false; editId.value = id; showFormModal.value = true }
 
 const courses = ref([])
 const loading = ref(false)

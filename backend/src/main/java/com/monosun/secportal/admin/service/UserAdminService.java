@@ -82,6 +82,18 @@ public class UserAdminService {
         return UserAdminDto.Response.from(user);
     }
 
+    /** 비밀번호 오류 횟수 초기화 + 계정 잠금 해제 */
+    @Transactional
+    public UserAdminDto.Response resetFailedAttempts(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        auditLogService.log("USER_UNLOCKED", "USER", id,
+                "email=" + user.getEmail() + " — 비밀번호 오류 횟수 초기화 및 잠금 해제");
+        return UserAdminDto.Response.from(user);
+    }
+
     @Transactional
     public UserAdminDto.Response create(UserAdminDto.CreateRequest request, User requester) {
         if (userRepository.existsByEmail(request.getEmail())) {

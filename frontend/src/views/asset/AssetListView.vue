@@ -24,12 +24,19 @@
           </svg>
           엑셀 일괄 등록
         </button>
-        <RouterLink v-if="isManager" to="/assets/new" class="btn-primary flex items-center gap-2">
+        <button v-if="isManager" @click="showSnapshotModal = true"
+          class="btn-secondary flex items-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          시점 이력
+        </button>
+        <button v-if="isManager" @click="openCreate" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           {{ $t('asset.create') }}
-        </RouterLink>
+        </button>
       </div>
     </div>
 
@@ -126,6 +133,35 @@
       </div>
     </div>
 
+    <!-- 자산유형별 현황 -->
+    <div v-if="isManager" class="card mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-gray-800 text-sm">자산유형별 현황</h2>
+        <span class="text-xs text-gray-400">
+          유형을 클릭하면 해당 유형으로 필터링됩니다<span v-if="isAdmin"> · 휴지통으로 유형 전체 삭제</span>
+        </span>
+      </div>
+      <div v-if="typeStats.length === 0" class="text-xs text-gray-400 py-1">등록된 자산이 없습니다.</div>
+      <div v-else class="flex flex-wrap gap-2">
+        <div v-for="s in typeStats" :key="s.type"
+          class="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-lg border transition-colors"
+          :class="filters.type === s.type ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'">
+          <button @click="filterByType(s.type)" class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">{{ typeLabel(s.type) }}</span>
+            <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{{ s.count }}</span>
+          </button>
+          <button v-if="isAdmin" @click="deleteType(s)" :disabled="deletingType"
+            class="text-gray-400 hover:text-red-500 rounded p-0.5 disabled:opacity-40"
+            :title="`'${typeLabel(s.type)}' 유형의 자산 전체 삭제`">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Filters -->
     <div class="card mb-4 flex flex-wrap gap-3">
       <input v-model="filters.keyword" @input="debouncedSearch" :placeholder="$t('common.search')" class="input flex-1 min-w-48" />
@@ -165,13 +201,14 @@
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.type') }}</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">위치 / 리소스</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.owner') }}</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">운영담당자</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.criticality') }}</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('common.status') }}</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
-            <tr v-for="a in assets" :key="a.id" class="hover:bg-gray-50 cursor-pointer" @click="$router.push(`/assets/${a.id}`)">
+            <tr v-for="a in assets" :key="a.id" class="hover:bg-gray-50 cursor-pointer" @click="openDetail(a)">
               <td class="px-5 py-3">
                 <p class="font-medium text-gray-900">{{ a.name }}</p>
                 <span v-if="a.environment" :class="environmentBadge(a.environment)" class="text-xs mt-0.5 inline-block">
@@ -184,20 +221,24 @@
                   {{ $t(`asset.cloud_provider_label.${a.cloudProvider}`) }}
                 </span>
               </td>
-              <td class="px-5 py-3 text-gray-500 font-mono text-xs">
-                <span v-if="a.ipAddress">{{ a.ipAddress }}</span>
-                <span v-else-if="a.region">{{ a.region }}</span>
-                <span v-else>-</span>
-                <p v-if="a.cloudResourceId" class="text-gray-400 truncate max-w-32">{{ a.cloudResourceId }}</p>
+              <td class="px-5 py-3 text-xs">
+                <p v-if="a.location" class="text-gray-700">{{ a.location }}</p>
+                <p class="text-gray-500 font-mono">
+                  <span v-if="a.ipAddress">{{ a.ipAddress }}</span>
+                  <span v-else-if="a.region">{{ a.region }}</span>
+                  <span v-else-if="!a.location">-</span>
+                </p>
+                <p v-if="a.cloudResourceId" class="text-gray-400 font-mono truncate max-w-32">{{ a.cloudResourceId }}</p>
               </td>
               <td class="px-5 py-3 text-gray-600">{{ a.owner || '-' }}</td>
+              <td class="px-5 py-3 text-gray-600">{{ a.operator || '-' }}</td>
               <td class="px-5 py-3"><span :class="criticalityClass(a.criticality)">{{ $t(`asset.criticality_label.${a.criticality}`) }}</span></td>
               <td class="px-5 py-3">
                 <span :class="statusBadge(a.status)">{{ statusLabel(a.status) }}</span>
                 <p v-if="a.monthlyCost" class="text-xs text-gray-400 mt-0.5">₩{{ Number(a.monthlyCost).toLocaleString() }}</p>
               </td>
               <td class="px-5 py-3" @click.stop>
-                <RouterLink v-if="isManager" :to="`/assets/${a.id}/edit`" class="text-blue-600 hover:underline text-xs mr-3">{{ $t('common.edit') }}</RouterLink>
+                <button v-if="isManager" @click="openEdit(a)" class="text-blue-600 hover:underline text-xs mr-3">{{ $t('common.edit') }}</button>
                 <button v-if="isAdmin" @click="confirmDelete(a)" class="text-red-500 hover:underline text-xs">{{ $t('common.delete') }}</button>
               </td>
             </tr>
@@ -212,15 +253,27 @@
         {{ p }}
       </button>
     </div>
+
+    <!-- 자산 상세 모달 -->
+    <AssetDetailModal :open="showDetailModal" :asset-id="detailAssetId"
+      @close="showDetailModal = false" @edit="onDetailEdit" />
+
+    <!-- 자산 등록 / 수정 모달 -->
+    <AssetFormModal :open="showFormModal" :asset-id="editAssetId" @close="showFormModal = false" @saved="onFormSaved" />
+
+    <!-- 자산 시점(스냅샷) 이력 모달 -->
+    <AssetSnapshotModal :open="showSnapshotModal" @close="showSnapshotModal = false" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { assetApi, exportApi, assetBulkApi, codeApi } from '@/api'
 import { useDebounceFn } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
+import AssetFormModal from './AssetFormModal.vue'
+import AssetDetailModal from './AssetDetailModal.vue'
+import AssetSnapshotModal from './AssetSnapshotModal.vue'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
@@ -233,6 +286,45 @@ const totalPages = ref(0)
 const totalElements = ref(0)
 const highCount = ref(0)
 const cloudCount = ref(0)
+const typeStats = ref([])
+const deletingType = ref(false)
+
+// 자산 시점(스냅샷) 이력 모달
+const showSnapshotModal = ref(false)
+
+// 자산 상세 모달
+const showDetailModal = ref(false)
+const detailAssetId = ref(null)
+
+function openDetail(asset) {
+  detailAssetId.value = asset.id
+  showDetailModal.value = true
+}
+
+function onDetailEdit(id) {
+  showDetailModal.value = false
+  editAssetId.value = id
+  showFormModal.value = true
+}
+
+// 자산 등록/수정 모달
+const showFormModal = ref(false)
+const editAssetId = ref(null)
+
+function openCreate() {
+  editAssetId.value = null
+  showFormModal.value = true
+}
+
+function openEdit(asset) {
+  editAssetId.value = asset.id
+  showFormModal.value = true
+}
+
+async function onFormSaved() {
+  showFormModal.value = false
+  await Promise.all([load(), loadTypeStats()])
+}
 const filters = ref({ keyword: '', type: '', criticality: '', active: '', status: '', cloudProvider: '', environment: '' })
 
 // CSV / PDF
@@ -285,7 +377,7 @@ async function uploadExcel() {
   try {
     const res = await assetBulkApi.upload(selectedFile.value)
     uploadResult.value = res.data
-    if (res.data?.success > 0) load()
+    if (res.data?.success > 0) { load(); loadTypeStats() }
   } catch (e) {
     uploadError.value = e || '업로드 중 오류가 발생했습니다.'
   } finally {
@@ -321,7 +413,41 @@ async function load() {
 async function confirmDelete(asset) {
   if (!confirm(`"${asset.name}" 자산을 삭제하시겠습니까?`)) return
   await assetApi.delete(asset.id)
+  await Promise.all([load(), loadTypeStats()])
+}
+
+async function loadTypeStats() {
+  if (!isManager) return
+  try { typeStats.value = (await assetApi.typeStats()).data ?? [] } catch { typeStats.value = [] }
+}
+
+function typeLabel(value) {
+  if (!value) return '미지정'
+  const found = assetTypes.value.find(t => t.value === value)
+  return found?.label || value
+}
+
+function filterByType(type) {
+  filters.value.type = filters.value.type === type ? '' : type
+  page.value = 0
   load()
+}
+
+async function deleteType(stat) {
+  const label = typeLabel(stat.type)
+  if (!confirm(`'${label}' 유형의 자산 ${stat.count}개를 모두 삭제하시겠습니까?\n삭제된 자산은 복구할 수 없습니다.`)) return
+  deletingType.value = true
+  try {
+    const res = await assetApi.deleteByType(stat.type)
+    if (filters.value.type === stat.type) filters.value.type = ''
+    page.value = 0
+    await Promise.all([load(), loadTypeStats()])
+    alert(`'${label}' 유형의 자산 ${res.data ?? stat.count}개를 삭제했습니다.`)
+  } catch (e) {
+    alert(e || '삭제에 실패했습니다.')
+  } finally {
+    deletingType.value = false
+  }
 }
 
 const debouncedSearch = useDebounceFn(() => { page.value = 0; load() }, 400)
@@ -355,6 +481,7 @@ onMounted(async () => {
   }
 
   await load()
+  loadTypeStats()
   try {
     const [highRes, cloudRes] = await Promise.all([
       assetApi.list({ criticality: 'HIGH', active: true, size: 1 }),

@@ -113,6 +113,7 @@ export const adminApi = {
   updateUser: (id, data) => api.patch(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   hardDeleteUser: (id) => api.delete(`/admin/users/${id}/permanent`),
+  unlockUser: (id) => api.post(`/admin/users/${id}/unlock`),
   listAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
 
   listCodeGroups: () => api.get('/admin/codes'),
@@ -136,9 +137,16 @@ export const reportApi = {
 export const assetApi = {
   list: (params) => api.get('/assets', { params }),
   get: (id) => api.get(`/assets/${id}`),
+  typeStats: () => api.get('/assets/types/stats'),
+  deleteByType: (type) => api.delete('/assets/by-type', { params: { type: type ?? '' } }),
   create: (data) => api.post('/assets', data),
   update: (id, data) => api.patch(`/assets/${id}`, data),
-  delete: (id) => api.delete(`/assets/${id}`)
+  delete: (id) => api.delete(`/assets/${id}`),
+  // 시점(스냅샷) 이력
+  listSnapshots: () => api.get('/assets/snapshots'),
+  createSnapshot: (data) => api.post('/assets/snapshots', data),
+  snapshotItems: (id) => api.get(`/assets/snapshots/${id}/items`),
+  deleteSnapshot: (id) => api.delete(`/assets/snapshots/${id}`)
 }
 
 export const sbomApi = {
@@ -588,6 +596,9 @@ export const riskApi = {
   updateAssessment: (id, data) => api.patch(`/risk/assessments/${id}`, data),
   deleteAssessment: (id) => api.delete(`/risk/assessments/${id}`),
   bulkUpdateTreatment: (ids, treatment) => api.patch('/risk/assessments/bulk-treatment', { ids, treatment }),
+  // 위험 처리 계획 (완료 차수 '감소' 항목)
+  listTreatmentPlans: (roundId) => api.get(`/risk/rounds/${roundId}/treatment-plans`),
+  updateTreatmentPlan: (id, data) => api.patch(`/risk/assessments/${id}/treatment-plan`, data),
 }
 
 export const monthlyCheckDefaultApi = {

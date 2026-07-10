@@ -137,10 +137,11 @@ public class RiskAssessmentService {
                         .threatId(threat.getId())
                         .threatName(threat.getName())
                         .threatType(threat.getType())
+                        .vulnerability(threat.getDescription())
                         .likelihood(threat.getLikelihood())
                         .impact(threat.getImpact())
                         .riskGrade(calcGrade(score))
-                        .treatment(RiskAssessment.Treatment.경감)
+                        .treatment(RiskAssessment.Treatment.감소)
                         .build());
             }
         }
@@ -168,7 +169,7 @@ public class RiskAssessmentService {
                 .riskGrade(calcGrade(score))
                 .treatment(req.getTreatment() != null
                         ? RiskAssessment.Treatment.valueOf(req.getTreatment())
-                        : RiskAssessment.Treatment.경감)
+                        : RiskAssessment.Treatment.감소)
                 .notes(req.getNotes())
                 .build();
         return RiskAssessmentDto.AssessmentResponse.from(assessmentRepository.save(assessment));
@@ -201,6 +202,34 @@ public class RiskAssessmentService {
             throw new ResourceNotFoundException("RiskAssessment", id);
         }
         assessmentRepository.deleteById(id);
+    }
+
+    // ── 위험 처리 계획 (완료 차수 '감소' 항목) ───────────────────────────────
+
+    /** 해당 차수의 '감소' 처리 항목 목록 (위험점수 높은 순) */
+    @Transactional(readOnly = true)
+    public List<RiskAssessmentDto.AssessmentResponse> listTreatmentPlans(Long roundId) {
+        if (!roundRepository.existsById(roundId)) {
+            throw new ResourceNotFoundException("RiskAssessmentRound", roundId);
+        }
+        return assessmentRepository.findByRoundIdAndTreatment(roundId, RiskAssessment.Treatment.감소).stream()
+                .sorted(java.util.Comparator.comparingInt(
+                        (RiskAssessment a) -> a.getLikelihood() * a.getImpact()).reversed())
+                .map(RiskAssessmentDto.AssessmentResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /** 개별 평가 항목의 처리 계획(조치계획·담당자·기한·진행률·상태) 갱신 */
+    @Transactional
+    public RiskAssessmentDto.AssessmentResponse updateTreatmentPlan(Long id, RiskAssessmentDto.TreatmentPlanRequest req) {
+        RiskAssessment a = assessmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("RiskAssessment", id));
+        a.setPlan(req.getPlan());
+        a.setPlanAssignee(req.getPlanAssignee());
+        a.setPlanDueDate(req.getPlanDueDate());
+        a.setPlanProgress(req.getPlanProgress() != null ? req.getPlanProgress() : 0);
+        a.setPlanStatus(req.getPlanStatus() != null && !req.getPlanStatus().isBlank() ? req.getPlanStatus() : "계획중");
+        return RiskAssessmentDto.AssessmentResponse.from(a);
     }
 
     @Transactional

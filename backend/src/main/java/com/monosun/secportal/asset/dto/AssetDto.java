@@ -110,6 +110,13 @@ public class AssetDto {
 
     @Getter
     @Builder
+    public static class TypeStat {
+        private String type;
+        private long count;
+    }
+
+    @Getter
+    @Builder
     public static class Response {
         private Long id;
         private String name;

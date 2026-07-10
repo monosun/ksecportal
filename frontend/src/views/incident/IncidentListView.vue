@@ -15,10 +15,10 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/></svg>
           {{ $t('incident.bulkImport') }}
         </button>
-        <RouterLink v-if="isManager" to="/incidents/new" class="btn-primary flex items-center gap-2">
+        <button v-if="isManager" @click="openCreate" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           {{ $t('incident.create') }}
-        </RouterLink>
+        </button>
       </div>
     </div>
 
@@ -73,7 +73,7 @@
         <tbody class="divide-y divide-gray-50">
           <tr v-for="i in incidents" :key="i.id"
             class="hover:bg-gray-50 cursor-pointer transition-colors"
-            @click="$router.push(`/incidents/${i.id}`)">
+            @click="openDetail(i)">
             <td class="px-5 py-3 font-medium text-gray-900">{{ i.title }}</td>
             <td class="px-5 py-3 text-gray-600">{{ $t(`incident.type_label.${i.type}`) }}</td>
             <td class="px-5 py-3"><span :class="severityClass(i.severity)">{{ $t(`incident.severity_label.${i.severity}`) }}</span></td>
@@ -91,19 +91,38 @@
         {{ p }}
       </button>
     </div>
+
+    <!-- 인시던트 상세 모달 -->
+    <IncidentDetailModal :open="showDetailModal" :item-id="detailId"
+      @close="showDetailModal = false" @edit="onDetailEdit" @changed="onDetailChanged" />
+
+    <!-- 인시던트 등록 모달 -->
+    <IncidentFormModal :open="showFormModal" :edit-id="editId" @close="showFormModal = false" @saved="onFormSaved" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { incidentApi, exportApi, incidentBulkApi } from '@/api'
 import { useDebounceFn } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import BulkImportModal from '@/components/BulkImportModal.vue'
+import IncidentFormModal from './IncidentFormModal.vue'
+import IncidentDetailModal from './IncidentDetailModal.vue'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
+
+const showFormModal = ref(false)
+const editId = ref(null)
+function openCreate() { editId.value = null; showFormModal.value = true }
+function onFormSaved() { showFormModal.value = false; page.value = 0; load(); loadSummary() }
+
+const showDetailModal = ref(false)
+const detailId = ref(null)
+function openDetail(i) { detailId.value = i.id; showDetailModal.value = true }
+function onDetailEdit(id) { showDetailModal.value = false; editId.value = id; showFormModal.value = true }
+function onDetailChanged() { load(); loadSummary() }
 const csvLoading = ref(false)
 const pdfLoading = ref(false)
 const showBulkModal = ref(false)

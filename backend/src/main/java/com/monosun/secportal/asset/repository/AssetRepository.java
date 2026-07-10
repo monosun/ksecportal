@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface AssetRepository extends JpaRepository<Asset, Long> {
 
     @Query("SELECT a FROM Asset a WHERE " +
@@ -35,7 +37,21 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     long countByActive(boolean active);
     long countByCriticality(Asset.Criticality criticality);
 
+    /** 자산유형별 자산 수 */
+    @Query("SELECT a.type AS type, COUNT(a) AS total FROM Asset a GROUP BY a.type ORDER BY a.type")
+    List<TypeCount> countByType();
+
+    @Modifying
+    @Query("DELETE FROM Asset a WHERE a.type = :type")
+    int deleteByType(@Param("type") String type);
+
     @Modifying
     @Query("UPDATE Asset a SET a.sbomSoftware = null WHERE a.sbomSoftware.id = :sbomSoftwareId")
     void clearSbomSoftware(@Param("sbomSoftwareId") Long sbomSoftwareId);
+
+    /** 자산유형별 자산 수 프로젝션 */
+    interface TypeCount {
+        String getType();
+        long getTotal();
+    }
 }

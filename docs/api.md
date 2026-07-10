@@ -431,6 +431,48 @@ ISMS-P 인증 항목 목록 조회.
 > 등록/수정 요청에 `sbomSoftwareId`(SW id)를 포함하면 맵핑되고, 수정 시 `0` 이하 값을 보내면 맵핑이 해제됩니다.
 > 응답에는 `sbomSoftwareId`, `sbomSoftwareName`, `sbomSoftwareVersion`, `sbomComponentCount`가 포함됩니다.
 
+### GET /assets/types/stats *(MANAGER+)*
+
+자산유형별 자산 수. 응답: `[{ "type": "SERVER", "count": 12 }, ...]`
+
+### DELETE /assets/by-type?type=SERVER *(ADMIN)*
+
+해당 유형의 자산을 일괄 삭제하고 삭제 건수를 반환합니다.
+
+### GET /assets/snapshots *(MANAGER+)*
+
+자산 시점(스냅샷) 이력 목록. 응답 항목: `id`, `title`, `memo`, `assetCount`, `createdBy`, `createdAt`.
+
+### POST /assets/snapshots *(MANAGER+)*
+
+현재 자산 목록 전체를 하나의 시점으로 저장(복사 보관). 요청: `{ "title": "2026 상반기", "memo": "..." }`
+
+### GET /assets/snapshots/:id/items *(MANAGER+)*
+
+특정 시점에 저장된 자산 목록(스냅샷 항목).
+
+### DELETE /assets/snapshots/:id *(ADMIN)*
+
+시점 이력 삭제.
+
+---
+
+## 위험평가 · 위험 처리 계획 (Risk)
+
+위험평가 차수(연도·차수)별로 자산×위협 항목을 평가하고, 완료 차수의 처리방법 '감소' 항목으로 처리 계획을 수립합니다. 처리방법은 `수용 / 감소 / 회피 / 이전`.
+
+### GET /risk/rounds/:roundId/treatment-plans
+
+해당 차수의 처리방법 '감소' 항목 목록(위험점수 높은 순). 응답에 처리계획 필드(`plan`, `planAssignee`, `planDueDate`, `planProgress`, `planStatus`)가 포함됩니다.
+
+### PATCH /risk/assessments/:id/treatment-plan *(MANAGER+)*
+
+개별 항목의 처리 계획 갱신. 요청: `{ "plan": "...", "planAssignee": "홍길동", "planDueDate": "2026-08-31", "planProgress": 60, "planStatus": "진행중" }`
+
+### PATCH /risk/assessments/bulk-treatment *(MANAGER+)*
+
+선택 항목의 처리방법 일괄 변경. 요청: `{ "ids": [1,2,3], "treatment": "감소" }`
+
 ---
 
 ## SBOM 관리 (SBOM)
@@ -725,6 +767,12 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 ```json
 { "role": "MANAGER", "active": true, "department": "보안팀" }
 ```
+
+> 응답에는 계정 상태 필드 `active`, `failedLoginAttempts`(비밀번호 오류 횟수), `locked`(잠김 여부), `lockedUntil`이 포함됩니다.
+
+### POST /admin/users/:id/unlock *(ADMIN)*
+
+비밀번호 오류 횟수를 0으로 초기화하고 계정 잠금을 해제합니다. (로그인 성공 시와 동일한 처리)
 
 ### GET /admin/users/bulk/template *(ADMIN)*
 

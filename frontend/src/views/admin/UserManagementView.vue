@@ -79,9 +79,20 @@
               </select>
             </td>
             <td class="py-3 px-4">
-              <span :class="user.active ? 'badge-success' : 'badge-danger'">
-                {{ user.active ? $t('admin.active') : $t('admin.inactive') }}
-              </span>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span :class="user.active ? 'badge-success' : 'badge-danger'">
+                  {{ user.active ? $t('admin.active') : $t('admin.inactive') }}
+                </span>
+                <span v-if="user.locked" class="badge-danger inline-flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                  </svg>
+                  잠김
+                </span>
+                <span :class="user.failedLoginAttempts > 0 ? 'badge-yellow' : 'badge-gray'" :title="'비밀번호 오류 횟수'">
+                  비번오류 {{ user.failedLoginAttempts ?? 0 }}회
+                </span>
+              </div>
             </td>
             <td class="py-3 px-4">
               <div class="flex gap-2">
@@ -101,11 +112,23 @@
                   {{ user.active ? $t('admin.deactivate') : $t('admin.activate') }}
                 </button>
                 <button
-                  v-if="!user.active"
-                  @click="hardDelete(user)"
-                  class="text-xs px-3 py-1 rounded border border-red-400 text-red-600 hover:bg-red-50"
+                  v-if="user.locked || user.failedLoginAttempts > 0"
+                  @click="unlockUser(user)"
+                  class="text-xs px-3 py-1 rounded border border-amber-400 text-amber-700 hover:bg-amber-50"
+                  title="비밀번호 오류 횟수를 0으로 초기화하고 계정 잠금을 해제합니다"
                 >
-                  완전 삭제
+                  잠금 해제
+                </button>
+                <button
+                  @click="hardDelete(user)"
+                  :disabled="user.active"
+                  class="text-xs px-3 py-1 rounded border"
+                  :class="user.active
+                    ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                    : 'border-red-400 text-red-600 hover:bg-red-50'"
+                  :title="user.active ? '계정을 비활성화한 후에 삭제할 수 있습니다' : '계정 완전 삭제 요청'"
+                >
+                  삭제
                 </button>
               </div>
             </td>
@@ -359,6 +382,18 @@ async function toggleActive(user) {
     user.active = res.data.active
   } catch (e) {
     alert(typeof e === 'string' ? e : '상태 변경에 실패했습니다.')
+  }
+}
+
+async function unlockUser(user) {
+  if (!confirm(`"${user.name}" 계정의 비밀번호 오류 횟수를 초기화하고 잠금을 해제하시겠습니까?`)) return
+  try {
+    const res = await adminApi.unlockUser(user.id)
+    const idx = users.value.findIndex(u => u.id === user.id)
+    if (idx !== -1) users.value[idx] = res.data
+    showToast(`"${user.name}" 계정의 잠금을 해제했습니다.`)
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '잠금 해제에 실패했습니다.')
   }
 }
 

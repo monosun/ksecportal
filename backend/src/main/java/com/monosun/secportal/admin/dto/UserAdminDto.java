@@ -35,9 +35,14 @@ public class UserAdminDto {
         private String role;
         private String department;
         private boolean active;
+        private int failedLoginAttempts;
+        private boolean locked;
+        private LocalDateTime lockedUntil;
         private LocalDateTime createdAt;
 
         public static Response from(User user) {
+            boolean locked = user.getLockedUntil() != null
+                    && user.getLockedUntil().isAfter(LocalDateTime.now());
             return Response.builder()
                     .id(user.getId())
                     .email(user.getEmail())
@@ -45,6 +50,9 @@ public class UserAdminDto {
                     .role(user.getRole().name())
                     .department(user.getDepartment())
                     .active(user.isActive())
+                    .failedLoginAttempts(user.getFailedLoginAttempts())
+                    .locked(locked)
+                    .lockedUntil(user.getLockedUntil())
                     .createdAt(user.getCreatedAt())
                     .build();
         }

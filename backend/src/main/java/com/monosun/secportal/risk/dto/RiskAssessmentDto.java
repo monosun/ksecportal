@@ -66,7 +66,7 @@ public class RiskAssessmentDto {
         private String vulnerability;
         private int likelihood = 3;
         private int impact = 3;
-        private String treatment; // 수용/경감/회피/이전
+        private String treatment; // 수용/감소/회피/이전
         private String notes;
     }
 
@@ -89,6 +89,12 @@ public class RiskAssessmentDto {
         private String riskGrade;
         private String treatment;
         private String notes;
+        // 위험 처리 계획
+        private String plan;
+        private String planAssignee;
+        private LocalDate planDueDate;
+        private int planProgress;
+        private String planStatus;
         private LocalDateTime createdAt;
 
         public static AssessmentResponse from(RiskAssessment a) {
@@ -110,9 +116,26 @@ public class RiskAssessmentDto {
                     .riskGrade(a.getRiskGrade().name())
                     .treatment(a.getTreatment() != null ? a.getTreatment().name() : null)
                     .notes(a.getNotes())
+                    .plan(a.getPlan())
+                    .planAssignee(a.getPlanAssignee())
+                    .planDueDate(a.getPlanDueDate())
+                    .planProgress(a.getPlanProgress() != null ? a.getPlanProgress() : 0)
+                    .planStatus(a.getPlanStatus() != null ? a.getPlanStatus() : "계획중")
                     .createdAt(a.getCreatedAt())
                     .build();
         }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TreatmentPlanRequest {
+        private String plan;
+        private String planAssignee;
+        private LocalDate planDueDate;
+        private Integer planProgress;
+        private String planStatus; // 계획중/진행중/완료/기한초과
     }
 
     @Getter

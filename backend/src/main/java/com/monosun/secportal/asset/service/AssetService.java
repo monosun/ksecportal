@@ -13,6 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class AssetService {
@@ -32,6 +35,26 @@ public class AssetService {
     @Transactional(readOnly = true)
     public AssetDto.Response get(Long id) {
         return AssetDto.Response.from(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssetDto.TypeStat> typeStats() {
+        return assetRepository.countByType().stream()
+                .map(t -> AssetDto.TypeStat.builder()
+                        .type(t.getType())
+                        .count(t.getTotal())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /** 자산유형 단위 일괄 삭제 */
+    @Transactional
+    public int deleteByType(String type) {
+        String value = type == null ? null : type.trim();
+        if (value == null || value.isEmpty()) return 0;
+        int deleted = assetRepository.deleteByType(value);
+        auditLogService.log("ASSET_TYPE_DELETED", "ASSET", null, "type=" + value + ", count=" + deleted);
+        return deleted;
     }
 
     @Transactional

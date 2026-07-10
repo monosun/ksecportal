@@ -116,4 +116,19 @@ public class RiskAssessmentController {
         int count = riskAssessmentService.bulkUpdateTreatment(request.getIds(), request.getTreatment());
         return ApiResponse.ok(count + "개 항목이 업데이트되었습니다.", count);
     }
+
+    // ── 위험 처리 계획 ───────────────────────────────────────────────────────
+
+    @GetMapping("/rounds/{roundId}/treatment-plans")
+    public ApiResponse<List<RiskAssessmentDto.AssessmentResponse>> listTreatmentPlans(@PathVariable Long roundId) {
+        return ApiResponse.ok(riskAssessmentService.listTreatmentPlans(roundId));
+    }
+
+    @PatchMapping("/assessments/{id}/treatment-plan")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<RiskAssessmentDto.AssessmentResponse> updateTreatmentPlan(
+            @PathVariable Long id,
+            @RequestBody RiskAssessmentDto.TreatmentPlanRequest request) {
+        return ApiResponse.ok(riskAssessmentService.updateTreatmentPlan(id, request));
+    }
 }

@@ -42,6 +42,18 @@ public class AssetController {
         return ApiResponse.ok(assetService.list(keyword, type, criticality, cloudProvider, environment, active, status, pageable));
     }
 
+    @GetMapping("/types/stats")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<java.util.List<AssetDto.TypeStat>> typeStats() {
+        return ApiResponse.ok(assetService.typeStats());
+    }
+
+    @DeleteMapping("/by-type")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Integer> deleteByType(@RequestParam(required = false) String type) {
+        return ApiResponse.ok(assetService.deleteByType(type));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<AssetDto.Response> get(@PathVariable Long id) {
         return ApiResponse.ok(assetService.get(id));

@@ -98,10 +98,10 @@
       </button>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Summary Cards (차수 전체 기준 — 아래 필터 조회에 영향받지 않음) -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
       <div class="card text-center">
-        <p class="text-3xl font-bold text-gray-900">{{ filteredAssessments.length }}</p>
+        <p class="text-3xl font-bold text-gray-900">{{ assessments.length }}</p>
         <p class="text-sm text-gray-500 mt-1">전체 평가</p>
       </div>
       <div class="card text-center">
@@ -118,11 +118,11 @@
       </div>
     </div>
 
-    <!-- 처리방법별 현황 -->
-    <div v-if="selectedRound && filteredAssessments.length > 0" class="bg-white border border-gray-200 rounded-lg px-4 py-2.5 mb-3 flex items-center gap-2 flex-wrap text-sm">
+    <!-- 처리방법별 현황 (차수 전체 기준) -->
+    <div v-if="selectedRound && assessments.length > 0" class="bg-white border border-gray-200 rounded-lg px-4 py-2.5 mb-3 flex items-center gap-2 flex-wrap text-sm">
       <span class="text-xs font-semibold text-gray-500 mr-1">처리방법</span>
       <span class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 font-medium text-xs">
-        경감 <span class="font-bold">{{ treatmentCounts['경감'] }}</span>
+        감소 <span class="font-bold">{{ treatmentCounts['감소'] }}</span>
       </span>
       <span class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 font-medium text-xs">
         수용 <span class="font-bold">{{ treatmentCounts['수용'] }}</span>
@@ -182,6 +182,8 @@
       </select>
       <input v-model="searchThreat" type="text" placeholder="위협명 검색"
         class="input w-32 text-sm py-1.5"/>
+      <input v-model="searchVulnerability" type="text" placeholder="취약점 검색"
+        class="input w-32 text-sm py-1.5"/>
       <select v-model="searchThreatType" class="input w-28 text-sm py-1.5">
         <option value="">위협 유형 전체</option>
         <option v-for="t in threatTypeOptions" :key="t" :value="t">{{ t }}</option>
@@ -191,6 +193,10 @@
         <option value="HIGH">고위험</option>
         <option value="MEDIUM">중위험</option>
         <option value="LOW">저위험</option>
+      </select>
+      <select v-model="searchTreatment" class="input w-28 text-sm py-1.5">
+        <option value="">처리방법 전체</option>
+        <option v-for="t in treatments" :key="t" :value="t">{{ t }}</option>
       </select>
       <!-- 위험점수 범위 검색 -->
       <div class="flex items-center gap-1">
@@ -208,17 +214,16 @@
     </div>
 
     <!-- 일괄 처리 바 -->
-    <div v-if="selectedIds.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 mb-3 flex items-center gap-3 text-sm">
+    <div v-if="selectedIds.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 mb-3 flex items-center gap-3 text-sm flex-wrap">
       <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
       <span class="text-blue-800 font-medium">{{ selectedIds.length }}개 항목 선택됨</span>
-      <button @click="bulkAccept" :disabled="bulkProcessing"
-        class="btn-primary text-xs px-3 py-1.5 disabled:opacity-50 flex items-center gap-1">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-        {{ bulkProcessing ? '처리 중...' : '수용완료 일괄처리' }}
+      <span class="text-xs text-gray-500">처리방법 일괄 적용:</span>
+      <button v-for="t in treatments" :key="t" @click="bulkSetTreatment(t)" :disabled="bulkProcessing"
+        class="text-xs font-semibold px-3 py-1.5 rounded border disabled:opacity-50 transition-colors"
+        :class="bulkBtnClass(t)">
+        {{ bulkProcessing ? '처리 중...' : t }}
       </button>
       <button @click="selectedIds = []" class="text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-2.5 py-1.5 hover:bg-gray-50">
         선택해제
@@ -283,7 +288,7 @@
                 <span v-if="item.threatType" class="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">{{ item.threatType }}</span>
                 <span v-else class="text-gray-400">-</span>
               </td>
-              <td class="px-4 py-3.5 text-gray-500 text-xs max-w-36 truncate">{{ item.vulnerability || '-' }}</td>
+              <td class="px-4 py-3.5 text-gray-500 text-xs max-w-36 truncate" :title="item.vulnerability || ''">{{ item.vulnerability || '-' }}</td>
               <td class="px-4 py-3.5 text-center font-semibold text-gray-700">{{ item.likelihood }}</td>
               <td class="px-4 py-3.5 text-center font-semibold text-gray-700">{{ item.impact }}</td>
               <td class="px-4 py-3.5 text-center">
@@ -462,8 +467,10 @@
           </div>
           <!-- 취약점 -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">취약점</label>
-            <input v-model="form.vulnerability" class="input w-full text-sm" placeholder="관련 취약점 설명"/>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              취약점 <span class="text-xs text-gray-400">(위협 선택 시 위협 설명이 자동 입력됩니다)</span>
+            </label>
+            <textarea v-model="form.vulnerability" rows="2" class="input w-full text-sm resize-none" placeholder="관련 취약점 설명"/>
           </div>
           <!-- 발생가능성 / 영향도 -->
           <div class="grid grid-cols-2 gap-4">
@@ -588,14 +595,16 @@ const searchAsset = ref('')
 const searchAssetType = ref('')
 const searchAssetEnv = ref('')
 const searchThreat = ref('')
+const searchVulnerability = ref('')
 const searchThreatType = ref('')
 const searchGrade = ref('')
+const searchTreatment = ref('')
 const searchScoreMin = ref('')
 const searchScoreMax = ref('')
 
 const hasActiveFilter = computed(() =>
   !!(searchAsset.value || searchAssetType.value || searchAssetEnv.value ||
-     searchThreat.value || searchThreatType.value || searchGrade.value ||
+     searchThreat.value || searchVulnerability.value || searchThreatType.value || searchGrade.value || searchTreatment.value ||
      searchScoreMin.value !== '' || searchScoreMax.value !== '')
 )
 
@@ -605,8 +614,10 @@ const filteredAssessments = computed(() => {
     if (searchAssetType.value && a.assetType !== searchAssetType.value) return false
     if (searchAssetEnv.value && a.assetEnvironment !== searchAssetEnv.value) return false
     if (searchThreat.value && !a.threatName?.toLowerCase().includes(searchThreat.value.toLowerCase())) return false
+    if (searchVulnerability.value && !a.vulnerability?.toLowerCase().includes(searchVulnerability.value.toLowerCase())) return false
     if (searchThreatType.value && a.threatType !== searchThreatType.value) return false
     if (searchGrade.value && a.riskGrade !== searchGrade.value) return false
+    if (searchTreatment.value && a.treatment !== searchTreatment.value) return false
     if (searchScoreMin.value !== '' && a.riskScore < Number(searchScoreMin.value)) return false
     if (searchScoreMax.value !== '' && a.riskScore > Number(searchScoreMax.value)) return false
     return true
@@ -679,11 +690,11 @@ function selectByThreshold() {
     .map(a => a.id)
 }
 
-async function bulkAccept() {
+async function bulkSetTreatment(treatment) {
   if (!selectedIds.value.length || bulkProcessing.value) return
   bulkProcessing.value = true
   try {
-    await riskApi.bulkUpdateTreatment([...selectedIds.value], '수용')
+    await riskApi.bulkUpdateTreatment([...selectedIds.value], treatment)
     selectedIds.value = []
     await loadAssessments()
   } catch (e) {
@@ -691,6 +702,15 @@ async function bulkAccept() {
   } finally {
     bulkProcessing.value = false
   }
+}
+
+function bulkBtnClass(t) {
+  return {
+    수용: 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100',
+    감소: 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100',
+    회피: 'border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100',
+    이전: 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100',
+  }[t] || 'border-gray-300 text-gray-700 bg-gray-50 hover:bg-gray-100'
 }
 
 // 필터 옵션 (현재 데이터에서 유니크 값 추출)
@@ -707,8 +727,10 @@ function clearSearch() {
   searchAssetType.value = ''
   searchAssetEnv.value = ''
   searchThreat.value = ''
+  searchVulnerability.value = ''
   searchThreatType.value = ''
   searchGrade.value = ''
+  searchTreatment.value = ''
   searchScoreMin.value = ''
   searchScoreMax.value = ''
 }
@@ -728,7 +750,7 @@ const groupedThreats = computed(() => {
 })
 
 // 처리방법
-const treatments = ['수용', '경감', '회피', '이전']
+const treatments = ['수용', '감소', '회피', '이전']
 
 // 차수 모달
 const showRoundModal = ref(false)
@@ -746,7 +768,7 @@ const assessmentError = ref('')
 const form = reactive({
   assetId: null, assetName: '', assetType: '', assetEnvironment: '',
   threatId: null, threatName: '', threatType: '',
-  vulnerability: '', likelihood: 3, impact: 3, treatment: '경감', notes: ''
+  vulnerability: '', likelihood: 3, impact: 3, treatment: '감소', notes: ''
 })
 
 // 삭제
@@ -838,6 +860,8 @@ function onThreatChange() {
   if (threat) {
     form.threatName = threat.name
     form.threatType = threat.type || ''
+    // 취약점에는 선택한 위협의 설명(description)을 채운다
+    form.vulnerability = threat.description || ''
   }
 }
 
@@ -976,14 +1000,14 @@ function openAssessmentModal(assessment) {
     form.vulnerability = assessment.vulnerability || ''
     form.likelihood = assessment.likelihood
     form.impact = assessment.impact
-    form.treatment = assessment.treatment || '경감'
+    form.treatment = assessment.treatment || '감소'
     form.notes = assessment.notes || ''
   } else {
     form.assetId = null; form.assetName = ''; form.assetType = ''; form.assetEnvironment = ''
     form.threatId = null; form.threatName = ''; form.threatType = ''
     form.vulnerability = ''
     form.likelihood = 3; form.impact = 3
-    form.treatment = '경감'; form.notes = ''
+    form.treatment = '감소'; form.notes = ''
   }
   showAssessmentModal.value = true
 }
@@ -1066,12 +1090,14 @@ async function executeDelete() {
 
 // 헬퍼 함수
 function countByGrade(grade) {
-  return filteredAssessments.value.filter(a => a.riskGrade === grade).length
+  // 요약 카드는 차수 전체 기준 — 필터 조회에 영향받지 않는다
+  return assessments.value.filter(a => a.riskGrade === grade).length
 }
 
 const treatmentCounts = computed(() => {
-  const counts = { 경감: 0, 수용: 0, 회피: 0, 이전: 0 }
-  for (const a of filteredAssessments.value) {
+  // 처리방법별 현황도 차수 전체 기준
+  const counts = { 감소: 0, 수용: 0, 회피: 0, 이전: 0 }
+  for (const a of assessments.value) {
     if (a.treatment in counts) counts[a.treatment]++
   }
   return counts
