@@ -189,6 +189,57 @@ public class MonthlyCheckService {
                 .collect(Collectors.toList());
     }
 
+    // ── 이전 점검 내용 복사 ──────────────────────────────────────────────────
+
+    /** 주어진 월 이전에 점검 내역이 있는 가장 최근 월을 반환(없으면 null). */
+    @Transactional(readOnly = true)
+    public String findPreviousMonthWithItems(String yearMonth) {
+        List<String> before = repository.findYearMonthsBefore(yearMonth);
+        return before.isEmpty() ? null : before.get(0);
+    }
+
+    /**
+     * 이전(가장 최근) 점검 월의 항목 구성을 대상 월로 복사한다.
+     * 점검 결과는 미완료로 초기화하고, 담당자는 그대로 이어받는다(증적·비고는 복사하지 않음).
+     * 대상 월에 기존 항목이 있으면 삭제 후 복사한다.
+     */
+    @Transactional
+    public List<MonthlyCheckDto.CheckItemResponse> copyFromPreviousMonth(String yearMonth, User user) {
+        String prev = findPreviousMonthWithItems(yearMonth);
+        if (prev == null) {
+            throw new com.monosun.secportal.common.exception.BusinessException("이전 점검 내역이 있는 월이 없습니다.");
+        }
+        List<MonthlyCheckItem> source = repository.findByYearMonthOrderBySortOrderAscIdAsc(prev);
+
+        List<MonthlyCheckItem> existing = repository.findByYearMonthOrderBySortOrderAscIdAsc(yearMonth);
+        for (MonthlyCheckItem item : existing) {
+            for (MonthlyCheckEvidence e : item.getEvidences()) {
+                deleteFile(e.getFilePath());
+            }
+        }
+        repository.deleteAll(existing);
+        repository.flush();
+
+        List<MonthlyCheckItem> copies = source.stream().map(s ->
+                MonthlyCheckItem.builder()
+                        .yearMonth(yearMonth)
+                        .priority(s.getPriority())
+                        .category(s.getCategory())
+                        .itemName(s.getItemName())
+                        .checkMethod(s.getCheckMethod())
+                        .checkExample(s.getCheckExample())
+                        .result(MonthlyCheckItem.Result.INCOMPLETE)
+                        .sortOrder(s.getSortOrder())
+                        .assignee(s.getAssignee())
+                        .assigneeText(s.getAssigneeText())
+                        .createdBy(user)
+                        .build()
+        ).collect(Collectors.toList());
+        return repository.saveAll(copies).stream()
+                .map(MonthlyCheckDto.CheckItemResponse::from)
+                .collect(Collectors.toList());
+    }
+
     // ── 증적 CRUD ──────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)

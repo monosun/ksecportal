@@ -71,6 +71,20 @@ public class MonthlyCheckController {
         return ApiResponse.ok(service.loadDefaults(yearMonth, user));
     }
 
+    /** 대상 월 이전에 점검 내역이 있는 가장 최근 월(없으면 data=null) */
+    @GetMapping("/previous-month")
+    public ApiResponse<String> previousMonth(@RequestParam String yearMonth) {
+        return ApiResponse.ok("ok", service.findPreviousMonthWithItems(yearMonth));
+    }
+
+    /** 이전 점검 월의 항목 구성을 대상 월로 복사 */
+    @PostMapping("/copy-previous")
+    public ApiResponse<List<MonthlyCheckDto.CheckItemResponse>> copyPrevious(
+            @RequestParam String yearMonth,
+            @AuthenticationPrincipal User user) {
+        return ApiResponse.ok(service.copyFromPreviousMonth(yearMonth, user));
+    }
+
     @PatchMapping("/{id}")
     public ApiResponse<MonthlyCheckDto.CheckItemResponse> update(
             @PathVariable Long id,

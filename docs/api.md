@@ -995,6 +995,100 @@ HTTP 403 Forbidden
 ### DELETE /monthly-checks/:id
 점검 항목 삭제
 
+### GET /monthly-checks/previous-month *(v1.8.0)*
+
+대상 월 이전에 점검 내역이 있는 **가장 최근 월**을 반환합니다. 없으면 `data`가 `null`입니다.
+
+**Query**: `yearMonth` (`YYYY-MM`)
+
+### POST /monthly-checks/copy-previous *(v1.8.0)*
+
+가장 최근 점검 월의 항목 구성을 대상 월로 복사합니다. 점검 결과는 미완료로 초기화하고 담당자는 승계하며, 증적·비고는 복사하지 않습니다. 대상 월에 기존 항목이 있으면 증적 파일과 함께 삭제한 뒤 복사합니다.
+
+**Query**: `yearMonth` (`YYYY-MM`)
+**Response**: 복사된 점검 항목 목록
+
+---
+
+## 개인정보보호 — 수탁사 (Contractor)
+
+### GET /privacy/contractors
+수탁사 목록 (점검 건수 포함)
+
+### POST /privacy/contractors *(MANAGER+)*
+수탁사 등록. 본문: `name`(필수), `businessNumber`, `representative`, `serviceType`(위탁업무), `subContractor`(재수탁사, v1.8.0), `contractStart`, `contractEnd`, `contactPerson`, `contactEmail`, `contactPhone`, `status`(`ACTIVE`/`INACTIVE`), `notes`
+
+### PATCH /privacy/contractors/:id *(MANAGER+)*
+수탁사 수정 (전달된 필드만 반영)
+
+### DELETE /privacy/contractors/:id *(MANAGER+)*
+수탁사 삭제 (점검 이력·증적 파일 함께 삭제)
+
+### POST /privacy/contractors/parse-policy *(MANAGER+, v1.8.0)*
+
+개인정보처리방침 URL을 읽어 위탁 표에서 수탁사·위탁업무·재수탁사를 추출합니다. **저장하지 않는 미리보기 전용**입니다.
+
+**Request**
+```json
+{ "url": "https://example.com/privacy" }
+```
+
+**Response**
+```json
+{
+  "sourceUrl": "https://example.com/privacy",
+  "tableCount": 1,
+  "items": [
+    { "name": "OO정보통신(주)", "serviceType": "결제서비스 대행", "subContractor": null, "existing": false }
+  ]
+}
+```
+
+- `existing` — 이름이 같은 수탁사가 이미 등록되어 있는지 (공백 무시 비교)
+- 개인정보 **제3자 제공** 표는 위탁 표와 구분하여 제외됩니다
+- `rowspan`/`colspan` 병합 셀을 펼쳐 해석합니다
+- 위탁 표를 자바스크립트로 렌더링하는 페이지는 인식하지 못하며, 표를 찾지 못하면 `400`과 안내 메시지를 반환합니다
+- 내부망 주소(loopback·사설 IP)로의 요청은 차단됩니다
+
+### POST /privacy/contractors/bulk *(MANAGER+, v1.8.0)*
+
+수탁사 일괄 등록. 이미 등록된 이름과 요청 내 중복은 **건너뜁니다**(공백 무시 비교).
+
+**Request**
+```json
+{ "items": [ { "name": "OO정보통신(주)", "serviceType": "결제서비스 대행", "subContractor": null, "status": "ACTIVE" } ] }
+```
+
+**Response**
+```json
+{ "created": 1, "skipped": 0, "skippedNames": [] }
+```
+
+---
+
+## 모의 악성메일 훈련 (Phishing)
+
+### GET /phishing/send-logs *(v1.8.0)*
+
+피싱 메일 **발송 처리 결과 로그**를 최신순으로 조회합니다. 발송이 시도된(결과가 기록된) 대상만 반환합니다.
+
+**Response 항목**: `campaignId`, `campaignName`, `targetName`, `targetEmail`, `department`, `sendStatus`(`SUCCESS`/`FAILED`), `sendError`, `sentAt`, `openedAt`, `clickedAt`
+
+---
+
+## 메일서버 설정 (Mail Config) *(ADMIN, v1.8.0)*
+
+발송 메일서버(SMTP) 설정. 활성화 시 이 설정으로 발송하고, 비활성/미설정 시 `application.yml`의 `spring.mail.*`로 폴백합니다.
+
+### GET /admin/mail-config
+설정 조회. 비밀번호는 **마스킹**되어 반환됩니다.
+
+### PUT /admin/mail-config
+설정 저장. 본문: `host`, `port`, `username`, `password`, `fromAddress`, `fromName`, `useAuth`, `useStartTls`, `enabled`
+
+### POST /admin/mail-config/test
+연결 테스트 — 지정한 수신 주소로 테스트 메일을 발송하고 성공/실패와 사유를 반환합니다.
+
 ---
 
 ## 소스 취약점 점검 (Source Scan / SAST)

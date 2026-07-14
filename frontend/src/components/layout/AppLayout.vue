@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex">
+  <div class="h-screen flex overflow-hidden">
 
     <!-- Sidebar -->
     <aside class="w-[220px] flex-shrink-0 flex flex-col border-r transition-colors duration-200"
@@ -21,7 +21,7 @@
       </div>
 
       <!-- Nav -->
-      <nav class="flex-1 overflow-y-auto px-3 py-3">
+      <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-3">
 
         <!-- Home (Main Dashboard) -->
         <RouterLink to="/dashboard" custom v-slot="{ isExactActive, navigate }">
@@ -135,7 +135,7 @@
       </nav>
 
       <!-- Bottom -->
-      <div class="px-3 pb-3 pt-2 border-t space-y-0.5"
+      <div class="flex-shrink-0 px-3 pb-3 pt-2 border-t space-y-0.5"
         :class="isDark ? 'border-gray-700/50' : 'border-gray-100'">
 
         <!-- 수신함 -->

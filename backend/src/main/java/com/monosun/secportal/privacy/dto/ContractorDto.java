@@ -5,8 +5,11 @@ import com.monosun.secportal.privacy.entity.ContractorInspection;
 import com.monosun.secportal.privacy.entity.ContractorInspectionFile;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +18,7 @@ import java.util.List;
 public class ContractorDto {
 
     @Getter
+    @Setter
     public static class ContractorRequest {
         @NotBlank @Size(max = 200)
         private String name;
@@ -22,8 +26,10 @@ public class ContractorDto {
         private String businessNumber;
         @Size(max = 100)
         private String representative;
-        @Size(max = 200)
+        @Size(max = 500)
         private String serviceType;
+        @Size(max = 500)
+        private String subContractor;
         private LocalDate contractStart;
         private LocalDate contractEnd;
         @Size(max = 100)
@@ -44,6 +50,7 @@ public class ContractorDto {
         private String businessNumber;
         private String representative;
         private String serviceType;
+        private String subContractor;
         private LocalDate contractStart;
         private LocalDate contractEnd;
         private String contactPerson;
@@ -69,6 +76,7 @@ public class ContractorDto {
                     .businessNumber(c.getBusinessNumber())
                     .representative(c.getRepresentative())
                     .serviceType(c.getServiceType())
+                    .subContractor(c.getSubContractor())
                     .contractStart(c.getContractStart())
                     .contractEnd(c.getContractEnd())
                     .contactPerson(c.getContactPerson())
@@ -90,6 +98,7 @@ public class ContractorDto {
                     .businessNumber(c.getBusinessNumber())
                     .representative(c.getRepresentative())
                     .serviceType(c.getServiceType())
+                    .subContractor(c.getSubContractor())
                     .contractStart(c.getContractStart())
                     .contractEnd(c.getContractEnd())
                     .contactPerson(c.getContactPerson())
@@ -101,6 +110,49 @@ public class ContractorDto {
                     .updatedAt(c.getUpdatedAt())
                     .build();
         }
+    }
+
+    // ── 개인정보처리방침 파싱 / 일괄 등록 ──────────────────────────────
+
+    @Getter
+    @Setter
+    public static class PolicyImportRequest {
+        @NotBlank
+        private String url;
+    }
+
+    @Getter
+    @Builder
+    public static class PolicyParseResponse {
+        private String sourceUrl;
+        private int tableCount;          // 수탁 정보로 인식한 표 개수
+        private List<ParsedContractor> items;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ParsedContractor {
+        private String name;             // 수탁사
+        private String serviceType;      // 위탁업무
+        private String subContractor;    // 재수탁사
+        private boolean existing;        // 이미 등록된 수탁사명인지
+    }
+
+    @Getter
+    @Setter
+    public static class BulkCreateRequest {
+        private List<ContractorRequest> items;
+    }
+
+    @Getter
+    @Builder
+    public static class BulkCreateResponse {
+        private int created;
+        private int skipped;
+        private List<String> skippedNames;   // 이미 등록되어 건너뛴 수탁사명
     }
 
     @Getter

@@ -221,6 +221,79 @@
         </div>
       </div>
 
+      <!-- 발송 메일서버(SMTP) 설정 -->
+      <div class="card lg:col-span-2">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-bold text-gray-800">발송 메일서버(SMTP) 설정</h2>
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer">
+            <input type="checkbox" v-model="mailCfg.enabled" class="w-4 h-4 text-primary-600 rounded" />
+            이 설정 사용
+          </label>
+        </div>
+        <p class="text-sm text-gray-400 mb-5">
+          승인 알림·모의훈련 메일 발송에 사용할 SMTP 서버를 설정합니다.
+          <b>"이 설정 사용"</b>을 끄면 서버 기본 설정(환경변수)으로 발송합니다.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">SMTP 호스트</label>
+            <input v-model="mailCfg.host" type="text" class="input w-full text-sm" placeholder="smtp.gmail.com" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">포트</label>
+            <input v-model.number="mailCfg.port" type="number" class="input w-full text-sm" placeholder="587" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">계정(사용자명)</label>
+            <input v-model="mailCfg.username" type="text" class="input w-full text-sm" placeholder="noreply@example.com" autocomplete="off" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
+            <input v-model="mailCfg.password" type="password" class="input w-full text-sm"
+              :placeholder="mailCfg.passwordStored ? `저장됨 (${mailCfg.passwordMasked}) · 변경 시에만 입력` : '비밀번호 입력'"
+              autocomplete="new-password" />
+            <p v-if="mailCfg.passwordStored" class="text-[11px] text-gray-400 mt-1">비워두면 기존 비밀번호가 유지됩니다. 삭제하려면 <code class="bg-gray-100 px-1 rounded">-</code> 입력.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">발신자 주소(From)</label>
+            <input v-model="mailCfg.fromAddress" type="email" class="input w-full text-sm" placeholder="noreply@example.com" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">발신자 표시 이름</label>
+            <input v-model="mailCfg.fromName" type="text" class="input w-full text-sm" placeholder="SecPortal 보안팀 (선택)" />
+          </div>
+        </div>
+
+        <div class="flex items-center gap-5 mt-4">
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" v-model="mailCfg.useAuth" class="w-4 h-4 text-primary-600 rounded" />
+            SMTP 인증 사용
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" v-model="mailCfg.useStartTls" class="w-4 h-4 text-primary-600 rounded" />
+            STARTTLS 사용
+          </label>
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+          <button @click="saveMailConfig" :disabled="mailSaving" class="btn-primary text-sm px-6 py-2">
+            {{ mailSaving ? '저장 중...' : '저장' }}
+          </button>
+          <span v-if="mailSaved" class="text-sm text-green-600 font-semibold">저장되었습니다.</span>
+
+          <div class="flex items-center gap-2 ml-auto">
+            <input v-model="mailTestTo" type="email" class="input text-sm w-56" placeholder="테스트 수신 이메일" />
+            <button @click="testMailConfig" :disabled="mailTesting" class="btn-secondary text-sm px-4 py-2">
+              {{ mailTesting ? '발송 중...' : '테스트 메일 발송' }}
+            </button>
+          </div>
+        </div>
+        <p v-if="mailTestResult"
+          :class="mailTestOk ? 'text-green-600' : 'text-red-500'"
+          class="text-sm font-medium mt-2">{{ mailTestResult }}</p>
+      </div>
+
       </div>
     </div>
   </div>
@@ -229,7 +302,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useUiSettingsStore } from '@/stores/uiSettings'
-import { notificationConfigApi, appSettingApi } from '@/api/index.js'
+import { notificationConfigApi, appSettingApi, mailConfigApi } from '@/api/index.js'
 
 const ui = useUiSettingsStore()
 
@@ -331,6 +404,84 @@ async function saveNotifyConfig() {
   }
 }
 
+// ── 발송 메일서버(SMTP) 설정 ──────────────────────────────────────────────
+const mailCfg = ref({
+  host: '', port: 587, username: '', password: '',
+  passwordStored: false, passwordMasked: '',
+  fromAddress: '', fromName: '', useAuth: true, useStartTls: true, enabled: false
+})
+const mailSaving = ref(false)
+const mailSaved  = ref(false)
+const mailTestTo = ref('')
+const mailTesting = ref(false)
+const mailTestResult = ref('')
+const mailTestOk = ref(false)
+
+async function loadMailConfig() {
+  try {
+    const res = await mailConfigApi.get()
+    const data = res.data ?? {}
+    mailCfg.value = {
+      host: data.host ?? '',
+      port: data.port ?? 587,
+      username: data.username ?? '',
+      password: '',
+      passwordStored: !!data.passwordStored,
+      passwordMasked: data.passwordMasked ?? '',
+      fromAddress: data.fromAddress ?? '',
+      fromName: data.fromName ?? '',
+      useAuth: data.useAuth !== false,
+      useStartTls: data.useStartTls !== false,
+      enabled: !!data.enabled
+    }
+  } catch {}
+}
+
+async function saveMailConfig() {
+  mailSaving.value = true
+  mailSaved.value = false
+  try {
+    const res = await mailConfigApi.save({
+      host: mailCfg.value.host,
+      port: mailCfg.value.port,
+      username: mailCfg.value.username,
+      password: mailCfg.value.password,   // 빈 값이면 기존 유지, '-'면 삭제
+      fromAddress: mailCfg.value.fromAddress,
+      fromName: mailCfg.value.fromName,
+      useAuth: mailCfg.value.useAuth,
+      useStartTls: mailCfg.value.useStartTls,
+      enabled: mailCfg.value.enabled
+    })
+    const data = res.data ?? {}
+    // 저장 후 마스킹 상태 갱신, 입력한 평문 비밀번호는 폼에서 비움
+    mailCfg.value.password = ''
+    mailCfg.value.passwordStored = !!data.passwordStored
+    mailCfg.value.passwordMasked = data.passwordMasked ?? ''
+    mailSaved.value = true
+    setTimeout(() => { mailSaved.value = false }, 3000)
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '메일서버 설정 저장에 실패했습니다.')
+  } finally {
+    mailSaving.value = false
+  }
+}
+
+async function testMailConfig() {
+  mailTesting.value = true
+  mailTestResult.value = ''
+  try {
+    const res = await mailConfigApi.test({ to: mailTestTo.value })
+    const r = res.data ?? {}
+    mailTestOk.value = !!r.success
+    mailTestResult.value = r.message || (r.success ? '테스트 메일을 발송했습니다.' : '발송에 실패했습니다.')
+  } catch (e) {
+    mailTestOk.value = false
+    mailTestResult.value = typeof e === 'string' ? e : '테스트 메일 발송에 실패했습니다.'
+  } finally {
+    mailTesting.value = false
+  }
+}
+
 function rssAddFeed() {
   rssFeeds.value.push({ url: '', category: '', label: '' })
 }
@@ -374,5 +525,6 @@ onMounted(async () => {
     notifyCfg.value = { ...notifyCfg.value, ...data }
   } catch {}
   loadRssConfig()
+  loadMailConfig()
 })
 </script>

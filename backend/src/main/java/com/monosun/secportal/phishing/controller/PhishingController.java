@@ -145,6 +145,13 @@ public class PhishingController {
         return ApiResponse.noContent();
     }
 
+    // ── Send logs (발송 처리 결과) ─────────────────────────────────────────
+
+    @GetMapping("/send-logs")
+    public ApiResponse<List<PhishingDto.SendLogEntry>> listSendLogs() {
+        return ApiResponse.ok(service.listSendLogs());
+    }
+
     // ── Tracking (public — no auth required) ──────────────────────────────
 
     @GetMapping("/track/{token}/open")

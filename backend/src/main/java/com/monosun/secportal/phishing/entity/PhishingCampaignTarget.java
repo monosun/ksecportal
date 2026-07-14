@@ -29,4 +29,15 @@ public class PhishingCampaignTarget {
     private LocalDateTime openedAt;
     private LocalDateTime clickedAt;
     private LocalDateTime reportedAt;
+
+    /** 발송 처리 결과: SUCCESS / FAILED (미발송 시 null) */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private SendStatus sendStatus;
+
+    /** 발송 실패 사유 (성공 시 null) */
+    @Column(columnDefinition = "TEXT")
+    private String sendError;
+
+    public enum SendStatus { SUCCESS, FAILED }
 }

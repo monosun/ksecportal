@@ -6,13 +6,23 @@
         <h1 class="text-2xl font-bold text-gray-900">수탁사 관리</h1>
         <p class="text-sm text-gray-500 mt-1">개인정보 처리 수탁사 정보 및 점검 이력 관리</p>
       </div>
-      <button @click="openContractorModal(null)"
-        class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-semibold hover:bg-primary-600 transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        수탁사 등록
-      </button>
+      <div class="flex items-center gap-2">
+        <button @click="openImportModal()"
+          class="flex items-center gap-2 px-4 py-2 bg-white border border-primary-200 text-primary-600 rounded-xl text-sm font-semibold hover:bg-primary-50 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          개인정보처리방침에서 수탁사 일괄등록
+        </button>
+        <button @click="openContractorModal(null)"
+          class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-semibold hover:bg-primary-600 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          수탁사 등록
+        </button>
+      </div>
     </div>
 
     <div class="flex gap-6">
@@ -90,6 +100,10 @@
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">위탁 업무</p>
                 <p class="text-gray-800">{{ selected.serviceType || '—' }}</p>
+              </div>
+              <div>
+                <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">재수탁사</p>
+                <p class="text-gray-800">{{ selected.subContractor || '—' }}</p>
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">대표자</p>
@@ -238,6 +252,11 @@
             <div class="col-span-2">
               <label class="block text-xs font-medium text-gray-600 mb-1">위탁 업무</label>
               <input v-model="contractorModal.form.serviceType" type="text" placeholder="예: 고객센터 운영, 배송 서비스 등"
+                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"/>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-600 mb-1">재수탁사</label>
+              <input v-model="contractorModal.form.subContractor" type="text" placeholder="재위탁(재수탁) 업체가 있는 경우 입력"
                 class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"/>
             </div>
             <div>
@@ -441,6 +460,122 @@
         </div>
       </div>
     </Transition>
+
+    <!-- ─── Import Modal (개인정보처리방침에서 수탁사 일괄등록) ─── -->
+    <Transition name="fade">
+      <div v-if="importModal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeImportModal"/>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+          <!-- Header -->
+          <div class="flex items-start justify-between p-6 border-b border-gray-100">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">개인정보처리방침에서 수탁사 일괄등록</h3>
+              <p class="text-sm text-gray-500 mt-1">
+                방침 페이지의 위탁 표에서 수탁사 · 위탁업무 · 재수탁사를 읽어옵니다. 내용을 확인·수정한 뒤 일괄 등록하세요.
+              </p>
+            </div>
+            <button @click="closeImportModal" class="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- URL bar -->
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <label class="block text-xs font-medium text-gray-600 mb-1">개인정보처리방침 URL</label>
+            <div class="flex gap-2">
+              <input v-model="importModal.url" type="url" placeholder="https://example.com/privacy"
+                @keyup.enter="parsePolicy"
+                class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-400"/>
+              <button @click="parsePolicy" :disabled="importModal.parsing || !importModal.url.trim()"
+                class="px-4 py-2 rounded-xl bg-primary-500 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60 transition-all whitespace-nowrap">
+                {{ importModal.parsing ? '불러오는 중...' : '불러오기' }}
+              </button>
+            </div>
+            <p v-if="importModal.error" class="mt-2 text-xs text-red-600">{{ importModal.error }}</p>
+            <p v-else-if="importModal.parsed" class="mt-2 text-xs text-gray-500">
+              표 {{ importModal.tableCount }}개에서 {{ importModal.rows.length }}건을 읽었습니다.
+              <span v-if="existingCount > 0" class="text-amber-600">이미 등록된 수탁사 {{ existingCount }}건은 선택에서 제외했습니다.</span>
+            </p>
+          </div>
+
+          <!-- Rows -->
+          <div class="flex-1 overflow-y-auto px-6 py-4">
+            <div v-if="importModal.parsing" class="text-center py-16 text-gray-400 text-sm">
+              개인정보처리방침을 분석하고 있습니다...
+            </div>
+            <div v-else-if="!importModal.parsed" class="text-center py-16 text-gray-400 text-sm">
+              URL을 입력하고 "불러오기"를 누르세요.
+            </div>
+            <div v-else-if="importModal.rows.length === 0" class="text-center py-16 text-gray-400 text-sm">
+              추출된 수탁사가 없습니다.
+            </div>
+            <table v-else class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs text-gray-500 border-b border-gray-200">
+                  <th class="py-2 pr-2 w-10">
+                    <input type="checkbox" :checked="allSelected" @change="toggleAll($event.target.checked)"
+                      class="rounded border-gray-300 text-primary-500 focus:ring-primary-400"/>
+                  </th>
+                  <th class="py-2 pr-3 font-medium w-1/4">수탁사 *</th>
+                  <th class="py-2 pr-3 font-medium">위탁업무</th>
+                  <th class="py-2 pr-3 font-medium w-1/4">재수탁사</th>
+                  <th class="py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, i) in importModal.rows" :key="i"
+                  class="border-b border-gray-50 align-top"
+                  :class="row.existing ? 'bg-amber-50/50' : ''">
+                  <td class="py-2 pr-2">
+                    <input type="checkbox" v-model="row.selected"
+                      class="mt-2 rounded border-gray-300 text-primary-500 focus:ring-primary-400"/>
+                  </td>
+                  <td class="py-2 pr-3">
+                    <input v-model="row.name" type="text" placeholder="수탁사명"
+                      class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"/>
+                    <p v-if="row.existing" class="text-[11px] text-amber-600 mt-1">이미 등록된 수탁사</p>
+                  </td>
+                  <td class="py-2 pr-3">
+                    <textarea v-model="row.serviceType" rows="2" placeholder="위탁업무"
+                      class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 resize-y"/>
+                  </td>
+                  <td class="py-2 pr-3">
+                    <input v-model="row.subContractor" type="text" placeholder="—"
+                      class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"/>
+                  </td>
+                  <td class="py-2">
+                    <button @click="importModal.rows.splice(i, 1)" title="행 삭제"
+                      class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center gap-3 px-6 py-4 border-t border-gray-100">
+            <p class="flex-1 text-sm text-gray-500">
+              <span v-if="importModal.parsed">선택 <span class="font-semibold text-gray-800">{{ selectedRows.length }}</span>건 / 전체 {{ importModal.rows.length }}건</span>
+            </p>
+            <button @click="closeImportModal"
+              class="px-5 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+              취소
+            </button>
+            <button @click="bulkRegister" :disabled="importModal.importing || selectedRows.length === 0"
+              class="px-5 py-2.5 rounded-xl bg-primary-500 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-60 transition-all">
+              {{ importModal.importing ? '등록 중...' : `선택한 ${selectedRows.length}건 일괄등록` }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -448,7 +583,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
-import { contractorCheckApi } from '@/api'
+import { contractorApi, contractorCheckApi } from '@/api'
 
 const router = useRouter()
 
@@ -508,7 +643,7 @@ async function loadContractorChecks(contractorId) {
 
 const contractorModal = reactive({
   open: false, isEdit: false, editId: null,
-  form: { name: '', businessNumber: '', representative: '', serviceType: '', contractStart: '', contractEnd: '', contactPerson: '', contactEmail: '', contactPhone: '', status: 'ACTIVE', notes: '' }
+  form: { name: '', businessNumber: '', representative: '', serviceType: '', subContractor: '', contractStart: '', contractEnd: '', contactPerson: '', contactEmail: '', contactPhone: '', status: 'ACTIVE', notes: '' }
 })
 
 function openContractorModal(c) {
@@ -519,6 +654,7 @@ function openContractorModal(c) {
     businessNumber: c?.businessNumber ?? '',
     representative: c?.representative ?? '',
     serviceType: c?.serviceType ?? '',
+    subContractor: c?.subContractor ?? '',
     contractStart: c?.contractStart ?? '',
     contractEnd: c?.contractEnd ?? '',
     contactPerson: c?.contactPerson ?? '',
@@ -555,6 +691,96 @@ async function confirmDeleteContractor(c) {
   selected.value = null
   contractorChecks.value = []
   await fetchContractors()
+}
+
+// ── Import Modal (개인정보처리방침 → 수탁사 일괄등록) ────────────────
+
+const importModal = reactive({
+  open: false,
+  url: '',
+  parsing: false,
+  importing: false,
+  parsed: false,
+  error: '',
+  tableCount: 0,
+  rows: []   // { name, serviceType, subContractor, existing, selected }
+})
+
+const selectedRows = computed(() => importModal.rows.filter(r => r.selected && r.name.trim()))
+const existingCount = computed(() => importModal.rows.filter(r => r.existing).length)
+const allSelected = computed(() =>
+  importModal.rows.length > 0 && importModal.rows.every(r => r.selected))
+
+function openImportModal() {
+  importModal.open = true
+  importModal.url = ''
+  importModal.parsing = false
+  importModal.importing = false
+  importModal.parsed = false
+  importModal.error = ''
+  importModal.tableCount = 0
+  importModal.rows = []
+}
+
+function closeImportModal() {
+  if (importModal.parsing || importModal.importing) return
+  importModal.open = false
+}
+
+function toggleAll(checked) {
+  importModal.rows.forEach(r => { r.selected = checked })
+}
+
+async function parsePolicy() {
+  const url = importModal.url.trim()
+  if (!url) return
+  importModal.parsing = true
+  importModal.error = ''
+  importModal.parsed = false
+  importModal.rows = []
+  try {
+    const res = await contractorApi.parsePolicy(url)
+    const data = res.data ?? res
+    importModal.tableCount = data.tableCount ?? 0
+    importModal.rows = (data.items ?? []).map(i => ({
+      name: i.name ?? '',
+      serviceType: i.serviceType ?? '',
+      subContractor: i.subContractor ?? '',
+      existing: !!i.existing,
+      selected: !i.existing        // 이미 등록된 수탁사는 기본 선택 해제
+    }))
+    importModal.parsed = true
+  } catch (e) {
+    importModal.error = typeof e === 'string' ? e : (e?.message || '개인정보처리방침을 불러오지 못했습니다.')
+  } finally {
+    importModal.parsing = false
+  }
+}
+
+async function bulkRegister() {
+  const items = selectedRows.value.map(r => ({
+    name: r.name.trim(),
+    serviceType: r.serviceType?.trim() || null,
+    subContractor: r.subContractor?.trim() || null,
+    status: 'ACTIVE'
+  }))
+  if (items.length === 0) return
+  importModal.importing = true
+  try {
+    const res = await contractorApi.bulkCreate(items)
+    const data = res.data ?? res
+    let msg = `${data.created}건을 등록했습니다.`
+    if (data.skipped > 0) {
+      msg += `\n이미 등록되어 건너뛴 ${data.skipped}건: ${data.skippedNames.join(', ')}`
+    }
+    alert(msg)
+    importModal.open = false
+    await fetchContractors()
+  } catch (e) {
+    alert(e || '일괄 등록에 실패했습니다.')
+  } finally {
+    importModal.importing = false
+  }
 }
 
 // ── Check Detail Modal (결과 보기) ─────────────────────────────────

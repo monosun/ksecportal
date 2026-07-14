@@ -54,7 +54,7 @@
 
         <!-- Content -->
         <div class="flex-1 min-w-0">
-          <div ref="contentEl" class="card md-body" v-html="renderedHtml" @click="onContentClick"></div>
+          <div ref="contentEl" class="card md-body max-h-[calc(100vh-8rem)] overflow-y-auto" v-html="renderedHtml" @click="onContentClick"></div>
         </div>
       </div>
     </div>
@@ -181,7 +181,7 @@ function observeHeadings() {
   observer = new IntersectionObserver(entries => {
     const visible = entries.filter(e => e.isIntersecting)
     if (visible.length > 0) activeId.value = visible[0].target.id
-  }, { rootMargin: '0px 0px -70% 0px' })
+  }, { root: contentEl.value, rootMargin: '0px 0px -70% 0px' })
   contentEl.value.querySelectorAll('h2, h3').forEach(h => observer.observe(h))
 }
 
@@ -264,6 +264,6 @@ onUnmounted(() => observer?.disconnect())
 /* ─── 인쇄 ─── */
 @media print {
   .page-header, .help-toc { display: none !important; }
-  .md-body { box-shadow: none; border: none; }
+  .md-body { box-shadow: none; border: none; max-height: none !important; overflow: visible !important; }
 }
 </style>

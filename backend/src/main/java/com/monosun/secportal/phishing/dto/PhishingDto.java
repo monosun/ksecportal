@@ -152,6 +152,8 @@ public class PhishingDto {
         private LocalDateTime openedAt;
         private LocalDateTime clickedAt;
         private LocalDateTime reportedAt;
+        private String sendStatus;
+        private String sendError;
 
         public static CampaignTargetResult from(PhishingCampaignTarget ct) {
             return CampaignTargetResult.builder()
@@ -163,6 +165,8 @@ public class PhishingDto {
                     .openedAt(ct.getOpenedAt())
                     .clickedAt(ct.getClickedAt())
                     .reportedAt(ct.getReportedAt())
+                    .sendStatus(ct.getSendStatus() != null ? ct.getSendStatus().name() : null)
+                    .sendError(ct.getSendError())
                     .build();
         }
     }
@@ -171,5 +175,38 @@ public class PhishingDto {
     public static class CampaignDetail {
         private CampaignResponse campaign;
         private List<CampaignTargetResult> results;
+    }
+
+    // ── 발송 처리 결과 로그 ──────────────────────────────────────────────────
+
+    @Getter @Builder
+    public static class SendLogEntry {
+        private Long id;
+        private Long campaignId;
+        private String campaignName;
+        private String targetName;
+        private String targetEmail;
+        private String department;
+        private String sendStatus;
+        private String sendError;
+        private LocalDateTime sentAt;
+        private LocalDateTime openedAt;
+        private LocalDateTime clickedAt;
+
+        public static SendLogEntry from(PhishingCampaignTarget ct) {
+            return SendLogEntry.builder()
+                    .id(ct.getId())
+                    .campaignId(ct.getCampaign().getId())
+                    .campaignName(ct.getCampaign().getName())
+                    .targetName(ct.getTarget().getName())
+                    .targetEmail(ct.getTarget().getEmail())
+                    .department(ct.getTarget().getDepartment())
+                    .sendStatus(ct.getSendStatus() != null ? ct.getSendStatus().name() : null)
+                    .sendError(ct.getSendError())
+                    .sentAt(ct.getSentAt())
+                    .openedAt(ct.getOpenedAt())
+                    .clickedAt(ct.getClickedAt())
+                    .build();
+        }
     }
 }

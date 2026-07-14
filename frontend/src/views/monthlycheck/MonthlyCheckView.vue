@@ -602,6 +602,78 @@
       </div>
     </div>
   </div>
+
+  <!-- 빈 월 진입 시 선택 팝업 -->
+  <div v-if="showEmptyMonthPrompt" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">점검 항목을 어떻게 시작할까요?</h3>
+      </div>
+      <p class="text-sm text-gray-600 mb-5">
+        <span class="font-semibold text-gray-900">{{ displayYearMonth }}</span>에는 등록된 점검 항목이 없습니다.
+        진행 방식을 선택하세요.
+      </p>
+
+      <div class="space-y-2.5">
+        <!-- 기본 점검 불러오기 -->
+        <button @click="emptyMonthLoadDefaults" :disabled="loadingDefaults || emptyMonthBusy"
+          class="w-full flex items-start gap-3 px-4 py-3 text-left border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50/50 disabled:opacity-50 transition-colors">
+          <div class="flex-shrink-0 w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">기본 점검 항목 불러오기</p>
+            <p class="text-xs text-gray-500 mt-0.5">표준 기본 점검 항목을 새로 추가합니다.</p>
+          </div>
+        </button>
+
+        <!-- 이전 점검 내용 불러오기 -->
+        <button @click="emptyMonthCopyPrevious" :disabled="!prevMonthAvailable || loadingDefaults || emptyMonthBusy"
+          class="w-full flex items-start gap-3 px-4 py-3 text-left border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">이전 점검 내용 불러오기</p>
+            <p v-if="prevMonthAvailable" class="text-xs text-gray-500 mt-0.5">
+              <span class="font-medium text-gray-700">{{ fmtYm(prevMonthAvailable) }}</span> 점검 항목을 복사합니다(결과는 미완료로 초기화).
+            </p>
+            <p v-else class="text-xs text-gray-400 mt-0.5">이전 점검 내역이 있는 월이 없습니다.</p>
+          </div>
+        </button>
+
+        <!-- 빈 상태로 두기 -->
+        <button @click="emptyMonthLeave" :disabled="loadingDefaults || emptyMonthBusy"
+          class="w-full flex items-start gap-3 px-4 py-3 text-left border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+          <div class="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mt-0.5">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">빈 상태로 두기</p>
+            <p class="text-xs text-gray-500 mt-0.5">항목을 추가하지 않고 직접 입력합니다.</p>
+          </div>
+        </button>
+      </div>
+
+      <div v-if="emptyMonthBusy || loadingDefaults" class="mt-4 text-center text-xs text-gray-400">
+        {{ $t('common.loading') }}
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -631,6 +703,11 @@ const showDefaultsAlreadyLoaded = ref(false)
 const loadingDefaults = ref(false)
 const showClearAllConfirm = ref(false)
 const clearingAll = ref(false)
+
+// 빈 월 진입 시 선택 팝업
+const showEmptyMonthPrompt = ref(false)
+const prevMonthAvailable = ref(null)   // 이전 점검 내역이 있는 월(YYYY-MM) 또는 null
+const emptyMonthBusy = ref(false)
 
 // ── 상세 패널 상태 ─────────────────────────────────────────────────────
 const detailItem = ref(null)
@@ -710,7 +787,12 @@ function nextMonth() {
   currentYearMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-watch(currentYearMonth, () => { selectedCategory.value = ''; loadData() })
+watch(currentYearMonth, async () => {
+  selectedCategory.value = ''
+  if (detailItem.value) closeDetail()
+  await loadData()
+  await maybePromptEmptyMonth()
+})
 
 // ── 데이터 로드 ────────────────────────────────────────────────────────
 async function loadData() {
@@ -730,6 +812,53 @@ async function loadData() {
 async function refreshSummary() {
   const res = await monthlyCheckApi.summary(currentYearMonth.value)
   summary.value = res.data
+}
+
+// ── 빈 월 진입 시 선택 팝업 ─────────────────────────────────────────────
+function fmtYm(ym) {
+  if (!ym) return ''
+  const [y, m] = ym.split('-')
+  return `${y}년 ${parseInt(m)}월`
+}
+
+async function maybePromptEmptyMonth() {
+  if (items.value.length > 0) { showEmptyMonthPrompt.value = false; return }
+  try {
+    const res = await monthlyCheckApi.previousMonth(currentYearMonth.value)
+    prevMonthAvailable.value = res.data || null
+  } catch {
+    prevMonthAvailable.value = null
+  }
+  showEmptyMonthPrompt.value = true
+}
+
+async function emptyMonthLoadDefaults() {
+  showEmptyMonthPrompt.value = false
+  loadingDefaults.value = true
+  try {
+    await monthlyCheckApi.loadDefaults(currentYearMonth.value)
+    await loadData()
+  } finally {
+    loadingDefaults.value = false
+  }
+}
+
+async function emptyMonthCopyPrevious() {
+  if (!prevMonthAvailable.value) return
+  showEmptyMonthPrompt.value = false
+  emptyMonthBusy.value = true
+  try {
+    await monthlyCheckApi.copyPrevious(currentYearMonth.value)
+    await loadData()
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '이전 점검 내용을 불러오지 못했습니다.')
+  } finally {
+    emptyMonthBusy.value = false
+  }
+}
+
+function emptyMonthLeave() {
+  showEmptyMonthPrompt.value = false
 }
 
 // ── 뱃지 헬퍼 ─────────────────────────────────────────────────────────
@@ -978,7 +1107,10 @@ async function loadDefaults() {
   finally { loadingDefaults.value = false }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+  await maybePromptEmptyMonth()
+})
 </script>
 
 <style scoped>

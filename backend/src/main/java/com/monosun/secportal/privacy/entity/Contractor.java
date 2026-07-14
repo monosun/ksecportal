@@ -34,8 +34,11 @@ public class Contractor extends BaseEntity {
     @Column(length = 100)
     private String representative;
 
-    @Column(name = "service_type", length = 200)
+    @Column(name = "service_type", length = 500)
     private String serviceType;
+
+    @Column(name = "sub_contractor", length = 500)
+    private String subContractor;
 
     @Column(name = "contract_start")
     private LocalDate contractStart;

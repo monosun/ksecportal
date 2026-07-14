@@ -364,6 +364,8 @@ export const monthlyCheckApi = {
   clearAll: (yearMonth) => api.delete('/monthly-checks', { params: { yearMonth } }),
   checkDefaults: (yearMonth) => api.get('/monthly-checks/defaults/check', { params: { yearMonth } }),
   loadDefaults: (yearMonth) => api.post('/monthly-checks/defaults', null, { params: { yearMonth } }),
+  previousMonth: (yearMonth) => api.get('/monthly-checks/previous-month', { params: { yearMonth } }),
+  copyPrevious: (yearMonth) => api.post('/monthly-checks/copy-previous', null, { params: { yearMonth } }),
 
   listEvidences: (itemId) => api.get(`/monthly-checks/${itemId}/evidences`),
   createEvidence: (itemId, { title, content, file }) => {
@@ -543,6 +545,14 @@ export const phishingApi = {
   completeCampaign: (id) => api.post(`/phishing/campaigns/${id}/complete`),
   cancelCampaign:   (id) => api.post(`/phishing/campaigns/${id}/cancel`),
   deleteCampaign:   (id) => api.delete(`/phishing/campaigns/${id}`),
+
+  listSendLogs:     ()   => api.get('/phishing/send-logs'),
+}
+
+export const mailConfigApi = {
+  get:  () => api.get('/admin/mail-config'),
+  save: (data) => api.put('/admin/mail-config', data),
+  test: (data) => api.post('/admin/mail-config/test', data),
 }
 
 export const contractorCheckItemApi = {
@@ -557,6 +567,16 @@ export const contractorCheckItemApi = {
   updateDefault: (id, data) => api.patch(`/privacy/contractor-check-items/defaults/${id}`, data),
   deleteDefault: (id) => api.delete(`/privacy/contractor-check-items/defaults/${id}`),
   reset: () => api.post('/privacy/contractor-check-items/reset'),
+}
+
+export const contractorApi = {
+  list: () => api.get('/privacy/contractors'),
+  get: (id) => api.get(`/privacy/contractors/${id}`),
+  create: (data) => api.post('/privacy/contractors', data),
+  update: (id, data) => api.patch(`/privacy/contractors/${id}`, data),
+  delete: (id) => api.delete(`/privacy/contractors/${id}`),
+  parsePolicy: (url) => api.post('/privacy/contractors/parse-policy', { url }),
+  bulkCreate: (items) => api.post('/privacy/contractors/bulk', { items }),
 }
 
 export const contractorCheckApi = {

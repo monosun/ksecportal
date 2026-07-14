@@ -172,6 +172,60 @@
           </table>
         </div>
       </div>
+
+      <!-- ── Tab 4: Send logs (발송 처리 결과) ─────────────────────────── -->
+      <div v-else-if="activeTab === 'sendlogs'">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-3 text-sm">
+            <p class="text-gray-500">총 {{ sendLogs.length }}건</p>
+            <span class="text-green-600 font-medium">성공 {{ sendLogSuccessCount }}</span>
+            <span class="text-red-500 font-medium">실패 {{ sendLogFailedCount }}</span>
+          </div>
+          <button class="btn-secondary text-sm" @click="loadSendLogs" :disabled="sendLogsLoading">
+            {{ sendLogsLoading ? '불러오는 중...' : '새로고침' }}
+          </button>
+        </div>
+        <div class="card overflow-hidden p-0">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                <th class="px-4 py-3 text-left">훈련명</th>
+                <th class="px-4 py-3 text-left">수신자</th>
+                <th class="px-4 py-3 text-left">이메일</th>
+                <th class="px-4 py-3 text-center">발송 결과</th>
+                <th class="px-4 py-3 text-left">실패 사유</th>
+                <th class="px-4 py-3 text-center">열람/클릭</th>
+                <th class="px-4 py-3 text-left">발송 시각</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-if="!sendLogs.length && !sendLogsLoading">
+                <td colspan="7" class="py-12 text-center text-gray-400 text-sm">발송 이력이 없습니다. 모의훈련을 실시하면 발송 결과가 기록됩니다.</td>
+              </tr>
+              <tr v-for="log in sendLogs" :key="log.id" class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 text-gray-700">{{ log.campaignName }}</td>
+                <td class="px-4 py-3 font-medium text-gray-900">
+                  {{ log.targetName }}
+                  <span v-if="log.department" class="text-gray-400 text-xs ml-1">({{ log.department }})</span>
+                </td>
+                <td class="px-4 py-3 text-gray-600 text-xs">{{ log.targetEmail }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span v-if="log.sendStatus === 'SUCCESS'" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">성공</span>
+                  <span v-else-if="log.sendStatus === 'FAILED'" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">실패</span>
+                  <span v-else class="text-gray-300">—</span>
+                </td>
+                <td class="px-4 py-3 text-red-500 text-xs max-w-xs truncate" :title="log.sendError || ''">{{ log.sendError || '—' }}</td>
+                <td class="px-4 py-3 text-center text-xs space-x-1">
+                  <span :class="log.openedAt ? 'text-amber-600 font-semibold' : 'text-gray-300'" title="열람">●</span>
+                  <span class="text-gray-300">/</span>
+                  <span :class="log.clickedAt ? 'text-red-600 font-bold' : 'text-gray-300'" title="클릭">⚠</span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 text-xs">{{ fmtDateTime(log.sentAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ── Template Modal ────────────────────────────────────────────── -->
@@ -432,7 +486,8 @@
                     <td class="px-3 py-2 text-gray-600 text-xs">{{ r.targetEmail }}</td>
                     <td class="px-3 py-2 text-gray-500 text-xs">{{ r.department || '—' }}</td>
                     <td class="px-3 py-2 text-center">
-                      <span v-if="r.sentAt" class="text-green-600" title="발송 완료">✓</span>
+                      <span v-if="r.sendStatus === 'FAILED'" class="text-red-500 font-bold cursor-help" :title="r.sendError || '발송 실패'">✕</span>
+                      <span v-else-if="r.sentAt" class="text-green-600" title="발송 완료">✓</span>
                       <span v-else class="text-gray-300">—</span>
                     </td>
                     <td class="px-3 py-2 text-center">
@@ -459,7 +514,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { phishingApi } from '@/api'
 
 const TEMPLATE_CATEGORIES = ['IT', 'HR', 'DELIVERY', 'FINANCE', 'SECURITY', 'MARKETING', '기타']
@@ -468,6 +523,7 @@ const tabs = [
   { key: 'templates', label: '악성메일 템플릿' },
   { key: 'targets',   label: '발송대상 관리' },
   { key: 'campaigns', label: '모의훈련 현황' },
+  { key: 'sendlogs',  label: '발송 로그' },
 ]
 const activeTab = ref('templates')
 
@@ -475,6 +531,8 @@ const activeTab = ref('templates')
 const templates = ref([])
 const targets   = ref([])
 const campaigns = ref([])
+const sendLogs  = ref([])
+const sendLogsLoading = ref(false)
 
 const activeTargets = computed(() => targets.value.filter(t => t.active))
 
@@ -489,6 +547,20 @@ async function loadAll() {
   targets.value    = tgt.data ?? []
   campaigns.value  = cmp.data ?? []
 }
+
+async function loadSendLogs() {
+  sendLogsLoading.value = true
+  try {
+    const res = await phishingApi.listSendLogs()
+    sendLogs.value = res.data ?? []
+  } catch (e) {
+    sendLogs.value = []
+  } finally {
+    sendLogsLoading.value = false
+  }
+}
+
+watch(activeTab, (t) => { if (t === 'sendlogs') loadSendLogs() })
 
 onMounted(loadAll)
 
@@ -672,9 +744,14 @@ const resultStats = computed(() => {
   ]
 })
 
+// ── Send log helpers ───────────────────────────────────────────────────────
+const sendLogSuccessCount = computed(() => sendLogs.value.filter(l => l.sendStatus === 'SUCCESS').length)
+const sendLogFailedCount  = computed(() => sendLogs.value.filter(l => l.sendStatus === 'FAILED').length)
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function pct(v, t) { return t ? Math.round(v / t * 100) : 0 }
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString('ko-KR') : '—' }
+function fmtDateTime(d) { return d ? new Date(d).toLocaleString('ko-KR') : '—' }
 
 function difficultyLabel(d) { return { EASY: '쉬움', MEDIUM: '보통', HARD: '어려움' }[d] ?? d }
 function difficultyClass(d) {

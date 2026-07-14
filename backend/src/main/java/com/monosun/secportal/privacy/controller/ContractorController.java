@@ -5,6 +5,7 @@ import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.privacy.dto.ContractorDto;
 import com.monosun.secportal.privacy.entity.ContractorInspectionFile;
 import com.monosun.secportal.privacy.service.ContractorService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -58,6 +59,24 @@ public class ContractorController {
     public ApiResponse<Void> delete(@PathVariable Long id) throws IOException {
         service.delete(id);
         return ApiResponse.ok(null);
+    }
+
+    // ── 개인정보처리방침 일괄등록 ────────────────────────────────────────
+
+    /** 개인정보처리방침 URL을 읽어 수탁사·위탁업무·재수탁사를 추출한다 (저장하지 않고 미리보기만). */
+    @PostMapping("/parse-policy")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<ContractorDto.PolicyParseResponse> parsePolicy(
+            @Valid @RequestBody ContractorDto.PolicyImportRequest req) {
+        return ApiResponse.ok(service.parseFromPolicy(req.getUrl()));
+    }
+
+    /** 팝업에서 확인·수정한 수탁사 목록을 일괄 등록한다. */
+    @PostMapping("/bulk")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ApiResponse<ContractorDto.BulkCreateResponse> bulkCreate(
+            @RequestBody ContractorDto.BulkCreateRequest req) {
+        return ApiResponse.ok(service.bulkCreate(req.getItems()));
     }
 
     // ── Inspections ───────────────────────────────────────────────────

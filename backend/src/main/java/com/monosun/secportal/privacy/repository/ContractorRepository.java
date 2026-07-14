@@ -14,4 +14,7 @@ public interface ContractorRepository extends JpaRepository<Contractor, Long> {
 
     @Query("SELECT c FROM Contractor c LEFT JOIN FETCH c.inspections WHERE c.id = :id")
     Optional<Contractor> findByIdWithInspections(@org.springframework.data.repository.query.Param("id") Long id);
+
+    @Query("SELECT c.name FROM Contractor c")
+    List<String> findAllNames();
 }

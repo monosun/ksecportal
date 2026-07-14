@@ -19,8 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class ContractorService {
     private final FileStorageService fileStorageService;
     private final ContractorCheckResultRepository checkResultRepo;
     private final ContractorCheckRepository checkRepo;
+    private final PrivacyPolicyParser policyParser;
 
     // ── Contractor CRUD ───────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ public class ContractorService {
                 .businessNumber(req.getBusinessNumber())
                 .representative(req.getRepresentative())
                 .serviceType(req.getServiceType())
+                .subContractor(req.getSubContractor())
                 .contractStart(req.getContractStart())
                 .contractEnd(req.getContractEnd())
                 .contactPerson(req.getContactPerson())
@@ -77,6 +80,7 @@ public class ContractorService {
         if (req.getBusinessNumber() != null) c.setBusinessNumber(req.getBusinessNumber());
         if (req.getRepresentative() != null) c.setRepresentative(req.getRepresentative());
         if (req.getServiceType() != null) c.setServiceType(req.getServiceType());
+        if (req.getSubContractor() != null) c.setSubContractor(req.getSubContractor());
         if (req.getContractStart() != null) c.setContractStart(req.getContractStart());
         if (req.getContractEnd() != null) c.setContractEnd(req.getContractEnd());
         if (req.getContactPerson() != null) c.setContactPerson(req.getContactPerson());
@@ -101,6 +105,51 @@ public class ContractorService {
             }
         }
         contractorRepo.delete(c);
+    }
+
+    // ── 개인정보처리방침 → 수탁사 일괄 등록 ─────────────────────────────
+
+    /** 개인정보처리방침 URL에서 수탁사·위탁업무·재수탁사를 추출한다. (저장하지 않음) */
+    @Transactional(readOnly = true)
+    public ContractorDto.PolicyParseResponse parseFromPolicy(String url) {
+        ContractorDto.PolicyParseResponse parsed = policyParser.parse(url);
+        Set<String> existingNames = contractorRepo.findAllNames().stream()
+                .map(this::nameKey)
+                .collect(java.util.stream.Collectors.toSet());
+        parsed.getItems().forEach(i -> i.setExisting(existingNames.contains(nameKey(i.getName()))));
+        return parsed;
+    }
+
+    /** 팝업에서 확인·수정한 수탁사 목록을 일괄 등록한다. 이미 등록된 수탁사명은 건너뛴다. */
+    @Transactional
+    public ContractorDto.BulkCreateResponse bulkCreate(List<ContractorDto.ContractorRequest> items) {
+        if (items == null || items.isEmpty()) throw new BusinessException("등록할 수탁사가 없습니다.");
+
+        Set<String> taken = contractorRepo.findAllNames().stream()
+                .map(this::nameKey)
+                .collect(java.util.stream.Collectors.toCollection(java.util.HashSet::new));
+
+        int created = 0;
+        List<String> skipped = new ArrayList<>();
+        for (ContractorDto.ContractorRequest req : items) {
+            if (req.getName() == null || req.getName().isBlank()) continue;
+            String key = nameKey(req.getName());
+            if (!taken.add(key)) {          // 기존 등록분 + 요청 내 중복 모두 차단
+                skipped.add(req.getName().trim());
+                continue;
+            }
+            create(req);
+            created++;
+        }
+        return ContractorDto.BulkCreateResponse.builder()
+                .created(created)
+                .skipped(skipped.size())
+                .skippedNames(skipped)
+                .build();
+    }
+
+    private String nameKey(String name) {
+        return name == null ? "" : name.replaceAll("\\s+", "").toLowerCase();
     }
 
     // ── Inspection CRUD ───────────────────────────────────────────────

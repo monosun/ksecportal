@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.monosun.secportal'
-version = '1.7.1'
+version = '1.8.0'
 sourceCompatibility = '17'
 
 configurations {
@@ -44,6 +44,9 @@ dependencies {
 
     // 소스 취약점 점검 — GitHub 저장소 tarball(.tar.gz) 해제용
     implementation 'org.apache.commons:commons-compress:1.26.2'
+
+    // 개인정보처리방침 HTML 파싱 (수탁사 일괄등록)
+    implementation 'org.jsoup:jsoup:1.17.2'
 
     // TOTP (MFA)
     implementation 'dev.samstevens.totp:totp:1.7.1'

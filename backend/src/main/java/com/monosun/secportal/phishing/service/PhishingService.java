@@ -197,18 +197,30 @@ public class PhishingService {
         c.setStatus(PhishingCampaign.Status.RUNNING);
         PhishingTemplate tmpl = c.getTemplate();
 
+        int success = 0, failed = 0;
         for (PhishingCampaignTarget ct : c.getCampaignTargets()) {
-            ct.setSentAt(LocalDateTime.now());
             String trackBase = appBaseUrl() + "/phishing/track/" + ct.getTrackingToken();
             String body = tmpl.getBodyHtml()
                     .replace("{CLICK_URL}", trackBase + "/click")
                     .replace("{OPEN_URL}", trackBase + "/open")
                     .replace("{TARGET_NAME}", ct.getTarget().getName())
                     .replace("{TARGET_EMAIL}", ct.getTarget().getEmail());
-            emailService.send(ct.getTarget().getEmail(), tmpl.getSubject(), body);
+            // 동기 발송하여 처리 결과(성공/실패)를 대상별로 기록한다.
+            try {
+                emailService.sendSync(ct.getTarget().getEmail(), tmpl.getSubject(), body);
+                ct.setSentAt(LocalDateTime.now());
+                ct.setSendStatus(PhishingCampaignTarget.SendStatus.SUCCESS);
+                ct.setSendError(null);
+                success++;
+            } catch (Exception e) {
+                ct.setSendStatus(PhishingCampaignTarget.SendStatus.FAILED);
+                ct.setSendError(e.getMessage() != null ? e.getMessage() : e.toString());
+                failed++;
+            }
         }
 
-        auditLogService.log("PHISHING_CAMPAIGN_LAUNCHED", "PHISHING_CAMPAIGN", id, "actor=" + actor.getName());
+        auditLogService.log("PHISHING_CAMPAIGN_LAUNCHED", "PHISHING_CAMPAIGN", id,
+                "actor=" + actor.getName() + ", 성공=" + success + ", 실패=" + failed);
         return PhishingDto.CampaignResponse.from(campaignRepo.save(c));
     }
 
@@ -237,6 +249,14 @@ public class PhishingService {
         campaignRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("PhishingCampaign", id));
         campaignRepo.deleteById(id);
         auditLogService.log("PHISHING_CAMPAIGN_DELETED", "PHISHING_CAMPAIGN", id, "");
+    }
+
+    // ── Send logs (발송 처리 결과) ─────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<PhishingDto.SendLogEntry> listSendLogs() {
+        return campaignTargetRepo.findSendLogs()
+                .stream().map(PhishingDto.SendLogEntry::from).toList();
     }
 
     // ── Tracking (click/open) ─────────────────────────────────────────────
