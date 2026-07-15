@@ -319,6 +319,52 @@
           </div>
         </div>
       </div>
+
+      <!-- 법령 개정정보 조회 기간 -->
+      <div class="card mt-6">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-bold text-gray-800">법령 개정정보 조회 기간</h2>
+          <div class="flex items-center gap-3">
+            <span v-if="legalDaysSaved" class="text-sm text-green-600 font-semibold">저장되었습니다.</span>
+            <button @click="saveLegalDays" :disabled="legalDaysSaving"
+              class="btn-primary text-sm px-6 py-2 disabled:opacity-50">
+              {{ legalDaysSaving ? '저장 중...' : '저장' }}
+            </button>
+          </div>
+        </div>
+        <p class="text-sm text-gray-400 mb-5">
+          대시보드 <strong>법령 개정</strong> 위젯에서 위 업종의 관련 법령 중 최근 개정·공포된 법령을 표시할 기간입니다.
+          법제처 Open API로 실시간 조회하며, <strong>API 연동</strong> 탭의 법제처 API 키가 필요합니다.
+        </p>
+
+        <!-- 법제처 OC 키 미설정 경고 -->
+        <div v-if="!lawApiKeyStored" class="mb-5 flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+          <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          <span>
+            법제처 Open API 키(OC 코드)가 설정되지 않았습니다. 법령 개정정보를 조회하려면
+            <button type="button" @click="activeTab = 'api'" class="underline font-semibold hover:text-amber-800">API 연동 탭</button>에서 먼저 API 키를 등록하세요.
+          </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">조회 기간</label>
+          <div class="flex gap-1.5">
+            <button v-for="p in LEGAL_PRESETS" :key="p.days"
+              @click="legalDays = p.days"
+              class="px-3 py-1 rounded-lg border text-xs font-semibold transition-all"
+              :class="legalDays === p.days ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 text-gray-500 hover:border-gray-300'">
+              {{ p.label }}
+            </button>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-gray-400">
+            <span>직접 입력</span>
+            <input v-model.number="legalDays" type="number" min="1" max="365"
+              class="input w-20 text-center text-sm" />
+            <span>일</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ── 탭: 시스템 설정 ── -->
@@ -1133,6 +1179,29 @@ const selectedIndustryIds = ref([])
 const industrySaving = ref(false)
 const industrySaved  = ref(false)
 
+// 법령 개정정보 조회 기간
+const LEGAL_PRESETS = [
+  { label: '1주일',  days: 7 },
+  { label: '1개월',  days: 30 },
+  { label: '3개월',  days: 90 },
+  { label: '6개월',  days: 180 },
+  { label: '12개월', days: 365 },
+]
+const legalDays = ref(30)
+const legalDaysSaving = ref(false)
+const legalDaysSaved  = ref(false)
+
+async function saveLegalDays() {
+  legalDaysSaving.value = true; legalDaysSaved.value = false
+  try {
+    const d = Math.min(365, Math.max(1, legalDays.value || 30))
+    legalDays.value = d
+    await appSettingApi.update('legal.days', String(d))
+    legalDaysSaved.value = true; setTimeout(() => { legalDaysSaved.value = false }, 3000)
+  } catch { alert('법령 조회 기간 저장에 실패했습니다.') }
+  finally { legalDaysSaving.value = false }
+}
+
 function toggleIndustry(id) {
   const idx = selectedIndustryIds.value.indexOf(id)
   if (idx === -1) selectedIndustryIds.value = [...selectedIndustryIds.value, id]
@@ -1165,6 +1234,8 @@ async function loadIndustryConfig() {
       const ids = JSON.parse(raw)
       if (Array.isArray(ids)) selectedIndustryIds.value = ids
     }
+    const ld = res.data?.['legal.days']
+    if (ld) legalDays.value = parseInt(ld) || 30
   } catch {}
 }
 

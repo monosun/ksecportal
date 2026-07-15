@@ -222,10 +222,10 @@
                       d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/>
                   </svg>
                 </div>
-                <h2 class="text-sm font-semibold text-gray-800">KRCERT 보안공지 <span class="text-xs text-gray-400 font-normal ml-1">최근 {{ rssDays }}일</span></h2>
+                <h2 class="text-sm font-semibold text-gray-800">{{ activeIsLegal ? '법령 개정정보' : 'KRCERT 보안공지' }} <span class="text-xs text-gray-400 font-normal ml-1">최근 {{ activeDaysLabel }}</span></h2>
               </div>
               <div class="flex gap-1">
-                <button v-for="tab in rssTabList" :key="tab.category"
+                <button v-for="tab in allTabs" :key="tab.category"
                   @click="rssTab = tab.category"
                   :class="rssTab === tab.category ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                   class="text-xs px-2.5 py-1 rounded-lg font-medium transition-colors">{{ tab.label }}</button>
@@ -233,21 +233,55 @@
             </div>
 
             <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              <div v-if="rssLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
-              <div v-else-if="rssError" class="py-8 text-center text-xs text-red-400">{{ rssError }}</div>
-              <template v-else>
-                <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssDays }}일간 게시물이 없습니다</div>
-                <div v-else class="divide-y divide-gray-50">
-                  <a v-for="item in filteredRss.slice(0,8)" :key="item.link"
-                    :href="item.link" target="_blank" rel="noopener noreferrer"
-                    class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.title }}</p>
-                      <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
-                    </div>
-                    <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">{{ fmtRssDate(item.pubDate) }}</span>
-                  </a>
+              <!-- ── 법령 개정 탭 ── -->
+              <template v-if="activeIsLegal">
+                <div v-if="legalLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
+                <div v-else-if="legalNoIndustry" class="py-8 text-center text-xs text-gray-400">
+                  <RouterLink to="/settings" class="text-primary-600 hover:underline">설정관리 &gt; 업종 설정</RouterLink>에서 업종을 먼저 선택하세요
                 </div>
+                <div v-else-if="legalKeyMissing" class="py-8 text-center text-xs text-gray-400">
+                  <RouterLink to="/settings" class="text-primary-600 hover:underline">설정관리 &gt; API 연동</RouterLink>에서 법제처 API 키를 등록하세요
+                </div>
+                <div v-else-if="legalError" class="py-8 text-center text-xs text-red-400">{{ legalError }}</div>
+                <template v-else>
+                  <div v-if="legalItems.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ legalPeriodLabel }}간 개정·공포된 법령이 없습니다</div>
+                  <div v-else class="divide-y divide-gray-50">
+                    <a v-for="item in legalItems.slice(0,8)" :key="item.name"
+                      :href="item.url" target="_blank" rel="noopener noreferrer"
+                      class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0" :class="lawTypeColor(item.type)">{{ item.type }}</span>
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.lawName }}</p>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                          {{ item.department }}<span v-if="item.amendType"> · {{ item.amendType }}</span><span v-if="item.enforcementDate && item.enforcementDate !== '-'"> · 시행 {{ item.enforcementDate }}</span>
+                        </p>
+                      </div>
+                      <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">공포 {{ item.promulgationDate }}</span>
+                    </a>
+                  </div>
+                </template>
+              </template>
+
+              <!-- ── RSS 탭 (취약점 정보 · 보안공지) ── -->
+              <template v-else>
+                <div v-if="rssLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
+                <div v-else-if="rssError" class="py-8 text-center text-xs text-red-400">{{ rssError }}</div>
+                <template v-else>
+                  <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssDays }}일간 게시물이 없습니다</div>
+                  <div v-else class="divide-y divide-gray-50">
+                    <a v-for="item in filteredRss.slice(0,8)" :key="item.link"
+                      :href="item.link" target="_blank" rel="noopener noreferrer"
+                      class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.title }}</p>
+                        <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                      </div>
+                      <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">{{ fmtRssDate(item.pubDate) }}</span>
+                    </a>
+                  </div>
+                </template>
               </template>
             </div>
           </div>
@@ -291,6 +325,8 @@ import {
 import { metricsApi, vulnApi, rssApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import NoticeBar from '@/components/dashboard/NoticeBar.vue'
+import { INDUSTRIES } from '@/data/legalIndustries.js'
+import { fetchLawMeta } from '@/services/legalApiService.js'
 
 Chart.register(DoughnutController, LineController, ArcElement, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler)
 
@@ -302,7 +338,7 @@ const lineCanvas = ref(null)
 // ── 위젯 순서 관리 ──
 const DEFAULT_ORDER = ['rss', 'securityEvents', 'kpi', 'policy', 'trends']
 const WIDGET_LABELS = {
-  rss:            'KRCERT 보안공지',
+  rss:            '보안 · 법령 정보',
   securityEvents: '보안이벤트 현황',
   kpi:            '보안 KPI',
   policy:         '정책 · 취약점 현황',
@@ -486,6 +522,16 @@ const rssTabList = ref([
   { category: 'notice', label: '보안공지' }
 ])
 
+const legalTab = { category: 'legal', label: '법령 개정' }
+const allTabs = computed(() => [...rssTabList.value, legalTab])
+const activeIsLegal = computed(() => rssTab.value === 'legal')
+// 법령 탭은 기간 라벨(1주일·1개월…)로, RSS 탭은 "N일"로 표시
+function daysToPeriodLabel(d) {
+  return { 7: '1주일', 30: '1개월', 90: '3개월', 180: '6개월', 365: '12개월' }[d] || `${d}일`
+}
+const legalPeriodLabel = computed(() => daysToPeriodLabel(legalDays.value))
+const activeDaysLabel = computed(() => activeIsLegal.value ? legalPeriodLabel.value : `${rssDays.value}일`)
+
 const filteredRss = computed(() =>
   rssItems.value.filter(item => item.category === rssTab.value)
 )
@@ -526,8 +572,104 @@ async function loadRssSettings() {
         rssTab.value = rssTabList.value[0]?.category || 'vuln'
       }
     }
+    // 법령 개정 위젯 설정
+    if (s['legal.days']) legalDays.value = parseInt(s['legal.days']) || 30
+    lawKeyPresent.value = !!(s['lawApiKey'] && s['lawApiKey'].trim())
+    const rawInd = s['company.industries']
+    if (rawInd) {
+      try { const ids = JSON.parse(rawInd); if (Array.isArray(ids)) companyIndustryIds.value = ids } catch {}
+    }
+    // 설정 로드가 탭 클릭보다 늦게 끝난 경우, 법령 탭이 열려 있으면 갱신된 값으로 재조회
+    if (rssTab.value === 'legal') { legalLoaded.value = false; loadLegal() }
   } catch {}
 }
+
+// ── 법령 개정 정보 (법제처 Open API) ──
+const legalItems   = ref([])
+const legalLoading = ref(false)
+const legalError   = ref('')
+const legalLoaded  = ref(false)
+const legalKeyMissing   = ref(false)
+const legalDays    = ref(30)
+const lawKeyPresent = ref(false)
+const companyIndustryIds = ref([])
+
+// 선택된 업종의 관련 법령 (법령명 기준 중복 제거)
+const legalLaws = computed(() => {
+  const seen = new Set(); const out = []
+  for (const ind of INDUSTRIES) {
+    if (!companyIndustryIds.value.includes(ind.id)) continue
+    for (const law of ind.laws) {
+      if (seen.has(law.name)) continue
+      seen.add(law.name); out.push(law)
+    }
+  }
+  return out
+})
+const legalNoIndustry = computed(() => companyIndustryIds.value.length === 0)
+
+function lawTypeColor(type) {
+  return {
+    '법령': 'bg-blue-100 text-blue-700', '시행령': 'bg-indigo-100 text-indigo-700',
+    '시행규칙': 'bg-violet-100 text-violet-700', '시행세칙': 'bg-purple-100 text-purple-700',
+    '규정': 'bg-teal-100 text-teal-700', '고시': 'bg-amber-100 text-amber-700',
+  }[type] || 'bg-gray-100 text-gray-600'
+}
+
+const LEGAL_CACHE_KEY = 'legal-meta-cache-v1'
+const LEGAL_TTL = 12 * 3600 * 1000  // 12시간
+
+function cutoffYmd(days) {
+  const d = new Date(); d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function loadLegal() {
+  legalLoaded.value = true
+  legalError.value = ''
+  legalKeyMissing.value = false
+  const laws = legalLaws.value
+  if (laws.length === 0) { legalItems.value = []; return }
+  if (!lawKeyPresent.value) { legalKeyMissing.value = true; legalItems.value = []; return }
+
+  legalLoading.value = true
+  try {
+    let cache = {}
+    try { cache = JSON.parse(localStorage.getItem(LEGAL_CACHE_KEY) || '{}') } catch {}
+    const now = Date.now()
+    const results = []
+    const queue = [...laws]
+
+    async function worker() {
+      while (queue.length) {
+        const law = queue.shift()
+        const cached = cache[law.name]
+        let meta
+        if (cached && (now - cached.ts) < LEGAL_TTL) {
+          meta = cached.meta
+        } else {
+          try { meta = await fetchLawMeta(law.name) } catch { meta = null }
+          cache[law.name] = { meta, ts: now }
+        }
+        if (meta) results.push({ ...law, ...meta })
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()])
+    try { localStorage.setItem(LEGAL_CACHE_KEY, JSON.stringify(cache)) } catch {}
+
+    const cutoff = cutoffYmd(legalDays.value)
+    legalItems.value = results
+      .filter(r => r.promulgationRaw && r.promulgationRaw >= cutoff)
+      .sort((a, b) => b.promulgationRaw.localeCompare(a.promulgationRaw))
+  } catch {
+    legalError.value = '법령 정보를 불러오지 못했습니다'
+  } finally {
+    legalLoading.value = false
+  }
+}
+
+// 법령 개정 탭을 처음 열 때만 조회 (불필요한 API 호출 방지)
+watch(rssTab, (t) => { if (t === 'legal' && !legalLoaded.value) loadLegal() })
 
 onMounted(async () => {
   loadRssSettings()

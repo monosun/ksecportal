@@ -39,7 +39,7 @@
         class="px-3 py-1 rounded-full text-xs font-medium cursor-pointer border transition-colors"
         :class="filters.status === s.key ? s.activeClass : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'"
         @click="toggleStatus(s.key)">
-        {{ s.label }}: {{ s.count }}
+        {{ s.label }}: {{ statusCounts[s.key] }}
       </span>
     </div>
 
@@ -139,12 +139,13 @@ const severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 const types = ['MALWARE', 'PHISHING', 'DATA_BREACH', 'UNAUTHORIZED_ACCESS', 'DDOS', 'INSIDER_THREAT', 'PHYSICAL', 'OTHER']
 
 const statusSummary = [
-  { key: 'OPEN',          label: '미처리',  count: ref(0), activeClass: 'bg-red-100 border-red-400 text-red-700' },
-  { key: 'INVESTIGATING', label: '조사중',  count: ref(0), activeClass: 'bg-orange-100 border-orange-400 text-orange-700' },
-  { key: 'CONTAINED',     label: '격리됨',  count: ref(0), activeClass: 'bg-yellow-100 border-yellow-400 text-yellow-700' },
-  { key: 'RESOLVED',      label: '해결됨',  count: ref(0), activeClass: 'bg-green-100 border-green-400 text-green-700' },
-  { key: 'CLOSED',        label: '종료',    count: ref(0), activeClass: 'bg-gray-100 border-gray-400 text-gray-700' },
+  { key: 'OPEN',          label: '미처리',  activeClass: 'bg-red-100 border-red-400 text-red-700' },
+  { key: 'INVESTIGATING', label: '조사중',  activeClass: 'bg-orange-100 border-orange-400 text-orange-700' },
+  { key: 'CONTAINED',     label: '격리됨',  activeClass: 'bg-yellow-100 border-yellow-400 text-yellow-700' },
+  { key: 'RESOLVED',      label: '해결됨',  activeClass: 'bg-green-100 border-green-400 text-green-700' },
+  { key: 'CLOSED',        label: '종료',    activeClass: 'bg-gray-100 border-gray-400 text-gray-700' },
 ]
+const statusCounts = ref({ OPEN: 0, INVESTIGATING: 0, CONTAINED: 0, RESOLVED: 0, CLOSED: 0 })
 
 function toggleStatus(key) {
   filters.value.status = filters.value.status === key ? '' : key
@@ -172,7 +173,8 @@ async function loadSummary() {
   for (const s of statusSummary) {
     try {
       const res = await incidentApi.list({ status: s.key, size: 1 })
-      s.count = res.data?.totalElements || 0
+      // 새 Spring 페이지 직렬화 형식은 totalElements가 res.data.page 하위에 위치
+      statusCounts.value[s.key] = res.data?.page?.totalElements ?? res.data?.totalElements ?? 0
     } catch {}
   }
 }
@@ -197,6 +199,7 @@ async function handleBulkUpload(file, resolve, reject) {
     const res = await incidentBulkApi.upload(file)
     resolve(res.data)
     load()
+    loadSummary()
   } catch (e) {
     reject(typeof e === 'string' ? e : '업로드 중 오류가 발생했습니다.')
   }

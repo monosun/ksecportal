@@ -338,6 +338,29 @@ export async function fetchLawByName(lawName) {
   return parseContentData(contentData)
 }
 
+// 법령명으로 개정 메타정보만 가져오기 (대시보드 법령 개정 위젯용)
+// 전문(content) 호출 없이 검색(search) 응답만으로 공포·시행·제개정 정보를 추출 → 가볍고 빠름
+export async function fetchLawMeta(lawName) {
+  let hit = await searchHit(lawName, 'law')
+  if (!hit) hit = await searchHit(lawName, 'admrul')
+  if (!hit) return null
+
+  const rawLink = hit.법령상세링크 || hit.법령링크 || null
+  const digits = (v) => String(v ?? '').replace(/\D/g, '')
+  return {
+    lawName:          hit.법령명한글 || lawName,
+    lawType:          hit.법령구분명 || '',
+    department:       hit.소관부처명 || '',
+    promulgationRaw:  digits(hit.공포일자),        // YYYYMMDD (문자열 비교·정렬용)
+    promulgationDate: formatDate(hit.공포일자),
+    enforcementRaw:   digits(hit.시행일자),
+    enforcementDate:  formatDate(hit.시행일자),
+    amendType:        hit.제개정구분명 || '',
+    lawNumber:        hit.공포번호 ? String(hit.공포번호) : '',
+    link:             rawLink && !rawLink.startsWith('http') ? `https://www.law.go.kr${rawLink}` : rawLink,
+  }
+}
+
 // 법령명으로 조문 + 메타정보 가져오기 (법령검토 모달용)
 export async function fetchLawFull(lawName) {
   let hit = await searchHit(lawName, 'law')

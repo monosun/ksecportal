@@ -39,15 +39,37 @@
           </select>
         </div>
 
-        <div class="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+        <!-- 선택 삭제 툴바 -->
+        <div v-if="!loading && filteredContractors.length > 0" class="mb-2 flex items-center justify-between px-1">
+          <label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+            <input type="checkbox" :checked="allChecked" :indeterminate.prop="someChecked && !allChecked"
+              @change="toggleCheckAll($event.target.checked)"
+              class="rounded border-gray-300 text-primary-500 focus:ring-primary-400"/>
+            {{ checkedCount > 0 ? `${checkedCount}건 선택됨` : '전체 선택' }}
+          </label>
+          <button v-if="checkedCount > 0" @click="bulkDeleteContractors" :disabled="bulkDeleting"
+            class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+            </svg>
+            {{ bulkDeleting ? '삭제 중...' : `선택 삭제 (${checkedCount})` }}
+          </button>
+        </div>
+
+        <div class="space-y-2 max-h-[calc(100vh-260px)] overflow-y-auto pr-1">
           <div v-if="loading" class="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
           <div v-else-if="filteredContractors.length === 0" class="text-center py-8 text-gray-400 text-sm">등록된 수탁사가 없습니다</div>
-          <button v-for="c in filteredContractors" :key="c.id"
-            @click="selectContractor(c)"
-            class="w-full text-left p-4 rounded-xl border transition-all"
-            :class="selected?.id === c.id
-              ? 'border-primary-400 bg-primary-50'
-              : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'">
+          <div v-for="c in filteredContractors" :key="c.id" class="flex items-start gap-2">
+            <input type="checkbox" :checked="checkedIds.has(c.id)"
+              @change="toggleCheck(c.id, $event.target.checked)"
+              class="mt-4 flex-shrink-0 rounded border-gray-300 text-primary-500 focus:ring-primary-400"/>
+            <button
+              @click="selectContractor(c)"
+              class="flex-1 min-w-0 text-left p-4 rounded-xl border transition-all"
+              :class="selected?.id === c.id
+                ? 'border-primary-400 bg-primary-50'
+                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
                 <p class="font-semibold text-gray-900 truncate text-sm">{{ c.name }}</p>
@@ -68,7 +90,8 @@
               </svg>
               점검 {{ c.checkCount ?? 0 }}건
             </div>
-          </button>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -498,6 +521,22 @@
               표 {{ importModal.tableCount }}개에서 {{ importModal.rows.length }}건을 읽었습니다.
               <span v-if="existingCount > 0" class="text-amber-600">이미 등록된 수탁사 {{ existingCount }}건은 선택에서 제외했습니다.</span>
             </p>
+
+            <!-- 최근 사용한 URL 이력 -->
+            <div v-if="policyUrlHistory.length" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+              <span class="text-[11px] font-medium text-gray-400 mr-0.5">최근 URL</span>
+              <span v-for="u in policyUrlHistory" :key="u"
+                class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-white border border-gray-200 text-[11px] text-gray-600 hover:border-primary-300 transition-colors">
+                <button @click="useHistoryUrl(u)" :title="u"
+                  class="max-w-[240px] truncate hover:text-primary-600 transition-colors">{{ u }}</button>
+                <button @click="removePolicyUrl(u)" title="이력에서 삭제"
+                  class="p-0.5 text-gray-300 hover:text-red-500 transition-colors">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </span>
+            </div>
           </div>
 
           <!-- Rows -->
@@ -607,6 +646,53 @@ const filteredContractors = computed(() => {
   })
 })
 
+// ── 선택 삭제 ──────────────────────────────────────────────────────
+const checkedIds = ref(new Set())
+const bulkDeleting = ref(false)
+
+// 현재 필터에 보이는 항목 중 선택된 것만 카운트 (필터로 숨겨진 선택은 제외)
+const checkedVisibleIds = computed(() =>
+  filteredContractors.value.filter(c => checkedIds.value.has(c.id)).map(c => c.id))
+const checkedCount = computed(() => checkedVisibleIds.value.length)
+const allChecked = computed(() =>
+  filteredContractors.value.length > 0 && filteredContractors.value.every(c => checkedIds.value.has(c.id)))
+const someChecked = computed(() => checkedVisibleIds.value.length > 0)
+
+function toggleCheck(id, checked) {
+  const s = new Set(checkedIds.value)
+  if (checked) s.add(id); else s.delete(id)
+  checkedIds.value = s
+}
+function toggleCheckAll(checked) {
+  const s = new Set(checkedIds.value)
+  for (const c of filteredContractors.value) {
+    if (checked) s.add(c.id); else s.delete(c.id)
+  }
+  checkedIds.value = s
+}
+
+async function bulkDeleteContractors() {
+  const ids = checkedVisibleIds.value
+  if (ids.length === 0) return
+  if (!confirm(`선택한 ${ids.length}개 수탁사를 삭제하시겠습니까?\n각 수탁사의 모든 점검 이력이 함께 삭제됩니다.`)) return
+  bulkDeleting.value = true
+  let failed = 0
+  try {
+    for (const id of ids) {
+      try { await contractorApi.delete(id) } catch { failed++ }
+    }
+    if (selected.value && checkedIds.value.has(selected.value.id)) {
+      selected.value = null
+      contractorChecks.value = []
+    }
+    checkedIds.value = new Set()
+    await fetchContractors()
+    if (failed > 0) alert(`${failed}건 삭제에 실패했습니다.`)
+  } finally {
+    bulkDeleting.value = false
+  }
+}
+
 async function fetchContractors() {
   loading.value = true
   try {
@@ -711,9 +797,39 @@ const existingCount = computed(() => importModal.rows.filter(r => r.existing).le
 const allSelected = computed(() =>
   importModal.rows.length > 0 && importModal.rows.every(r => r.selected))
 
+// ── 개인정보처리방침 URL 이력 (localStorage) ──
+const POLICY_URL_HISTORY_KEY = 'contractor-policy-url-history'
+const POLICY_URL_HISTORY_MAX = 8
+const policyUrlHistory = ref([])
+
+function loadPolicyUrlHistory() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(POLICY_URL_HISTORY_KEY) || '[]')
+    policyUrlHistory.value = Array.isArray(arr) ? arr : []
+  } catch { policyUrlHistory.value = [] }
+}
+function persistPolicyUrlHistory() {
+  try { localStorage.setItem(POLICY_URL_HISTORY_KEY, JSON.stringify(policyUrlHistory.value)) } catch {}
+}
+function savePolicyUrl(url) {
+  const u = (url || '').trim()
+  if (!u) return
+  policyUrlHistory.value = [u, ...policyUrlHistory.value.filter(x => x !== u)].slice(0, POLICY_URL_HISTORY_MAX)
+  persistPolicyUrlHistory()
+}
+function removePolicyUrl(url) {
+  policyUrlHistory.value = policyUrlHistory.value.filter(x => x !== url)
+  persistPolicyUrlHistory()
+}
+function useHistoryUrl(url) {
+  importModal.url = url
+  parsePolicy()
+}
+
 function openImportModal() {
+  loadPolicyUrlHistory()
   importModal.open = true
-  importModal.url = ''
+  importModal.url = policyUrlHistory.value[0] || ''   // 최근 사용한 URL 자동 채움
   importModal.parsing = false
   importModal.importing = false
   importModal.parsed = false
@@ -741,6 +857,7 @@ async function parsePolicy() {
   try {
     const res = await contractorApi.parsePolicy(url)
     const data = res.data ?? res
+    savePolicyUrl(url)   // 성공적으로 불러온 URL을 이력에 저장
     importModal.tableCount = data.tableCount ?? 0
     importModal.rows = (data.items ?? []).map(i => ({
       name: i.name ?? '',
