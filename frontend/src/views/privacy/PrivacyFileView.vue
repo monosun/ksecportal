@@ -16,13 +16,17 @@
 <script setup>
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
 import { privacyFileApi } from '@/api'
+import { loadServiceAssets } from '@/utils/serviceAssets'
 
 const STATUS = { ACTIVE: '운영중', INACTIVE: '폐기' }
 
 const fields = [
   { key: 'name', label: '개인정보파일명', required: true, placeholder: '예: 가입자정보, 배송정보, 본인인증정보, VOC, 마케팅' },
   { key: 'department', label: '담당부서' },
-  { key: 'systemName', label: '운영 시스템' },
+  { key: 'systemName', label: '운영 시스템', type: 'combobox',
+    optionsFrom: loadServiceAssets,
+    placeholder: '자산에서 선택하거나 직접 입력',
+    hint: '처리현황의 처리시스템과 같은 이름이어야 흐름 지도에서 연결됩니다.' },
   { key: 'dbTable', label: 'DB 테이블', placeholder: '예: tb_subscriber' },
   { key: 'infoItems', label: '개인정보 항목', type: 'textarea', span: 2 },
   { key: 'retentionPeriod', label: '보유기간' },

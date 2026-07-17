@@ -38,6 +38,7 @@ import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
 import PrivacyFlowModal from './PrivacyFlowModal.vue'
 import PrivacyFlowMapModal from './PrivacyFlowMapModal.vue'
 import { privacyProcessingApi } from '@/api'
+import { loadServiceAssets } from '@/utils/serviceAssets'
 
 const showFlow = ref(false)
 const flowId = ref(null)
@@ -57,7 +58,10 @@ const fields = [
   { key: 'infoItems', label: '개인정보 항목', type: 'textarea', span: 2, placeholder: '예: 성명, 휴대전화번호, 주소, 생년월일' },
   { key: 'retentionPeriod', label: '보유기간', placeholder: '예: 수집일로부터 3년' },
   { key: 'legalBasis', label: '처리근거', placeholder: '예: 정보주체 동의 / 계약 이행 / 법령상 의무' },
-  { key: 'systemName', label: '처리시스템' },
+  { key: 'systemName', label: '처리시스템', type: 'combobox',
+    optionsFrom: loadServiceAssets,
+    placeholder: '자산에서 선택하거나 직접 입력',
+    hint: '자산관리의 서비스·애플리케이션 자산에서 고르거나 직접 입력합니다.' },
   { key: 'lifecycle', label: '개인정보 라이프사이클', placeholder: '예: 수집,보유,이용,제공,파기', hint: '해당 단계를 쉼표로 구분해 입력합니다.' },
   { key: 'workflow', label: '업무흐름도', type: 'textarea', span: 2, rows: 4, hint: '개인정보가 흐르는 경로를 단계별로 기술합니다.' },
   { key: 'status', label: '상태', type: 'select', default: 'ACTIVE',

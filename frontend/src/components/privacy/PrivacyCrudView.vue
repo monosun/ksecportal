@@ -113,6 +113,15 @@
                 <span class="text-sm text-gray-600">{{ f.checkboxLabel || '예' }}</span>
               </label>
 
+              <!-- 목록에서 고르거나 직접 입력할 수 있는 입력 -->
+              <template v-else-if="f.type === 'combobox'">
+                <input v-model="form[f.key]" type="text" class="input w-full"
+                  :list="`dl-${f.key}`" :required="f.required" :placeholder="f.placeholder" />
+                <datalist :id="`dl-${f.key}`">
+                  <option v-for="o in optionsOf(f)" :key="o.value" :value="o.value">{{ o.label }}</option>
+                </datalist>
+              </template>
+
               <input v-else v-model="form[f.key]" :type="inputType(f.type)" class="input w-full"
                 :required="f.required" :placeholder="f.placeholder" />
 
