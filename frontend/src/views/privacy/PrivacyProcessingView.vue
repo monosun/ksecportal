@@ -10,12 +10,43 @@
     :search-keys="['name', 'department', 'purpose', 'systemName']"
     title-key="name"
     :stats-fn="statsFn"
-  />
+  >
+    <template #header-actions>
+      <button @click="showMap = true" class="btn-secondary flex items-center gap-2 text-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+        </svg>
+        전체 흐름 지도
+      </button>
+    </template>
+
+    <template #row-actions="{ row }">
+      <button @click="openFlow(row)" class="text-xs text-primary-600 hover:text-primary-700 px-2 py-1">
+        흐름도
+      </button>
+    </template>
+  </PrivacyCrudView>
+
+  <PrivacyFlowModal :open="showFlow" :item-id="flowId" @close="showFlow = false" />
+  <PrivacyFlowMapModal :open="showMap" @close="showMap = false" />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
+import PrivacyFlowModal from './PrivacyFlowModal.vue'
+import PrivacyFlowMapModal from './PrivacyFlowMapModal.vue'
 import { privacyProcessingApi } from '@/api'
+
+const showFlow = ref(false)
+const flowId = ref(null)
+const showMap = ref(false)
+
+function openFlow(row) {
+  flowId.value = row.id
+  showFlow.value = true
+}
 
 const STATUS = { ACTIVE: '운영중', INACTIVE: '중단' }
 

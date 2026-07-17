@@ -18,6 +18,7 @@ public class PrivacyProvisionDto {
         private String provisionType;
         @NotBlank @Size(max = 200)
         private String recipient;
+        private Long processingId;
         @Size(max = 100)
         private String country;
         private String infoItems;
@@ -42,6 +43,7 @@ public class PrivacyProvisionDto {
         private Long id;
         private String provisionType;
         private String recipient;
+        private Long processingId;
         private String country;
         private String infoItems;
         private String purpose;
@@ -62,6 +64,7 @@ public class PrivacyProvisionDto {
                     .id(p.getId())
                     .provisionType(p.getProvisionType().name())
                     .recipient(p.getRecipient())
+                    .processingId(p.getProcessingId())
                     .country(p.getCountry())
                     .infoItems(p.getInfoItems())
                     .purpose(p.getPurpose())

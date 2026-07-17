@@ -34,6 +34,10 @@ public class PrivacyProvision extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String recipient;
 
+    /** 연계된 개인정보 처리업무 — 개인정보 흐름도에서 처리업무 → 제공처 연결에 사용 */
+    @Column(name = "processing_id")
+    private Long processingId;
+
     /** 국외이전 시 이전 국가 */
     @Column(length = 100)
     private String country;

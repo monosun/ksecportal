@@ -6,12 +6,15 @@
         <h1 class="text-2xl font-bold text-gray-900">{{ title }}</h1>
         <p v-if="description" class="text-sm text-gray-500 mt-1">{{ description }}</p>
       </div>
-      <button v-if="canWrite" @click="openCreate" class="btn-primary flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        등록
-      </button>
+      <div class="flex items-center gap-2">
+        <slot name="header-actions" :items="items" />
+        <button v-if="canWrite" @click="openCreate" class="btn-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          등록
+        </button>
+      </div>
     </div>
 
     <!-- 요약 통계 -->
@@ -46,7 +49,7 @@
                 class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                 {{ c.label }}
               </th>
-              <th v-if="canWrite" class="px-5 py-3 w-20"></th>
+              <th v-if="canWrite || $slots['row-actions']" class="px-5 py-3 w-20"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
@@ -64,8 +67,10 @@
                 <span v-else-if="c.render">{{ c.render(row) }}</span>
                 <span v-else>{{ display(row[c.key]) }}</span>
               </td>
-              <td v-if="canWrite" class="px-5 py-3.5 text-right" @click.stop>
-                <button @click="confirmDelete(row)" class="text-xs text-red-500 hover:text-red-600 px-2 py-1">
+              <td v-if="canWrite || $slots['row-actions']" class="px-5 py-3.5 text-right whitespace-nowrap" @click.stop>
+                <slot name="row-actions" :row="row" />
+                <button v-if="canWrite" @click="confirmDelete(row)"
+                  class="text-xs text-red-500 hover:text-red-600 px-2 py-1">
                   삭제
                 </button>
               </td>
@@ -99,7 +104,8 @@
                 :rows="f.rows || 3" :required="f.required" :placeholder="f.placeholder"></textarea>
 
               <select v-else-if="f.type === 'select'" v-model="form[f.key]" class="input w-full" :required="f.required">
-                <option v-for="o in f.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                <option v-if="!f.required" value="">선택 안 함</option>
+                <option v-for="o in optionsOf(f)" :key="o.value" :value="o.value">{{ o.label }}</option>
               </select>
 
               <label v-else-if="f.type === 'checkbox'" class="flex items-center gap-2 h-9">
@@ -200,6 +206,27 @@ async function load() {
   }
 }
 
+// 다른 도메인을 참조하는 셀렉트(예: 연계 처리업무)는 옵션을 API에서 불러온다.
+const asyncOptions = ref({})
+
+function optionsOf(f) {
+  return f.optionsFrom ? (asyncOptions.value[f.key] || []) : (f.options || [])
+}
+
+async function loadAsyncOptions() {
+  const dynamic = props.fields.filter(f => f.optionsFrom)
+  if (!dynamic.length) return
+  const loaded = { ...asyncOptions.value }
+  await Promise.all(dynamic.map(async (f) => {
+    try {
+      loaded[f.key] = await f.optionsFrom()
+    } catch {
+      loaded[f.key] = []
+    }
+  }))
+  asyncOptions.value = loaded
+}
+
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   return items.value.filter(row => {
@@ -220,6 +247,7 @@ function openCreate() {
   form.value = emptyForm()
   error.value = ''
   showForm.value = true
+  loadAsyncOptions()
 }
 
 function openEdit(row) {
@@ -233,6 +261,7 @@ function openEdit(row) {
   form.value = o
   error.value = ''
   showForm.value = true
+  loadAsyncOptions()
 }
 
 async function submit() {

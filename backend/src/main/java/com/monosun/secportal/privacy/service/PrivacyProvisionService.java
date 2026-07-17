@@ -35,6 +35,7 @@ public class PrivacyProvisionService {
         PrivacyProvision p = PrivacyProvision.builder()
                 .provisionType(parseType(req.getProvisionType()))
                 .recipient(req.getRecipient().trim())
+                .processingId(req.getProcessingId())
                 .country(req.getCountry())
                 .infoItems(req.getInfoItems())
                 .purpose(req.getPurpose())
@@ -58,6 +59,7 @@ public class PrivacyProvisionService {
         PrivacyProvision p = find(id);
         if (req.getProvisionType() != null) p.setProvisionType(parseType(req.getProvisionType()));
         if (req.getRecipient() != null && !req.getRecipient().isBlank()) p.setRecipient(req.getRecipient().trim());
+        if (req.getProcessingId() != null) p.setProcessingId(req.getProcessingId());
         if (req.getCountry() != null) p.setCountry(req.getCountry());
         if (req.getInfoItems() != null) p.setInfoItems(req.getInfoItems());
         if (req.getPurpose() != null) p.setPurpose(req.getPurpose());

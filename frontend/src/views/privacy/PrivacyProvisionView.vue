@@ -15,7 +15,7 @@
 
 <script setup>
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
-import { privacyProvisionApi } from '@/api'
+import { privacyProvisionApi, privacyProcessingApi } from '@/api'
 
 const TYPE = { THIRD_PARTY: '제3자 제공', JOINT_USE: '공동이용', OVERSEAS: '국외이전' }
 const STATUS = { ACTIVE: '제공중', TERMINATED: '종료' }
@@ -28,6 +28,12 @@ const fields = [
       { value: 'OVERSEAS', label: '국외이전' },
     ] },
   { key: 'recipient', label: '제공받는 자', required: true },
+  { key: 'processingId', label: '연계 처리업무', type: 'select',
+    optionsFrom: async () => {
+      const res = await privacyProcessingApi.list()
+      return (res.data || []).map(p => ({ value: p.id, label: p.name }))
+    },
+    hint: '개인정보 흐름도에서 처리업무 → 제공처 연결에 사용됩니다.' },
   { key: 'country', label: '이전 국가', hint: '국외이전인 경우에만 입력합니다.' },
   { key: 'method', label: '제공 방법', placeholder: '예: API 연계, 파일 전송' },
   { key: 'infoItems', label: '제공 항목', type: 'textarea', span: 2 },
