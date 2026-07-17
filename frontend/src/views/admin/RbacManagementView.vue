@@ -235,6 +235,19 @@ const MENUS = [
   // 보안 교육 / 문서관리
   { key: 'training',          label: 'IT 및 정보보호 교육' },
   { key: 'sec_docs',          label: '보안문서' },
+  // 개인정보보호
+  { key: 'privacy_processing', label: '[개인정보] 처리현황' },
+  { key: 'privacy_files',      label: '[개인정보] 파일관리' },
+  { key: 'privacy_consent',    label: '[개인정보] 수집·이용 관리' },
+  { key: 'privacy_provision',  label: '[개인정보] 제공관리' },
+  { key: 'privacy_contractors',label: '[개인정보] 수탁사 관리·점검·법령준수' },
+  { key: 'privacy_retention',  label: '[개인정보] 보유기간 관리' },
+  { key: 'privacy_disposal',   label: '[개인정보] 파기관리' },
+  { key: 'privacy_dpia',       label: '[개인정보] 영향평가(DPIA)' },
+  { key: 'privacy_breach',     label: '[개인정보] 유출관리' },
+  { key: 'privacy_rights',     label: '[개인정보] 정보주체 권리행사' },
+  { key: 'privacy_safeguard',  label: '[개인정보] 보호조치 관리' },
+  { key: 'privacy_report',     label: '[개인정보] 현황보고서' },
 ]
 
 const roles = ref([])

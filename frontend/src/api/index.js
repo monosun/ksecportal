@@ -592,6 +592,66 @@ export const contractorCheckApi = {
   syncResults: (id) => api.post(`/privacy/contractor-checks/${id}/sync`),
 }
 
+// ── 개인정보보호 ──────────────────────────────────────────────────
+
+/** 공통 CRUD 형태 — 개인정보보호 도메인은 모두 같은 엔드포인트 규약을 따른다 */
+function privacyCrud(resource) {
+  const base = `/privacy/${resource}`
+  return {
+    list: () => api.get(base),
+    get: (id) => api.get(`${base}/${id}`),
+    create: (data) => api.post(base, data),
+    update: (id, data) => api.patch(`${base}/${id}`, data),
+    delete: (id) => api.delete(`${base}/${id}`),
+  }
+}
+
+/** 개인정보 처리현황 */
+export const privacyProcessingApi = privacyCrud('processing')
+
+/** 개인정보 파일관리 */
+export const privacyFileApi = privacyCrud('files')
+
+/** 개인정보 수집·이용 관리 */
+export const privacyConsentApi = {
+  ...privacyCrud('consents'),
+  newVersion: (id, version) => api.post(`/privacy/consents/${id}/versions`, { version }),
+}
+
+/** 개인정보 제공관리 */
+export const privacyProvisionApi = privacyCrud('provisions')
+
+/** 개인정보 보유기간 관리 */
+export const privacyRetentionApi = {
+  ...privacyCrud('retentions'),
+  listExpiring: (days = 30) => api.get('/privacy/retentions/expiring', { params: { days } }),
+}
+
+/** 개인정보 파기관리 */
+export const privacyDisposalApi = privacyCrud('disposals')
+
+/** 개인정보 영향평가(DPIA) */
+export const privacyDpiaApi = privacyCrud('dpia')
+
+/** 개인정보 유출관리 */
+export const privacyBreachApi = privacyCrud('breaches')
+
+/** 정보주체 권리행사 관리 */
+export const privacyRightsApi = privacyCrud('rights-requests')
+
+/** 개인정보 보호조치 관리 */
+export const privacySafeguardApi = privacyCrud('safeguards')
+
+/** 개인정보 현황보고서 */
+export const privacyReportApi = {
+  summary: () => api.get('/privacy/report'),
+}
+
+/** 백엔드 기술스택 버전 (환경설정 → 정보 탭) */
+export const systemApi = {
+  version: () => api.get('/system/version'),
+}
+
 export const threatApi = {
   list: () => api.get('/threats'),
   get: (id) => api.get(`/threats/${id}`),

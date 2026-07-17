@@ -82,7 +82,7 @@ dependencies {
 }
 ```
 
-> Spring Boot 3.3에는 `WebClient`를 쓰기 위해 `spring-boot-starter-webflux`가 필요합니다.  
+> Spring Boot 3.5에는 `WebClient`를 쓰기 위해 `spring-boot-starter-webflux`가 필요합니다.  
 > 이미 포함된 경우 추가하지 않아도 됩니다.
 
 ---

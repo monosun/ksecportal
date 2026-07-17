@@ -344,6 +344,26 @@ const routes = [
       },
       // 개인정보보호
       {
+        path: 'privacy/processing',
+        name: 'PrivacyProcessing',
+        component: () => import('@/views/privacy/PrivacyProcessingView.vue')
+      },
+      {
+        path: 'privacy/files',
+        name: 'PrivacyFiles',
+        component: () => import('@/views/privacy/PrivacyFileView.vue')
+      },
+      {
+        path: 'privacy/consents',
+        name: 'PrivacyConsents',
+        component: () => import('@/views/privacy/PrivacyConsentView.vue')
+      },
+      {
+        path: 'privacy/provisions',
+        name: 'PrivacyProvisions',
+        component: () => import('@/views/privacy/PrivacyProvisionView.vue')
+      },
+      {
         path: 'privacy/contractors',
         name: 'PrivacyContractors',
         component: () => import('@/views/privacy/ContractorView.vue')
@@ -354,9 +374,44 @@ const routes = [
         component: () => import('@/views/privacy/ContractorCheckView.vue')
       },
       {
+        path: 'privacy/retentions',
+        name: 'PrivacyRetentions',
+        component: () => import('@/views/privacy/PrivacyRetentionView.vue')
+      },
+      {
+        path: 'privacy/disposals',
+        name: 'PrivacyDisposals',
+        component: () => import('@/views/privacy/PrivacyDisposalView.vue')
+      },
+      {
+        path: 'privacy/dpia',
+        name: 'PrivacyDpia',
+        component: () => import('@/views/privacy/PrivacyDpiaView.vue')
+      },
+      {
+        path: 'privacy/breaches',
+        name: 'PrivacyBreaches',
+        component: () => import('@/views/privacy/PrivacyBreachView.vue')
+      },
+      {
+        path: 'privacy/rights-requests',
+        name: 'PrivacyRightsRequests',
+        component: () => import('@/views/privacy/PrivacyRightsView.vue')
+      },
+      {
+        path: 'privacy/safeguards',
+        name: 'PrivacySafeguards',
+        component: () => import('@/views/privacy/PrivacySafeguardView.vue')
+      },
+      {
         path: 'privacy/legal-compliance',
         name: 'LegalCompliance',
         component: () => import('@/views/privacy/LegalComplianceView.vue')
+      },
+      {
+        path: 'privacy/report',
+        name: 'PrivacyReport',
+        component: () => import('@/views/privacy/PrivacyReportView.vue')
       }
     ]
   }

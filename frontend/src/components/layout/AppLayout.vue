@@ -383,9 +383,20 @@ const navGroups = [
     labelKey: 'nav.group.privacy',
     icon: ShieldExclamationIcon,
     items: [
-      { to: '/privacy/contractors',            label: 'nav.privacyContractors',   icon: ClipboardCheckIcon, menuKey: 'privacy_contractors' },
-      { to: '/privacy/contractor-checks',      label: 'nav.contractorChecks',     icon: ClipboardCheckIcon, menuKey: 'privacy_contractors' },
-      { to: '/privacy/legal-compliance',        label: 'nav.legalCompliance',      icon: DocumentTextIcon,   menuKey: 'privacy_contractors' },
+      { to: '/privacy/processing',        label: 'nav.privacyProcessing',    icon: DocumentTextIcon,      menuKey: 'privacy_processing' },
+      { to: '/privacy/files',             label: 'nav.privacyFiles',         icon: DocumentTextIcon,      menuKey: 'privacy_files' },
+      { to: '/privacy/consents',          label: 'nav.privacyConsent',       icon: ClipboardCheckIcon,    menuKey: 'privacy_consent' },
+      { to: '/privacy/provisions',        label: 'nav.privacyProvision',     icon: DocumentTextIcon,      menuKey: 'privacy_provision' },
+      { to: '/privacy/contractors',       label: 'nav.privacyContractors',   icon: ClipboardCheckIcon,    menuKey: 'privacy_contractors' },
+      { to: '/privacy/contractor-checks', label: 'nav.contractorChecks',     icon: ClipboardCheckIcon,    menuKey: 'privacy_contractors' },
+      { to: '/privacy/retentions',        label: 'nav.privacyRetention',     icon: ClipboardCheckIcon,    menuKey: 'privacy_retention' },
+      { to: '/privacy/disposals',         label: 'nav.privacyDisposal',      icon: ShieldExclamationIcon, menuKey: 'privacy_disposal' },
+      { to: '/privacy/dpia',              label: 'nav.privacyDpia',          icon: ClipboardCheckIcon,    menuKey: 'privacy_dpia' },
+      { to: '/privacy/breaches',          label: 'nav.privacyBreach',        icon: ShieldExclamationIcon, menuKey: 'privacy_breach' },
+      { to: '/privacy/rights-requests',   label: 'nav.privacyRights',        icon: ClipboardCheckIcon,    menuKey: 'privacy_rights' },
+      { to: '/privacy/safeguards',        label: 'nav.privacySafeguard',     icon: ShieldExclamationIcon, menuKey: 'privacy_safeguard' },
+      { to: '/privacy/legal-compliance',  label: 'nav.legalCompliance',      icon: DocumentTextIcon,      menuKey: 'privacy_contractors' },
+      { to: '/privacy/report',            label: 'nav.privacyReport',        icon: DocumentTextIcon,      menuKey: 'privacy_report' },
     ]
   },
 ]

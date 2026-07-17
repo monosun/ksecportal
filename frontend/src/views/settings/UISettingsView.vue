@@ -424,8 +424,9 @@
           <div class="card">
             <h3 class="text-sm font-bold text-gray-800 mb-3">기술 스택</h3>
             <div class="space-y-1.5 text-sm text-gray-600">
-              <p><span class="inline-block w-20 font-semibold text-gray-700">Frontend</span> Vue 3 · Vite · Pinia · Tailwind CSS</p>
-              <p><span class="inline-block w-20 font-semibold text-gray-700">Backend</span> Spring Boot 3.3 · Spring Security 6 (JWT) · JPA</p>
+              <p><span class="inline-block w-20 font-semibold text-gray-700">Frontend</span> {{ frontendStack }}</p>
+              <p><span class="inline-block w-20 font-semibold text-gray-700">Backend</span> {{ backendStack }}</p>
+              <p><span class="inline-block w-20 font-semibold text-gray-700">Runtime</span> {{ runtimeStack }}</p>
               <p><span class="inline-block w-20 font-semibold text-gray-700">Database</span> MySQL 8</p>
               <p><span class="inline-block w-20 font-semibold text-gray-700">인프라</span> Docker Compose · Nginx</p>
             </div>
@@ -477,15 +478,66 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useUiSettingsStore, THEMES, FONTS, FONT_SIZES } from '@/stores/uiSettings'
-import { inboxApi, authApi } from '@/api/index.js'
+import { inboxApi, authApi, systemApi } from '@/api/index.js'
 import { useInboxStore } from '@/stores/inbox'
 import { useAuthStore } from '@/stores/auth'
 import QRCode from 'qrcode'
 import { validatePassword, PASSWORD_HINT } from '@/utils/password'
-import { version as appVersion } from '../../../package.json'
+import pkg from '../../../package.json'
+
+const appVersion = pkg.version
+
+// ── 기술 스택 표기 ────────────────────────────────────────────────
+// 하드코딩하면 업그레이드 때마다 낡으므로, 프론트는 package.json에서,
+// 백엔드는 /api/system/version 에서 실제 버전을 읽어 표시한다.
+
+/** "^3.5.12" → "3.5" */
+function major(range) {
+  if (!range) return ''
+  const m = String(range).match(/(\d+)\.(\d+)/)
+  return m ? `${m[1]}.${m[2]}` : ''
+}
+
+const frontendStack = computed(() => [
+  `Vue ${major(pkg.dependencies?.vue)}`,
+  `Vite ${major(pkg.devDependencies?.vite)}`,
+  `Pinia ${major(pkg.dependencies?.pinia)}`,
+  `Tailwind CSS ${major(pkg.devDependencies?.tailwindcss)}`,
+].join(' · '))
+
+const backendVersions = ref(null)
+
+const backendStack = computed(() => {
+  const v = backendVersions.value
+  if (!v) return '불러오는 중...'
+  return `Spring Boot ${short(v.springBoot)} · Spring Security ${short(v.springSecurity)} (JWT) · JPA (Hibernate ${short(v.hibernate)})`
+})
+
+const runtimeStack = computed(() => {
+  const v = backendVersions.value
+  if (!v) return '불러오는 중...'
+  return `Java ${v.java}${v.jvm ? ` (${v.jvm})` : ''}`
+})
+
+/** "3.5.16" → "3.5", "6.6.53.Final" → "6.6" */
+function short(v) {
+  if (!v || v === 'unknown') return '—'
+  const m = String(v).match(/(\d+)\.(\d+)/)
+  return m ? `${m[1]}.${m[2]}` : v
+}
+
+async function loadVersions() {
+  try {
+    const res = await systemApi.version()
+    backendVersions.value = res.data
+  } catch {
+    backendVersions.value = null
+  }
+}
+
 const ui = useUiSettingsStore()
 const inboxStore = useInboxStore()
 const auth = useAuthStore()
@@ -541,6 +593,7 @@ const qrCanvas = ref(null)
 onMounted(async () => {
   loadInbox()
   loadMfaStatus()
+  loadVersions()
 })
 
 async function loadMfaStatus() {
