@@ -56,6 +56,7 @@ public class ReportService {
     private final IsmsItemRepository ismsItemRepository;
     private final IsmsEvidenceRepository ismsEvidenceRepository;
     private final com.monosun.secportal.setting.service.AppSettingService appSettingService;
+    private final com.monosun.secportal.privacy.service.PrivacyReportService privacyReportService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -782,6 +783,149 @@ public class ReportService {
     }
 
     private String nvl(Object o) { return o != null ? o.toString() : ""; }
+
+    // ── 개인정보 현황보고서 ──────────────────────────────────────────────────
+
+    /**
+     * 개인정보 현황보고서 PDF — 화면(개인정보보호 > 개인정보 현황보고서)과 같은 9개 영역을 담는다.
+     * 집계는 PrivacyReportService를 재사용하므로 화면과 값이 항상 일치한다.
+     */
+    @Transactional(readOnly = true)
+    public byte[] generatePrivacyReport(String lang) {
+        var s = privacyReportService.generate();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document doc = new Document(PageSize.A4);
+        try {
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+            Font titleFont = kFont(18, Font.BOLD);
+
+            addCenteredTitle(doc, t(lang, "개인정보 현황보고서", "Privacy Status Report"), titleFont);
+            addCompanyLine(doc);
+            addCenteredSubtitle(doc, t(lang, "기준일: ", "As of: ") + s.getGeneratedAt().format(DATE_FMT));
+            doc.add(new Paragraph(" "));
+
+            addPrivacySection(doc, lang, t(lang, "1. 개인정보 처리현황", "1. Processing Activities"), new String[][]{
+                    {t(lang, "전체 처리업무", "Total"), String.valueOf(s.getProcessing().getTotal())},
+                    {t(lang, "운영중", "Active"), String.valueOf(s.getProcessing().getActive())},
+                    {t(lang, "중단", "Inactive"), String.valueOf(s.getProcessing().getInactive())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "2. 개인정보파일 현황", "2. Personal Data Files"), new String[][]{
+                    {t(lang, "전체 파일", "Total"), String.valueOf(s.getFiles().getTotal())},
+                    {t(lang, "운영중", "Active"), String.valueOf(s.getFiles().getActive())},
+                    {t(lang, "민감정보 포함", "Sensitive"), String.valueOf(s.getFiles().getSensitive())},
+                    {t(lang, "고유식별정보 포함", "Unique ID"), String.valueOf(s.getFiles().getUniqueIdentifier())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "3. 수탁사 현황", "3. Contractors"), new String[][]{
+                    {t(lang, "전체 수탁사", "Total"), String.valueOf(s.getContractors().getTotal())},
+                    {t(lang, "점검 이력 있음", "Inspected"), String.valueOf(s.getContractors().getChecked())},
+                    {t(lang, "점검 이력 없음", "Not inspected"), String.valueOf(s.getContractors().getUnchecked())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "4. 제3자 제공 현황", "4. Data Provision"), new String[][]{
+                    {t(lang, "전체", "Total"), String.valueOf(s.getProvisions().getTotal())},
+                    {t(lang, "제3자 제공", "Third party"), String.valueOf(s.getProvisions().getThirdParty())},
+                    {t(lang, "공동이용", "Joint use"), String.valueOf(s.getProvisions().getJointUse())},
+                    {t(lang, "국외이전", "Overseas"), String.valueOf(s.getProvisions().getOverseas())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "5. 보유기간 현황", "5. Retention"), new String[][]{
+                    {t(lang, "전체", "Total"), String.valueOf(s.getRetentions().getTotal())},
+                    {t(lang, "30일 내 만료예정", "Expiring in 30d"), String.valueOf(s.getRetentions().getExpiringIn30Days())},
+                    {t(lang, "만료 경과·미파기", "Overdue"), String.valueOf(s.getRetentions().getOverdue())},
+                    {t(lang, "파기완료", "Disposed"), String.valueOf(s.getRetentions().getDisposed())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "6. 파기 현황", "6. Disposal"), new String[][]{
+                    {t(lang, "전체 파기계획", "Total"), String.valueOf(s.getDisposals().getTotal())},
+                    {t(lang, "계획", "Planned"), String.valueOf(s.getDisposals().getPlanned())},
+                    {t(lang, "승인대기", "Pending approval"), String.valueOf(s.getDisposals().getPendingApproval())},
+                    {t(lang, "파기완료", "Completed"), String.valueOf(s.getDisposals().getCompleted())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "7. 정보주체 권리행사 현황", "7. Data Subject Rights"), new String[][]{
+                    {t(lang, "전체 요청", "Total"), String.valueOf(s.getRights().getTotal())},
+                    {t(lang, "처리중", "In progress"), String.valueOf(s.getRights().getInProgress())},
+                    {t(lang, "완료", "Completed"), String.valueOf(s.getRights().getCompleted())},
+                    {t(lang, "처리기한 초과", "SLA breached"), String.valueOf(s.getRights().getSlaBreached())},
+            });
+
+            if (s.getRights().getByType() != null && !s.getRights().getByType().isEmpty()) {
+                addPrivacyKeyValueLine(doc, lang, t(lang, "요청 유형별", "By type"),
+                        s.getRights().getByType().entrySet().stream()
+                                .map(e -> tRightsType(lang, e.getKey()) + " " + e.getValue())
+                                .collect(Collectors.joining("   ")));
+            }
+
+            addPrivacySection(doc, lang, t(lang, "8. 유출사고 현황", "8. Breaches"), new String[][]{
+                    {t(lang, "전체 사고", "Total"), String.valueOf(s.getBreaches().getTotal())},
+                    {t(lang, "미종결", "Open"), String.valueOf(s.getBreaches().getOpen())},
+                    {t(lang, "신고기한 경과", "Report overdue"), String.valueOf(s.getBreaches().getReportOverdue())},
+                    {t(lang, "유출 정보주체", "Affected"), String.valueOf(s.getBreaches().getAffectedSubjects())},
+            });
+
+            addPrivacySection(doc, lang, t(lang, "9. 법령 준수현황", "9. Compliance"), new String[][]{
+                    {t(lang, "DPIA 전체", "DPIA total"), String.valueOf(s.getCompliance().getDpiaTotal())},
+                    {t(lang, "DPIA 완료", "DPIA completed"), String.valueOf(s.getCompliance().getDpiaCompleted())},
+                    {t(lang, "DPIA 위험도 높음", "DPIA high risk"), String.valueOf(s.getCompliance().getDpiaHighRisk())},
+                    {t(lang, "보호조치 전체", "Safeguards"), String.valueOf(s.getCompliance().getSafeguardTotal())},
+                    {t(lang, "보호조치 완료", "Completed"), String.valueOf(s.getCompliance().getSafeguardCompleted())},
+            });
+
+            doc.close();
+        } catch (Exception e) {
+            log.error("Failed to generate privacy report", e);
+            throw new RuntimeException("Failed to generate privacy report", e);
+        }
+        return out.toByteArray();
+    }
+
+    /** 보고서 섹션 — 제목 + 지표 표 */
+    private void addPrivacySection(Document doc, String lang, String title, String[][] metrics)
+            throws DocumentException {
+        doc.add(new Paragraph(title, kFont(12, Font.BOLD)));
+        doc.add(new Paragraph(" ", kFont(4, Font.NORMAL)));
+
+        PdfPTable table = new PdfPTable(metrics.length);
+        table.setWidthPercentage(100);
+        for (String[] m : metrics) {
+            PdfPCell cell = new PdfPCell();
+            Paragraph value = new Paragraph(m[1], kFont(15, Font.BOLD));
+            value.setAlignment(Element.ALIGN_CENTER);
+            Paragraph label = new Paragraph(m[0], kFont(8, Font.NORMAL, Color.GRAY));
+            label.setAlignment(Element.ALIGN_CENTER);
+            cell.addElement(value);
+            cell.addElement(label);
+            cell.setPadding(7);
+            cell.setBackgroundColor(new Color(249, 250, 251));
+            cell.setBorderColor(new Color(229, 231, 235));
+            table.addCell(cell);
+        }
+        doc.add(table);
+        doc.add(new Paragraph(" ", kFont(7, Font.NORMAL)));
+    }
+
+    /** 섹션 아래 보조 설명 한 줄 */
+    private void addPrivacyKeyValueLine(Document doc, String lang, String label, String value)
+            throws DocumentException {
+        Paragraph p = new Paragraph(label + ": " + value, kFont(8, Font.NORMAL, Color.DARK_GRAY));
+        doc.add(p);
+        doc.add(new Paragraph(" ", kFont(7, Font.NORMAL)));
+    }
+
+    private String tRightsType(String lang, String type) {
+        if (!"ko".equalsIgnoreCase(lang)) return type;
+        return switch (type) {
+            case "ACCESS" -> "열람";
+            case "CORRECTION" -> "정정";
+            case "DELETION" -> "삭제";
+            case "SUSPENSION" -> "처리정지";
+            case "CONSENT_WITHDRAWAL" -> "동의철회";
+            default -> type;
+        };
+    }
 
     private void addCenteredTitle(Document doc, String text, Font font) throws DocumentException {
         Paragraph p = new Paragraph(text, font);

@@ -87,9 +87,24 @@
         </section>
 
         <!-- 제공처 -->
-        <section v-if="provisions.length">
-          <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">이 업무에서 나가는 개인정보</h3>
-          <div class="flex flex-wrap gap-2">
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">이 업무에서 나가는 개인정보</h3>
+            <button @click="$emit('manage-provisions', item)"
+              class="text-xs text-primary-600 hover:text-primary-700 font-medium">
+              제공 정보 관리
+            </button>
+          </div>
+
+          <div v-if="!provisions.length"
+            class="rounded-xl border border-dashed border-gray-200 px-4 py-5 text-center">
+            <p class="text-sm text-gray-400">등록된 제공이 없습니다.</p>
+            <p class="text-xs text-gray-400 mt-1">
+              제3자 제공 · 공동이용 · 국외이전이 있다면 <b>제공 정보 관리</b>에서 등록하세요.
+            </p>
+          </div>
+
+          <div v-else class="flex flex-wrap gap-2">
             <div v-for="p in provisions" :key="p.id"
               class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2">
               <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +156,7 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   itemId: { type: [Number, String], default: null },
 })
-defineEmits(['close'])
+defineEmits(['close', 'manage-provisions'])
 
 const STAGES = ['수집', '보유', '이용', '제공', '파기']
 const TYPE = { THIRD_PARTY: '제3자 제공', JOINT_USE: '공동이용', OVERSEAS: '국외이전' }

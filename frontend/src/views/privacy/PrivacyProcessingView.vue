@@ -22,14 +22,24 @@
     </template>
 
     <template #row-actions="{ row }">
+      <button @click="openProvisions(row)" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">
+        제공
+      </button>
       <button @click="openFlow(row)" class="text-xs text-primary-600 hover:text-primary-700 px-2 py-1">
         흐름도
       </button>
     </template>
   </PrivacyCrudView>
 
-  <PrivacyFlowModal :open="showFlow" :item-id="flowId" @close="showFlow = false" />
+  <PrivacyFlowModal :open="showFlow" :item-id="flowId"
+    @close="showFlow = false" @manage-provisions="onManageProvisions" />
   <PrivacyFlowMapModal :open="showMap" @close="showMap = false" />
+  <PrivacyProvisionForProcessingModal
+    :open="showProvisions"
+    :processing-id="provisionTarget?.id"
+    :processing-name="provisionTarget?.name || ''"
+    :processing-info-items="provisionTarget?.infoItems || ''"
+    @close="showProvisions = false" />
 </template>
 
 <script setup>
@@ -37,16 +47,31 @@ import { ref } from 'vue'
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
 import PrivacyFlowModal from './PrivacyFlowModal.vue'
 import PrivacyFlowMapModal from './PrivacyFlowMapModal.vue'
+import PrivacyProvisionForProcessingModal from './PrivacyProvisionForProcessingModal.vue'
 import { privacyProcessingApi } from '@/api'
 import { loadServiceAssets } from '@/utils/serviceAssets'
 
 const showFlow = ref(false)
 const flowId = ref(null)
 const showMap = ref(false)
+const showProvisions = ref(false)
+const provisionTarget = ref(null)
 
 function openFlow(row) {
   flowId.value = row.id
   showFlow.value = true
+}
+
+function openProvisions(row) {
+  provisionTarget.value = row
+  showProvisions.value = true
+}
+
+/** 흐름도에서 '제공 관리'를 누르면 흐름도를 닫고 제공 관리로 넘어간다. */
+function onManageProvisions(item) {
+  showFlow.value = false
+  provisionTarget.value = item
+  showProvisions.value = true
 }
 
 const STATUS = { ACTIVE: '운영중', INACTIVE: '중단' }

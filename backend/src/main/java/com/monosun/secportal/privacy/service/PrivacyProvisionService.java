@@ -25,6 +25,14 @@ public class PrivacyProvisionService {
                 .toList();
     }
 
+    /** 처리업무에 연계된 제공 목록 */
+    @Transactional(readOnly = true)
+    public List<PrivacyProvisionDto.Response> listByProcessing(Long processingId) {
+        return repo.findByProcessingIdOrderByRecipientAsc(processingId).stream()
+                .map(PrivacyProvisionDto.Response::from)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public PrivacyProvisionDto.Response get(Long id) {
         return PrivacyProvisionDto.Response.from(find(id));

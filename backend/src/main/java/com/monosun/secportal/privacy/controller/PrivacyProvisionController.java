@@ -17,9 +17,13 @@ public class PrivacyProvisionController {
 
     private final PrivacyProvisionService service;
 
+    /** 제공 목록 — processingId를 주면 해당 처리업무에 연계된 건만 조회한다. */
     @GetMapping
-    public ApiResponse<List<PrivacyProvisionDto.Response>> list() {
-        return ApiResponse.ok(service.listAll());
+    public ApiResponse<List<PrivacyProvisionDto.Response>> list(
+            @RequestParam(required = false) Long processingId) {
+        return ApiResponse.ok(processingId != null
+                ? service.listByProcessing(processingId)
+                : service.listAll());
     }
 
     @GetMapping("/{id}")

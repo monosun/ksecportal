@@ -10,6 +10,9 @@ public interface PrivacyProvisionRepository extends JpaRepository<PrivacyProvisi
 
     List<PrivacyProvision> findAllByOrderByRecipientAsc();
 
+    /** 특정 처리업무에 연계된 제공 목록 — 처리현황 화면에서 제공 정보를 관리할 때 사용 */
+    List<PrivacyProvision> findByProcessingIdOrderByRecipientAsc(Long processingId);
+
     long countByStatus(PrivacyProvision.Status status);
 
     /** 제공 유형별 건수 — [ProvisionType, count] */

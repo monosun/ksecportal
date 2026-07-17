@@ -35,6 +35,14 @@ public class ReportController {
         return pdfResponse(reportService.generateVulnerabilityReport(lang), filename);
     }
 
+    @GetMapping("/privacy/pdf")
+    public ResponseEntity<byte[]> privacyPdf(@RequestParam(defaultValue = "ko") String lang) {
+        String filename = "ko".equalsIgnoreCase(lang)
+                ? "개인정보-현황보고서-" + today() + ".pdf"
+                : "privacy-status-report-" + today() + ".pdf";
+        return pdfResponse(reportService.generatePrivacyReport(lang), filename);
+    }
+
     @GetMapping("/policies/pdf")
     public ResponseEntity<byte[]> policyPdf(@RequestParam(defaultValue = "ko") String lang) {
         String filename = "ko".equalsIgnoreCase(lang)

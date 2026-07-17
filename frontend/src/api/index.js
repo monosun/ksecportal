@@ -250,6 +250,12 @@ export const exportApi = {
     const name = lang === 'ko' ? `보안정책-보고서-${today()}.pdf` : `security-policy-report-${today()}.pdf`
     return downloadBlob('/reports/policies/pdf', name, { lang })
   },
+  // 개인정보 현황보고서
+  privacyPdf: () => {
+    const lang = getLang()
+    const name = lang === 'ko' ? `개인정보-현황보고서-${today()}.pdf` : `privacy-status-report-${today()}.pdf`
+    return downloadBlob('/reports/privacy/pdf', name, { lang })
+  },
   // Vulnerability
   vulnCsv: () => {
     const lang = getLang()
@@ -619,7 +625,10 @@ export const privacyConsentApi = {
 }
 
 /** 개인정보 제공관리 */
-export const privacyProvisionApi = privacyCrud('provisions')
+export const privacyProvisionApi = {
+  ...privacyCrud('provisions'),
+  listByProcessing: (processingId) => api.get('/privacy/provisions', { params: { processingId } }),
+}
 
 /** 개인정보 보유기간 관리 */
 export const privacyRetentionApi = {
