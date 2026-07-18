@@ -33,6 +33,9 @@ db_data/
 # Release artifacts (아카이브 파일만 제외, 릴리즈 디렉토리는 커밋)
 secportal-v*.tar.gz
 
+# SBOM 스캔 산출물 (cdxgen 등이 생성)
+ksecportal_bom.json
+
 # Backup files
 release/*/backups/
 backups/
