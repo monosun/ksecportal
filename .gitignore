@@ -4,6 +4,8 @@
 
 # Claude Code
 .claude/
+CLAUDE.md
+claude-auto-resume.ps1
 
 # Java
 *.class
