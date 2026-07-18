@@ -40,8 +40,9 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">내용 (Markdown 지원) *</label>
-          <textarea v-model="form.content" class="input w-full font-mono text-sm" rows="12" required></textarea>
+          <label class="block text-sm font-medium text-gray-700 mb-1">내용 (Markdown) *</label>
+          <MarkdownEditor v-model="form.content" :rows="14" required
+            placeholder="## 목적&#10;&#10;이 정책은 …" />
         </div>
         <p v-if="error" class="text-red-600 text-sm">{{ error }}</p>
       </form>
@@ -58,6 +59,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { policyApi } from '@/api'
 
 const props = defineProps({
@@ -92,6 +94,11 @@ watch(() => props.open, async (open) => {
 })
 
 async function handleSubmit() {
+  // 미리보기 모드에서는 textarea 가 DOM 에 없어 required 검증이 걸리지 않으므로 직접 확인한다.
+  if (!form.value.content?.trim()) {
+    error.value = '내용을 입력하세요.'
+    return
+  }
   loading.value = true
   error.value = ''
   try {

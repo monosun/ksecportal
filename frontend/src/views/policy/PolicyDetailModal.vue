@@ -37,7 +37,7 @@
             <div><p class="text-gray-500">수신 확인</p><p class="font-medium mt-1">{{ policy.acknowledgmentCount }}명</p></div>
             <div><p class="text-gray-500">최종 수정</p><p class="font-medium mt-1">{{ formatDate(policy.updatedAt) }}</p></div>
           </div>
-          <div class="prose max-w-none" v-html="renderedContent"></div>
+          <MarkdownView :content="policy.content" />
         </template>
       </div>
 
@@ -49,9 +49,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { ref, watch } from 'vue'
+import MarkdownView from '@/components/MarkdownView.vue'
 import { policyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -67,10 +66,6 @@ const isAdmin = auth.isAdmin
 
 const policy = ref(null)
 const loading = ref(false)
-
-const renderedContent = computed(() =>
-  policy.value ? DOMPurify.sanitize(marked(policy.value.content || '')) : ''
-)
 
 watch(() => props.open, async (open) => {
   if (!open || !props.itemId) return

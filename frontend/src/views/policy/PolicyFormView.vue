@@ -31,8 +31,8 @@
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">내용 (Markdown 지원) *</label>
-        <textarea v-model="form.content" class="input font-mono text-sm" rows="16" required></textarea>
+        <label class="block text-sm font-medium text-gray-700 mb-1">내용 (Markdown) *</label>
+        <MarkdownEditor v-model="form.content" :rows="18" required />
       </div>
       <p v-if="error" class="text-red-600 text-sm">{{ error }}</p>
       <div class="flex gap-3 justify-end">
@@ -48,6 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import { policyApi } from '@/api'
 
 const route = useRoute()
@@ -70,6 +71,11 @@ onMounted(async () => {
 })
 
 async function handleSubmit() {
+  // 미리보기 모드에서는 textarea 가 DOM 에 없어 required 검증이 걸리지 않으므로 직접 확인한다.
+  if (!form.value.content?.trim()) {
+    error.value = '내용을 입력하세요.'
+    return
+  }
   loading.value = true
   error.value = ''
   try {

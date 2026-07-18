@@ -32,16 +32,17 @@
       </div>
 
       <!-- Content (Markdown) -->
-      <div class="card prose max-w-none" v-html="renderedContent"></div>
+      <div class="card">
+        <MarkdownView :content="policy.content" />
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import MarkdownView from '@/components/MarkdownView.vue'
 import { policyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -53,10 +54,6 @@ const isAdmin = auth.isAdmin
 
 const policy = ref(null)
 const loading = ref(true)
-
-const renderedContent = computed(() =>
-  policy.value ? DOMPurify.sanitize(marked(policy.value.content)) : ''
-)
 
 async function loadPolicy() {
   try {
