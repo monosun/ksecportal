@@ -374,7 +374,8 @@
     "dateFrom": "시작 일시",
     "dateTo": "종료 일시",
     "backup": "백업 관리",
-    "settingsMgmt": "설정관리"
+    "settingsMgmt": "설정관리",
+    "menuOrder": "메뉴 순서 설정"
   },
   "vuln": {
     "comments": "댓글",

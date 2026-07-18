@@ -347,7 +347,8 @@
     "dateTo": "To Date",
     "backup": "Backup Management",
     "settingsMgmt": "Settings",
-    "quizBank": "Quiz Bank"
+    "quizBank": "Quiz Bank",
+    "menuOrder": "Menu Order"
   },
   "vuln": {
     "comments": "Comments",

@@ -1,5 +1,6 @@
 <template>
   <PrivacyCrudView
+    ref="crud"
     title="개인정보 수집·이용 관리"
     description="수집동의서를 버전 단위로 관리합니다. 필수·선택 구분, 수집 항목, 이용목적, 처리근거를 함께 기록합니다."
     :api="privacyConsentApi"
@@ -10,19 +11,49 @@
     :search-keys="['title', 'purpose', 'infoItems', 'channel']"
     title-key="title"
     :stats-fn="statsFn"
+  >
+    <template #row-actions="{ row }">
+      <button @click="openVersions(row)"
+        class="text-xs text-primary-600 hover:text-primary-700 px-2 py-1">
+        버전이력
+      </button>
+    </template>
+  </PrivacyCrudView>
+
+  <ConsentVersionModal
+    :open="versionOpen"
+    :consent="versionTarget"
+    @close="versionOpen = false"
+    @changed="onVersionChanged"
   />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
+import ConsentVersionModal from '@/components/privacy/ConsentVersionModal.vue'
 import { privacyConsentApi } from '@/api'
+
+const crud = ref(null)
+const versionOpen = ref(false)
+const versionTarget = ref(null)
+
+function openVersions(row) {
+  versionTarget.value = row
+  versionOpen.value = true
+}
+
+function onVersionChanged() {
+  crud.value?.reload()
+}
 
 const TYPE = { REQUIRED: '필수', OPTIONAL: '선택' }
 const STATUS = { DRAFT: '초안', ACTIVE: '시행중', ARCHIVED: '만료' }
 
 const fields = [
   { key: 'title', label: '동의서명', required: true, placeholder: '예: 회원가입 개인정보 수집·이용 동의' },
-  { key: 'version', label: '버전', default: '1.0', placeholder: '1.0' },
+  { key: 'version', label: '버전', default: '1.0', readonly: true,
+    hint: '버전은 수정할 수 없습니다. 최초 1.0으로 시작하며 버전이력의 추가·삭제로만 변경됩니다.' },
   { key: 'consentType', label: '필수/선택', type: 'select', default: 'REQUIRED',
     options: [{ value: 'REQUIRED', label: '필수' }, { value: 'OPTIONAL', label: '선택' }] },
   { key: 'channel', label: '수집 채널/화면', placeholder: '예: 웹 회원가입 페이지' },

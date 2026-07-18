@@ -83,6 +83,8 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   const dbLogoUrl = ref(null)
   const dbLogoText = ref(null)
   const sessionTimeoutMinutes = ref(60)
+  // 좌측 메뉴 순서 오버라이드 — { groups: [key...], items: { key: [to...] } } 또는 null
+  const menuOrder = ref(null)
 
   // 실제 표시 로고 — localStorage 우선, 없으면 DB 기본값
   const effectiveLogoUrl = () => logoUrl.value || dbLogoUrl.value || null
@@ -101,7 +103,18 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
         const m = parseInt(settings.session_timeout_minutes, 10)
         if (m >= 1) sessionTimeoutMinutes.value = m
       }
+      if (settings.menu_order) {
+        try {
+          const parsed = JSON.parse(settings.menu_order)
+          if (parsed && typeof parsed === 'object') menuOrder.value = parsed
+        } catch {}
+      }
     } catch {}
+  }
+
+  async function saveMenuOrder(order) {
+    await appSettingApi.update('menu_order', JSON.stringify(order))
+    menuOrder.value = order
   }
 
   function setTheme(key) {
@@ -161,10 +174,11 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
 
   return {
     theme, font, fontSize, sidebarStyle, logoUrl, logoText,
-    dbLogoUrl, dbLogoText, sessionTimeoutMinutes,
+    dbLogoUrl, dbLogoText, sessionTimeoutMinutes, menuOrder,
     effectiveLogoUrl, effectiveLogoText,
     init, setTheme, setFont, setFontSize, setSidebarStyle,
     setLogoUrl, clearLogoUrl, setLogoText,
-    saveLogoToServer, saveLogoTextToServer, saveSessionTimeoutToServer
+    saveLogoToServer, saveLogoTextToServer, saveSessionTimeoutToServer,
+    saveMenuOrder
   }
 })

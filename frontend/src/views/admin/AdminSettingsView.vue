@@ -274,7 +274,7 @@
             </button>
           </div>
         </div>
-        <p class="text-sm text-gray-400 mb-5">해당하는 업종을 선택하면 법령준수관리 화면에서 관련 법령만 우선 표시됩니다. 복수 선택 가능합니다.</p>
+        <p class="text-sm text-gray-400 mb-5">해당하는 업종을 선택하면 법령준수관리 화면에서 관련 법령만 우선 표시됩니다. 복수 선택 가능합니다. 업종을 선택한 뒤 <svg class="inline w-3.5 h-3.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg> 를 눌러 업종 내 개별 법령만 선택할 수도 있습니다.</p>
 
         <div class="space-y-5">
           <div v-for="cat in CATEGORIES" :key="cat.key">
@@ -288,17 +288,56 @@
             </div>
             <!-- 업종 체크박스 목록 -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-1.5 pl-6">
-              <label v-for="ind in INDUSTRIES.filter(i => i.category === cat.key)" :key="ind.id"
-                class="flex items-center gap-2.5 px-3 py-2 rounded-xl border cursor-pointer transition-all"
+              <div v-for="ind in INDUSTRIES.filter(i => i.category === cat.key)" :key="ind.id"
+                class="rounded-xl border transition-all overflow-hidden"
                 :class="selectedIndustryIds.includes(ind.id)
                   ? 'border-primary-300 bg-primary-50'
                   : 'border-gray-200 bg-white hover:border-gray-300'">
-                <input type="checkbox" class="w-4 h-4 rounded text-primary-500 cursor-pointer flex-shrink-0"
-                  :checked="selectedIndustryIds.includes(ind.id)"
-                  @change="toggleIndustry(ind.id)" />
-                <span class="text-sm text-gray-700">{{ ind.name }}</span>
-                <span class="ml-auto text-xs text-gray-400 flex-shrink-0">법령 {{ ind.laws.length }}개</span>
-              </label>
+                <div class="flex items-center gap-2.5 px-3 py-2">
+                  <label class="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                    <input type="checkbox" class="w-4 h-4 rounded text-primary-500 cursor-pointer flex-shrink-0"
+                      :checked="selectedIndustryIds.includes(ind.id)"
+                      @change="toggleIndustry(ind.id)" />
+                    <span class="text-sm text-gray-700 truncate">{{ ind.name }}</span>
+                  </label>
+                  <span class="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
+                    <template v-if="selectedIndustryIds.includes(ind.id) && selectedLawCount(ind.id) < ind.laws.length">
+                      법령 <strong class="text-primary-600">{{ selectedLawCount(ind.id) }}</strong>/{{ ind.laws.length }}개
+                    </template>
+                    <template v-else>법령 {{ ind.laws.length }}개</template>
+                  </span>
+                  <button v-if="selectedIndustryIds.includes(ind.id)" type="button"
+                    @click="toggleExpand(ind.id)"
+                    class="flex-shrink-0 p-1 rounded hover:bg-primary-100 text-gray-400 hover:text-primary-600 transition-colors"
+                    :title="expandedIndustries.includes(ind.id) ? '법령 접기' : '법령 개별 선택'">
+                    <svg class="w-4 h-4 transition-transform" :class="expandedIndustries.includes(ind.id) ? 'rotate-180' : ''"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+                <!-- 업종 내 개별 법령 선택 -->
+                <div v-if="selectedIndustryIds.includes(ind.id) && expandedIndustries.includes(ind.id)"
+                  class="border-t border-primary-200 bg-white/70 px-3 py-2">
+                  <label class="flex items-center gap-2 mb-1.5 cursor-pointer">
+                    <input type="checkbox" class="w-3.5 h-3.5 rounded text-primary-500 cursor-pointer"
+                      :checked="isIndustryLawsAllSelected(ind)"
+                      :indeterminate.prop="isIndustryLawsPartial(ind)"
+                      @change="toggleAllLaws(ind, $event.target.checked)" />
+                    <span class="text-xs font-semibold text-gray-500">전체 법령 선택</span>
+                  </label>
+                  <div class="space-y-0.5">
+                    <label v-for="law in ind.laws" :key="law.name"
+                      class="flex items-center gap-2 px-1.5 py-1 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" class="w-3.5 h-3.5 rounded text-primary-500 cursor-pointer flex-shrink-0"
+                        :checked="isLawSelected(ind.id, law.name)"
+                        @change="toggleLaw(ind.id, law.name)" />
+                      <span class="text-xs text-gray-600 truncate">{{ law.name }}</span>
+                      <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" :class="typeColor(law.type)">{{ law.type }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -308,7 +347,7 @@
             선택된 업종: <strong class="text-gray-700">{{ selectedIndustryIds.length }}개</strong>
           </p>
           <div class="flex items-center gap-3">
-            <button @click="selectedIndustryIds = []"
+            <button @click="clearAllIndustries"
               class="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               전체 해제
             </button>
@@ -1176,6 +1215,10 @@ async function saveCompanyConfig() {
 
 // ── 업종 설정 ──────────────────────────────────────
 const selectedIndustryIds = ref([])
+// 선택된 업종별로 개별 적용할 법령명 목록 { [업종id]: [법령명, ...] }
+// 항목이 없으면 해당 업종의 전체 법령 적용(기본값). 부분 선택 시에만 목록을 보관.
+const industryLaws = ref({})
+const expandedIndustries = ref([])
 const industrySaving = ref(false)
 const industrySaved  = ref(false)
 
@@ -1204,8 +1247,64 @@ async function saveLegalDays() {
 
 function toggleIndustry(id) {
   const idx = selectedIndustryIds.value.indexOf(id)
-  if (idx === -1) selectedIndustryIds.value = [...selectedIndustryIds.value, id]
-  else selectedIndustryIds.value = selectedIndustryIds.value.filter(x => x !== id)
+  if (idx === -1) {
+    selectedIndustryIds.value = [...selectedIndustryIds.value, id]
+    // 신규 선택 시 전체 법령 선택 상태로 초기화
+    const ind = INDUSTRIES.find(i => i.id === id)
+    industryLaws.value = { ...industryLaws.value, [id]: ind ? ind.laws.map(l => l.name) : [] }
+  } else {
+    selectedIndustryIds.value = selectedIndustryIds.value.filter(x => x !== id)
+    const copy = { ...industryLaws.value }; delete copy[id]; industryLaws.value = copy
+    expandedIndustries.value = expandedIndustries.value.filter(x => x !== id)
+  }
+}
+
+// ── 업종 내 개별 법령 선택 ─────────────────────────
+function toggleExpand(id) {
+  const i = expandedIndustries.value.indexOf(id)
+  if (i === -1) expandedIndustries.value = [...expandedIndustries.value, id]
+  else expandedIndustries.value = expandedIndustries.value.filter(x => x !== id)
+}
+function isLawSelected(id, name) {
+  const arr = industryLaws.value[id]
+  return arr ? arr.includes(name) : false
+}
+function toggleLaw(id, name) {
+  const arr = industryLaws.value[id] ? [...industryLaws.value[id]] : []
+  const i = arr.indexOf(name)
+  if (i === -1) arr.push(name); else arr.splice(i, 1)
+  industryLaws.value = { ...industryLaws.value, [id]: arr }
+}
+function selectedLawCount(id) {
+  return (industryLaws.value[id] || []).length
+}
+function isIndustryLawsAllSelected(ind) {
+  return selectedLawCount(ind.id) >= ind.laws.length
+}
+function isIndustryLawsPartial(ind) {
+  const n = selectedLawCount(ind.id)
+  return n > 0 && n < ind.laws.length
+}
+function toggleAllLaws(ind, checked) {
+  industryLaws.value = {
+    ...industryLaws.value,
+    [ind.id]: checked ? ind.laws.map(l => l.name) : [],
+  }
+}
+function typeColor(type) {
+  return {
+    '법령':   'bg-blue-100 text-blue-700',
+    '시행령': 'bg-indigo-100 text-indigo-700',
+    '시행규칙': 'bg-violet-100 text-violet-700',
+    '시행세칙': 'bg-purple-100 text-purple-700',
+    '규정':   'bg-teal-100 text-teal-700',
+    '고시':   'bg-amber-100 text-amber-700',
+  }[type] || 'bg-gray-100 text-gray-600'
+}
+function clearAllIndustries() {
+  selectedIndustryIds.value = []
+  industryLaws.value = {}
+  expandedIndustries.value = []
 }
 
 function isCategoryAllSelected(catKey) {
@@ -1217,12 +1316,23 @@ function isCategoryPartialSelected(catKey) {
   return some && !isCategoryAllSelected(catKey)
 }
 function toggleCategory(catKey, checked) {
-  const ids = INDUSTRIES.filter(i => i.category === catKey).map(i => i.id)
+  const inds = INDUSTRIES.filter(i => i.category === catKey)
+  const ids = inds.map(i => i.id)
   if (checked) {
     const merged = new Set([...selectedIndustryIds.value, ...ids])
     selectedIndustryIds.value = [...merged]
+    // 새로 선택된 업종은 전체 법령 선택 상태로 초기화(기존 선택 상태는 유지)
+    const nextLaws = { ...industryLaws.value }
+    for (const ind of inds) {
+      if (!(ind.id in nextLaws)) nextLaws[ind.id] = ind.laws.map(l => l.name)
+    }
+    industryLaws.value = nextLaws
   } else {
     selectedIndustryIds.value = selectedIndustryIds.value.filter(id => !ids.includes(id))
+    const nextLaws = { ...industryLaws.value }
+    for (const id of ids) delete nextLaws[id]
+    industryLaws.value = nextLaws
+    expandedIndustries.value = expandedIndustries.value.filter(id => !ids.includes(id))
   }
 }
 
@@ -1230,10 +1340,27 @@ async function loadIndustryConfig() {
   try {
     const res = await appSettingApi.getAll()
     const raw = res.data?.['company.industries']
+    let ids = []
     if (raw) {
-      const ids = JSON.parse(raw)
-      if (Array.isArray(ids)) selectedIndustryIds.value = ids
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) ids = parsed
     }
+    selectedIndustryIds.value = ids
+    // 업종별 개별 법령 선택 로드(없는 항목은 전체 선택으로 간주)
+    let savedLaws = {}
+    const rawLaws = res.data?.['company.industryLaws']
+    if (rawLaws) {
+      try { const p = JSON.parse(rawLaws); if (p && typeof p === 'object') savedLaws = p } catch {}
+    }
+    const laws = {}
+    for (const id of ids) {
+      const ind = INDUSTRIES.find(i => i.id === id)
+      if (!ind) continue
+      const sel = savedLaws[id]
+      laws[id] = Array.isArray(sel) ? ind.laws.filter(l => sel.includes(l.name)).map(l => l.name)
+                                    : ind.laws.map(l => l.name)
+    }
+    industryLaws.value = laws
     const ld = res.data?.['legal.days']
     if (ld) legalDays.value = parseInt(ld) || 30
   } catch {}
@@ -1243,6 +1370,15 @@ async function saveIndustryConfig() {
   industrySaving.value = true; industrySaved.value = false
   try {
     await appSettingApi.update('company.industries', JSON.stringify(selectedIndustryIds.value))
+    // 부분 선택된 업종만 법령 목록을 저장(전체 선택은 생략 → 기본 전체 적용)
+    const map = {}
+    for (const id of selectedIndustryIds.value) {
+      const ind = INDUSTRIES.find(i => i.id === id)
+      if (!ind) continue
+      const sel = industryLaws.value[id] || ind.laws.map(l => l.name)
+      if (sel.length < ind.laws.length) map[id] = sel
+    }
+    await appSettingApi.update('company.industryLaws', JSON.stringify(map))
     industrySaved.value = true
     setTimeout(() => { industrySaved.value = false }, 3000)
   } catch { alert('업종 설정 저장에 실패했습니다.') }

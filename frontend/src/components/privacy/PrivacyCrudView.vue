@@ -122,6 +122,9 @@
                 </datalist>
               </template>
 
+              <input v-else-if="f.readonly" :value="form[f.key] || '—'" type="text" readonly disabled
+                class="input w-full bg-gray-100 text-gray-500 cursor-not-allowed" />
+
               <input v-else v-model="form[f.key]" :type="inputType(f.type)" class="input w-full"
                 :required="f.required" :placeholder="f.placeholder" />
 
@@ -279,6 +282,8 @@ async function submit() {
   try {
     const payload = {}
     props.fields.forEach(f => {
+      // 읽기 전용 필드(예: 버전)는 서버에서 관리하므로 전송하지 않는다
+      if (f.readonly) return
       const v = form.value[f.key]
       // 빈 문자열은 서버로 보내지 않는다 — PATCH 부분수정에서 기존 값을 지우지 않도록
       if (v === '' || v === null || v === undefined) return

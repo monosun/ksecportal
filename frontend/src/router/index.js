@@ -188,6 +188,12 @@ const routes = [
         meta: { adminOnly: true }
       },
       {
+        path: 'admin/menu-order',
+        name: 'AdminMenuOrder',
+        component: () => import('@/views/admin/MenuOrderView.vue'),
+        meta: { adminOnly: true }
+      },
+      {
         path: 'admin/quiz-bank',
         name: 'AdminQuizBank',
         component: () => import('@/views/admin/QuizBankView.vue'),

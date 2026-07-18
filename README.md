@@ -3,7 +3,7 @@
 스타트업·중소기업을 위한 **올인원 정보보안 관리 시스템**입니다.  
 보안 정책, 취약점, 인시던트, 자산, 보안이벤트, 교육을 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.10.3** — 처리현황에서 제공 정보(제3자·공동이용·국외이전) 직접 등록·수정, 개인정보 현황보고서 한 화면 최적화 및 PDF 다운로드 ([릴리즈 노트](release/v1.10.3/RELEASE_NOTES.md))
+> **최신 버전: v1.11.0** — 업종별 개별 법령 선택, 동의서 버전 자동 관리, 메뉴관리(상위 추가·삭제·이름변경·하위 이동), 대시보드 보안·법령 위젯 조회기간 선택·스크롤, **MySQL 8.4 LTS 업그레이드** ([릴리즈 노트](release/v1.11.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -114,7 +114,7 @@ docker compose up -d --build
 | **Frontend** | Vue 3, Vite, Pinia, Tailwind CSS, vue-i18n, Chart.js, Axios |
 | **Backend** | Spring Boot 3.5, Spring Security 6.5 (JWT), Spring Data JPA, Hibernate 6.6 |
 | **Runtime** | Java 21 (Temurin) |
-| **Database** | MySQL 8 |
+| **Database** | MySQL 8.4 LTS |
 | **인프라** | Docker Compose, Nginx (reverse proxy + SPA fallback) |
 | **폰트** | Inter, Noto Sans KR (Google Fonts), Pretendard |
 
@@ -601,6 +601,7 @@ secportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.11.0](release/v1.11.0/RELEASE_NOTES.md) | 설정관리>업종설정 **업종 내 개별 법령 선택**(부분 선택만 저장·법령준수관리/대시보드 반영), 개인정보 수집·이용 **동의서 버전 자동 관리**(버전 읽기전용·최초 1.0·이력 추가 시 자동증가·삭제 시 하위버전 롤백), 관리>메뉴관리 **상위 메뉴 추가·삭제·이름변경·하위 메뉴 상위 간 이동**(사이드바 즉시 반영·하위호환), 대시보드 보안·법령 위젯 **조회기간 선택**(법령 1주~12개월, RSS 1·3·7·14·30일 실제 날짜 필터)·**목록 스크롤**, 인프라 **MySQL 8.0→8.4 LTS 업그레이드**(인플레이스·볼륨 유지, 논리 덤프+볼륨 스냅샷 백업) |
 | [v1.10.3](release/v1.10.3/RELEASE_NOTES.md) | 처리현황에서 제공 정보 직접 등록·수정(행 `제공` 버튼·흐름도 `제공 정보 관리`, 현재 처리업무 자동 연계, 국외이전 선택 시 이전 국가 필수, 처리업무 개인정보 항목 가져오기), 개인정보 현황보고서 한 화면 최적화(3열 그리드) 및 **PDF 다운로드**(`GET /api/reports/privacy/pdf`, 화면과 동일 집계 재사용·NanumGothic 임베딩), `GET /api/privacy/provisions?processingId=` 선택 필터 추가 |
 | [v1.10.2](release/v1.10.2/RELEASE_NOTES.md) | 개인정보 처리현황 `처리시스템`을 자산관리 연계 콤보박스로 전환(자산유형 SERVICE + 유형 APPLICATION + 사용중 자산 목록에서 선택 또는 직접 입력, 자산명·담당부서 함께 표시), 파일관리 `운영 시스템`에도 동일 목록 적용(흐름 지도의 시스템명 일치 연결이 표기 불일치로 끊기는 것 예방). 스키마·API 변경 없음 |
 | [v1.10.1](release/v1.10.1/RELEASE_NOTES.md) | 개인정보 흐름도 신설 — 업무별 흐름도(라이프사이클 해당 단계 강조, `업무흐름도` 텍스트를 `→`·줄바꿈 기준으로 단계 노드 분해, 나가는 제공처), 전체 흐름 지도(처리업무 → 시스템·개인정보파일 → 제공·국외이전; 파일은 시스템명 일치로, 제공처는 연계 처리업무 지정으로 연결), 미연결 개인정보파일·미연결 제공 누락 점검 섹션, 제공관리 `연계 처리업무` 선택 추가(`privacy_provisions.processing_id`, ddl-auto 자동 추가) |

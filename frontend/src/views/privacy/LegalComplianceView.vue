@@ -100,7 +100,7 @@
             <!-- 업종명 -->
             <h3 class="text-sm font-bold text-gray-800 flex-1 min-w-0">{{ industry.name }}</h3>
             <!-- 법령 수 뱃지 -->
-            <span class="text-xs text-gray-400 flex-shrink-0">{{ industry.laws.length }}개 법령</span>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ visibleLaws(industry).length }}개 법령</span>
             <!-- 펼치기 버튼 -->
             <button @click="toggleExpand(industry.id)"
               class="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
@@ -114,7 +114,7 @@
 
           <!-- 법령 태그 (접힌 상태) -->
           <div v-if="!expanded.has(industry.id)" class="px-4 pb-3 flex flex-wrap gap-1.5">
-            <span v-for="law in industry.laws" :key="law.name"
+            <span v-for="law in visibleLaws(industry)" :key="law.name"
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
               :class="checkedKey(industry.id, law.name) in checkedLaws
                 ? 'bg-primary-100 text-primary-700 border border-primary-300'
@@ -141,7 +141,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
-                <tr v-for="law in industry.laws" :key="law.name"
+                <tr v-for="law in visibleLaws(industry)" :key="law.name"
                   class="hover:bg-gray-50 transition-colors cursor-pointer"
                   @click="toggleLaw(industry.id, law.name)">
                   <td class="px-4 py-2.5">
@@ -218,6 +218,16 @@ const searchQuery      = ref('')
 const selectedCategory = ref('')
 const showMyIndustryOnly = ref(false)
 const companyIndustryIds = ref([])
+// 업종별 개별 법령 선택 { [업종id]: [법령명, ...] }. 항목 없으면 전체 법령.
+const companyIndustryLaws = ref({})
+
+// "우리 업종만 보기"가 켜져 있고 해당 업종에 개별 법령 설정이 있으면 선택된 법령만 노출
+function visibleLaws(industry) {
+  if (!showMyIndustryOnly.value) return industry.laws
+  const sel = companyIndustryLaws.value[industry.id]
+  if (!Array.isArray(sel)) return industry.laws
+  return industry.laws.filter(l => sel.includes(l.name))
+}
 
 let searchTimer = null
 function onSearchInput() {
@@ -250,17 +260,19 @@ function toggleLaw(industryId, lawName) {
 }
 
 function isIndustryAllChecked(industry) {
-  return industry.laws.every(l => checkedKey(industry.id, l.name) in checkedLaws.value)
+  const laws = visibleLaws(industry)
+  return laws.length > 0 && laws.every(l => checkedKey(industry.id, l.name) in checkedLaws.value)
 }
 
 function isIndustryPartialChecked(industry) {
-  const some = industry.laws.some(l => checkedKey(industry.id, l.name) in checkedLaws.value)
+  const laws = visibleLaws(industry)
+  const some = laws.some(l => checkedKey(industry.id, l.name) in checkedLaws.value)
   return some && !isIndustryAllChecked(industry)
 }
 
 function toggleIndustryAll(industry, checked) {
   const next = { ...checkedLaws.value }
-  for (const law of industry.laws) {
+  for (const law of visibleLaws(industry)) {
     const key = checkedKey(industry.id, law.name)
     if (checked) next[key] = true
     else delete next[key]
@@ -273,7 +285,7 @@ const checkedCount = computed(() => Object.keys(checkedLaws.value).length)
 function selectAll() {
   const next = {}
   for (const ind of filteredIndustries.value) {
-    for (const law of ind.laws) {
+    for (const law of visibleLaws(ind)) {
       next[checkedKey(ind.id, law.name)] = true
     }
   }
@@ -333,6 +345,11 @@ onMounted(async () => {
         companyIndustryIds.value = ids
         showMyIndustryOnly.value = true
       }
+    }
+    const rawLaws = res.data?.['company.industryLaws']
+    if (rawLaws) {
+      const m = JSON.parse(rawLaws)
+      if (m && typeof m === 'object') companyIndustryLaws.value = m
     }
   } catch {}
 })

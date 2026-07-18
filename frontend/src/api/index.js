@@ -621,7 +621,16 @@ export const privacyFileApi = privacyCrud('files')
 /** 개인정보 수집·이용 관리 */
 export const privacyConsentApi = {
   ...privacyCrud('consents'),
-  newVersion: (id, version) => api.post(`/privacy/consents/${id}/versions`, { version }),
+  listVersions: (id) => api.get(`/privacy/consents/${id}/versions`),
+  addVersion: (id, data, file) => {
+    const fd = new FormData()
+    fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+    if (file) fd.append('file', file)
+    return api.post(`/privacy/consents/${id}/versions`, fd)
+  },
+  deleteVersion: (versionId) => api.delete(`/privacy/consents/versions/${versionId}`),
+  downloadVersionFile: (versionId, fileName) =>
+    downloadBlob(`/privacy/consents/versions/${versionId}/download`, fileName),
 }
 
 /** 개인정보 제공관리 */

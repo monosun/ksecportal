@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: secportal-db
     restart: unless-stopped
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-character-set-client-handshake --default-time-zone=+09:00
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+09:00
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: secportal

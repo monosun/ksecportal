@@ -222,7 +222,20 @@
                       d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/>
                   </svg>
                 </div>
-                <h2 class="text-sm font-semibold text-gray-800">{{ activeIsLegal ? '법령 개정정보' : 'KRCERT 보안공지' }} <span class="text-xs text-gray-400 font-normal ml-1">최근 {{ activeDaysLabel }}</span></h2>
+                <h2 class="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  {{ activeIsLegal ? '법령 개정정보' : 'KRCERT 보안공지' }}
+                  <span class="text-xs text-gray-400 font-normal">최근</span>
+                  <select v-if="activeIsLegal" v-model.number="legalDays" @change="onLegalDaysChange"
+                    title="조회 기간 변경"
+                    class="text-xs text-gray-600 font-normal border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-300">
+                    <option v-for="p in LEGAL_PERIODS" :key="p.days" :value="p.days">{{ p.label }}</option>
+                  </select>
+                  <select v-else v-model.number="rssDays" @change="onRssDaysChange"
+                    title="조회 기간 변경"
+                    class="text-xs text-gray-600 font-normal border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-300">
+                    <option v-for="d in RSS_PERIODS" :key="d" :value="d">{{ d }}일</option>
+                  </select>
+                </h2>
               </div>
               <div class="flex gap-1">
                 <button v-for="tab in allTabs" :key="tab.category"
@@ -232,7 +245,7 @@
               </div>
             </div>
 
-            <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+            <div class="flex-1 min-h-0 max-h-[420px] overflow-y-auto overflow-x-hidden">
               <!-- ── 법령 개정 탭 ── -->
               <template v-if="activeIsLegal">
                 <div v-if="legalLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
@@ -271,7 +284,7 @@
                 <template v-else>
                   <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssDays }}일간 게시물이 없습니다</div>
                   <div v-else class="divide-y divide-gray-50">
-                    <a v-for="item in filteredRss.slice(0,8)" :key="item.link"
+                    <a v-for="item in filteredRss" :key="item.link"
                       :href="item.link" target="_blank" rel="noopener noreferrer"
                       class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
                       <div class="flex-1 min-w-0">
@@ -322,7 +335,7 @@ import {
   Chart, DoughnutController, LineController, ArcElement, LineElement,
   PointElement, CategoryScale, LinearScale, Tooltip, Filler
 } from 'chart.js'
-import { metricsApi, vulnApi, rssApi } from '@/api'
+import { metricsApi, vulnApi, rssApi, appSettingApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import NoticeBar from '@/components/dashboard/NoticeBar.vue'
 import { INDUSTRIES } from '@/data/legalIndustries.js'
@@ -525,6 +538,14 @@ const rssTabList = ref([
 const legalTab = { category: 'legal', label: '법령 개정' }
 const allTabs = computed(() => [...rssTabList.value, legalTab])
 const activeIsLegal = computed(() => rssTab.value === 'legal')
+// 법령 개정 조회 기간 프리셋 (설정관리 > 업종설정과 동일)
+const LEGAL_PERIODS = [
+  { days: 7, label: '1주일' },
+  { days: 30, label: '1개월' },
+  { days: 90, label: '3개월' },
+  { days: 180, label: '6개월' },
+  { days: 365, label: '12개월' },
+]
 // 법령 탭은 기간 라벨(1주일·1개월…)로, RSS 탭은 "N일"로 표시
 function daysToPeriodLabel(d) {
   return { 7: '1주일', 30: '1개월', 90: '3개월', 180: '6개월', 365: '12개월' }[d] || `${d}일`
@@ -532,9 +553,19 @@ function daysToPeriodLabel(d) {
 const legalPeriodLabel = computed(() => daysToPeriodLabel(legalDays.value))
 const activeDaysLabel = computed(() => activeIsLegal.value ? legalPeriodLabel.value : `${rssDays.value}일`)
 
-const filteredRss = computed(() =>
-  rssItems.value.filter(item => item.category === rssTab.value)
-)
+// RSS(취약점·보안공지) 조회 기간 프리셋
+const RSS_PERIODS = [1, 3, 7, 14, 30]
+
+const filteredRss = computed(() => {
+  const cutoff = Date.now() - rssDays.value * 86400000
+  return rssItems.value.filter(item => {
+    if (item.category !== rssTab.value) return false
+    if (!item.pubDate) return true
+    const t = new Date(item.pubDate).getTime()
+    if (isNaN(t)) return true            // 날짜 파싱 불가 항목은 숨기지 않음
+    return t >= cutoff
+  })
+})
 
 function fmtRssDate(pubDate) {
   if (!pubDate) return ''
@@ -579,6 +610,10 @@ async function loadRssSettings() {
     if (rawInd) {
       try { const ids = JSON.parse(rawInd); if (Array.isArray(ids)) companyIndustryIds.value = ids } catch {}
     }
+    const rawIndLaws = s['company.industryLaws']
+    if (rawIndLaws) {
+      try { const m = JSON.parse(rawIndLaws); if (m && typeof m === 'object') companyIndustryLaws.value = m } catch {}
+    }
     // 설정 로드가 탭 클릭보다 늦게 끝난 경우, 법령 탭이 열려 있으면 갱신된 값으로 재조회
     if (rssTab.value === 'legal') { legalLoaded.value = false; loadLegal() }
   } catch {}
@@ -593,13 +628,17 @@ const legalKeyMissing   = ref(false)
 const legalDays    = ref(30)
 const lawKeyPresent = ref(false)
 const companyIndustryIds = ref([])
+// 업종별 개별 법령 선택 { [업종id]: [법령명, ...] }. 항목 없으면 전체 법령 적용.
+const companyIndustryLaws = ref({})
 
-// 선택된 업종의 관련 법령 (법령명 기준 중복 제거)
+// 선택된 업종의 관련 법령 (법령명 기준 중복 제거, 업종별 개별 선택 반영)
 const legalLaws = computed(() => {
   const seen = new Set(); const out = []
   for (const ind of INDUSTRIES) {
     if (!companyIndustryIds.value.includes(ind.id)) continue
+    const sel = companyIndustryLaws.value[ind.id]
     for (const law of ind.laws) {
+      if (Array.isArray(sel) && !sel.includes(law.name)) continue
       if (seen.has(law.name)) continue
       seen.add(law.name); out.push(law)
     }
@@ -670,6 +709,22 @@ async function loadLegal() {
 
 // 법령 개정 탭을 처음 열 때만 조회 (불필요한 API 호출 방지)
 watch(rssTab, (t) => { if (t === 'legal' && !legalLoaded.value) loadLegal() })
+
+// 대시보드에서 직접 조회 기간 변경 → 즉시 재조회, 관리자는 설정값도 함께 갱신
+async function onLegalDaysChange() {
+  legalLoaded.value = false
+  loadLegal()
+  if (auth.isAdmin) {
+    try { await appSettingApi.update('legal.days', String(legalDays.value)) } catch {}
+  }
+}
+
+// RSS 조회 기간 변경 → 목록은 클라이언트에서 즉시 필터링, 관리자는 설정값도 갱신
+async function onRssDaysChange() {
+  if (auth.isAdmin) {
+    try { await appSettingApi.update('rss.days', String(rssDays.value)) } catch {}
+  }
+}
 
 onMounted(async () => {
   loadRssSettings()

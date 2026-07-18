@@ -47,7 +47,7 @@
               : (isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100')">
             <div class="flex items-center gap-2">
               <component :is="group.icon" class="w-[14px] h-[14px] flex-shrink-0" />
-              <span class="text-[10px] font-bold uppercase tracking-widest">{{ $t(group.labelKey) }}</span>
+              <span class="text-[10px] font-bold uppercase tracking-widest">{{ group.labelText || $t(group.labelKey) }}</span>
             </div>
             <svg class="w-3 h-3 transition-transform duration-200 flex-shrink-0"
               :class="groupOpen[group.key] ? 'rotate-180' : ''"
@@ -274,9 +274,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiSettingsStore } from '@/stores/uiSettings'
 import { useInboxStore } from '@/stores/inbox'
 import { useSessionTimer } from '@/composables/useSessionTimer'
-import {
-  HomeIcon, ChartBarIcon, DocumentTextIcon, ShieldExclamationIcon, AcademicCapIcon, ClipboardCheckIcon
-} from './icons'
+import { HomeIcon, DocumentTextIcon, ShieldExclamationIcon } from './icons'
+import { navGroups, resolveMenu } from '@/config/navMenu'
 
 const auth = useAuthStore()
 const ui = useUiSettingsStore()
@@ -297,109 +296,8 @@ onUnmounted(() => {
 
 const isDark = computed(() => ui.sidebarStyle === 'dark')
 
-// ── 메뉴 그룹 정의 ────────────────────────────────────────────────
-const navGroups = [
-  {
-    key: 'dashboard',
-    labelKey: 'nav.group.dashboard',
-    icon: ChartBarIcon,
-    items: [
-      { to: '/dashboard/risks',            label: 'nav.dashRisks',     icon: ShieldExclamationIcon, menuKey: 'dash_risks' },
-      { to: '/dashboard/vulns-status',     label: 'nav.dashVulns',     icon: ShieldExclamationIcon, menuKey: 'dash_vulns' },
-      { to: '/dashboard/incidents-status', label: 'nav.dashIncidents', icon: ShieldExclamationIcon, menuKey: 'dash_incidents' },
-      { to: '/dashboard/isms-progress',    label: 'nav.dashIsms',      icon: ClipboardCheckIcon,    menuKey: 'dash_isms' },
-      { to: '/dashboard/evidence-status',  label: 'nav.dashEvidence',  icon: DocumentTextIcon,      menuKey: 'dash_evidence' },
-    ]
-  },
-  {
-    key: 'isms_framework',
-    labelKey: 'nav.group.ismsFramework',
-    icon: ShieldExclamationIcon,
-    items: [
-      { to: '/policies',          label: 'nav.policies',       icon: DocumentTextIcon,      menuKey: 'policies' },
-      { to: '/assets',            label: 'nav.assets',          icon: DocumentTextIcon,      menuKey: 'assets' },
-      { to: '/sbom',              label: 'nav.sbom',            icon: DocumentTextIcon,      menuKey: 'sbom' },
-      { to: '/threat-management', label: 'nav.threats',         icon: ShieldExclamationIcon, menuKey: 'threats' },
-      { to: '/vulnerabilities',   label: 'nav.vulnerabilities', icon: ShieldExclamationIcon, menuKey: 'vulnerabilities' },
-      { to: '/risk-assessment',   label: 'nav.riskAssessment',  icon: ShieldExclamationIcon, menuKey: 'risk_assessment' },
-      { to: '/risk-treatment',    label: 'nav.riskTreatment',   icon: DocumentTextIcon,      menuKey: 'risk_treatment' },
-      { to: '/isms-mapping',      label: 'nav.ismsMapping',     icon: ClipboardCheckIcon,    menuKey: 'isms_mapping' },
-      { to: '/isms',              label: 'nav.isms',            icon: ClipboardCheckIcon,    menuKey: 'isms' },
-    ]
-  },
-  {
-    key: 'sec_ops',
-    labelKey: 'nav.group.secOps',
-    icon: ShieldExclamationIcon,
-    items: [
-      { to: '/security-events',   label: 'nav.securityEvents', icon: ShieldExclamationIcon, menuKey: 'security_events' },
-      { to: '/incidents',          label: 'nav.incidents',       icon: ShieldExclamationIcon, menuKey: 'incidents' },
-      { to: '/security-findings',  label: 'nav.secFindings',    icon: ShieldExclamationIcon, menuKey: 'sec_findings' },
-      { to: '/monthly-checks',     label: 'nav.monthlyChecks',   icon: ClipboardCheckIcon,    menuKey: 'monthly_checks' },
-      { to: '/source-scan',        label: 'nav.sourceScan',      icon: ShieldExclamationIcon, menuKey: 'source_scan' },
-    ]
-  },
-  {
-    key: 'log_mgmt',
-    labelKey: 'nav.group.logMgmt',
-    icon: DocumentTextIcon,
-    items: [
-      { to: '/logs/personal-info', label: 'nav.logPersonalInfo', icon: DocumentTextIcon, menuKey: 'log_personal_info' },
-      { to: '/logs/ad',            label: 'nav.logAd',           icon: DocumentTextIcon, menuKey: 'log_ad' },
-      { to: '/logs/nac',           label: 'nav.logNac',          icon: DocumentTextIcon, menuKey: 'log_nac' },
-      { to: '/logs/network-link',  label: 'nav.logNetworkLink',  icon: DocumentTextIcon, menuKey: 'log_network_link' },
-      { to: '/logs/search',        label: 'nav.logSearch',       icon: DocumentTextIcon, menuKey: 'log_search' },
-    ]
-  },
-  {
-    key: 'governance',
-    labelKey: 'nav.group.governance',
-    icon: ClipboardCheckIcon,
-    items: [
-      { to: '/committee',      label: 'nav.committee',    icon: ClipboardCheckIcon, menuKey: 'committee' },
-      { to: '/internal-audit', label: 'nav.internalAudit',icon: ClipboardCheckIcon, menuKey: 'internal_audit' },
-    ]
-  },
-  {
-    key: 'education',
-    labelKey: 'nav.group.education',
-    icon: AcademicCapIcon,
-    items: [
-      { to: '/training',         label: 'nav.training',        icon: AcademicCapIcon,       menuKey: 'training' },
-      { to: '/phishing',         label: 'nav.phishing',        icon: ShieldExclamationIcon, menuKey: 'phishing' },
-      { to: '/training-results', label: 'nav.trainingResults', icon: ClipboardCheckIcon,    menuKey: 'training' },
-    ]
-  },
-  {
-    key: 'doc_mgmt',
-    labelKey: 'nav.group.docMgmt',
-    icon: DocumentTextIcon,
-    items: [
-      { to: '/sec-docs', label: 'nav.secDocs', icon: DocumentTextIcon, menuKey: 'sec_docs' },
-    ]
-  },
-  {
-    key: 'privacy',
-    labelKey: 'nav.group.privacy',
-    icon: ShieldExclamationIcon,
-    items: [
-      { to: '/privacy/processing',        label: 'nav.privacyProcessing',    icon: DocumentTextIcon,      menuKey: 'privacy_processing' },
-      { to: '/privacy/files',             label: 'nav.privacyFiles',         icon: DocumentTextIcon,      menuKey: 'privacy_files' },
-      { to: '/privacy/consents',          label: 'nav.privacyConsent',       icon: ClipboardCheckIcon,    menuKey: 'privacy_consent' },
-      { to: '/privacy/provisions',        label: 'nav.privacyProvision',     icon: DocumentTextIcon,      menuKey: 'privacy_provision' },
-      { to: '/privacy/contractors',       label: 'nav.privacyContractors',   icon: ClipboardCheckIcon,    menuKey: 'privacy_contractors' },
-      { to: '/privacy/contractor-checks', label: 'nav.contractorChecks',     icon: ClipboardCheckIcon,    menuKey: 'privacy_contractors' },
-      { to: '/privacy/retentions',        label: 'nav.privacyRetention',     icon: ClipboardCheckIcon,    menuKey: 'privacy_retention' },
-      { to: '/privacy/disposals',         label: 'nav.privacyDisposal',      icon: ShieldExclamationIcon, menuKey: 'privacy_disposal' },
-      { to: '/privacy/dpia',              label: 'nav.privacyDpia',          icon: ClipboardCheckIcon,    menuKey: 'privacy_dpia' },
-      { to: '/privacy/breaches',          label: 'nav.privacyBreach',        icon: ShieldExclamationIcon, menuKey: 'privacy_breach' },
-      { to: '/privacy/rights-requests',   label: 'nav.privacyRights',        icon: ClipboardCheckIcon,    menuKey: 'privacy_rights' },
-      { to: '/privacy/safeguards',        label: 'nav.privacySafeguard',     icon: ShieldExclamationIcon, menuKey: 'privacy_safeguard' },
-      { to: '/privacy/legal-compliance',  label: 'nav.legalCompliance',      icon: DocumentTextIcon,      menuKey: 'privacy_contractors' },
-      { to: '/privacy/report',            label: 'nav.privacyReport',        icon: DocumentTextIcon,      menuKey: 'privacy_report' },
-    ]
-  },
-]
+// ── 메뉴 그룹 정의 (config/navMenu.js 공유) + 저장된 커스터마이즈 적용 ─────
+const orderedGroups = computed(() => resolveMenu(navGroups, ui.menuOrder))
 
 // ── 그룹 열림/닫힘 상태 ───────────────────────────────────────────
 const groupOpen = reactive({})
@@ -408,17 +306,17 @@ function isGroupActive(group) {
   return group.items.some(item => route.path.startsWith(item.to))
 }
 
-navGroups.forEach(g => { groupOpen[g.key] = isGroupActive(g) })
+orderedGroups.value.forEach(g => { groupOpen[g.key] = isGroupActive(g) })
 
 watch(() => route.path, () => {
-  navGroups.forEach(g => { if (isGroupActive(g)) groupOpen[g.key] = true })
+  orderedGroups.value.forEach(g => { if (isGroupActive(g)) groupOpen[g.key] = true })
 })
 
 function toggleGroup(key) {
   const willOpen = !groupOpen[key]
   // 아코디언: 하나를 펼치면 다른 펼쳐진 그룹(관리 섹션 포함)은 닫는다
   if (willOpen) {
-    navGroups.forEach(g => { groupOpen[g.key] = false })
+    orderedGroups.value.forEach(g => { groupOpen[g.key] = false })
     adminOpen.value = false
   }
   groupOpen[key] = willOpen
@@ -430,7 +328,7 @@ function visibleItems(group) {
 }
 
 const visibleGroups = computed(() =>
-  navGroups.filter(g => visibleItems(g).length > 0)
+  orderedGroups.value.filter(g => visibleItems(g).length > 0)
 )
 
 // ── 관리(admin) 섹션 ──────────────────────────────────────────────
@@ -442,7 +340,7 @@ watch(() => route.path, (path) => {
 function toggleAdmin() {
   const willOpen = !adminOpen.value
   // 아코디언: 관리 섹션을 펼치면 다른 그룹은 닫는다
-  if (willOpen) navGroups.forEach(g => { groupOpen[g.key] = false })
+  if (willOpen) orderedGroups.value.forEach(g => { groupOpen[g.key] = false })
   adminOpen.value = willOpen
 }
 
@@ -451,6 +349,7 @@ const adminNavItems = [
   { to: '/admin/rbac',                label: 'admin.rbac',        icon: ShieldExclamationIcon },
   { to: '/admin/notices',             label: 'admin.notices',     icon: DocumentTextIcon },
   { to: '/admin/codes',               label: 'admin.codes',       icon: DocumentTextIcon },
+  { to: '/admin/menu-order',          label: 'admin.menuOrder',   icon: DocumentTextIcon },
   { to: '/admin/quiz-bank',           label: 'admin.quizBank',    icon: DocumentTextIcon },
   { to: '/admin/audit-logs',          label: 'admin.auditLogs',   icon: DocumentTextIcon },
   { to: '/admin/backup',              label: 'admin.backup',      icon: DocumentTextIcon },
