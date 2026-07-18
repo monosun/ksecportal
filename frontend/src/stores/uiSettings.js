@@ -72,6 +72,29 @@ function applyFontSize(key) {
   document.documentElement.style.setProperty('--font-size-base', size.value)
 }
 
+const DEFAULT_FAVICON = '/shield.svg'
+// 브라우저 탭 아이콘(파비콘)을 설정된 로고로 적용 — 로고가 없으면 기본 아이콘으로 되돌린다.
+function applyFavicon(url) {
+  if (typeof document === 'undefined') return
+  const href = url || DEFAULT_FAVICON
+  let link = document.querySelector("link[rel~='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  if (href.startsWith('data:')) {
+    const end = Math.min(...[href.indexOf(';'), href.indexOf(',')].filter(i => i > -1))
+    const mime = href.slice(5, end)
+    if (mime) link.type = mime
+  } else if (href.endsWith('.svg')) {
+    link.type = 'image/svg+xml'
+  } else {
+    link.removeAttribute('type')
+  }
+  link.href = href
+}
+
 export const useUiSettingsStore = defineStore('uiSettings', () => {
   const theme = ref(localStorage.getItem('ui-theme') || 'blue')
   const font = ref(localStorage.getItem('ui-font') || 'pretendard')
@@ -94,11 +117,14 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
     applyTheme(theme.value)
     applyFont(font.value)
     applyFontSize(fontSize.value)
+    applyFavicon(effectiveLogoUrl())   // localStorage 로고 우선 즉시 적용
     try {
       const res = await appSettingApi.getAll()
       const settings = res?.data || {}
       if (settings.login_logo) dbLogoUrl.value = settings.login_logo
       if (settings.login_logo_text) dbLogoText.value = settings.login_logo_text
+      // 파비콘을 설정된 로고로 적용
+      applyFavicon(effectiveLogoUrl())
       if (settings.session_timeout_minutes) {
         const m = parseInt(settings.session_timeout_minutes, 10)
         if (m >= 1) sessionTimeoutMinutes.value = m
@@ -143,11 +169,13 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   function setLogoUrl(dataUrl) {
     logoUrl.value = dataUrl
     localStorage.setItem('ui-logo', dataUrl)
+    applyFavicon(effectiveLogoUrl())
   }
 
   function clearLogoUrl() {
     logoUrl.value = null
     localStorage.removeItem('ui-logo')
+    applyFavicon(effectiveLogoUrl())
   }
 
   function setLogoText(text) {
@@ -158,7 +186,7 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   async function saveLogoToServer(dataUrl) {
     await appSettingApi.update('login_logo', dataUrl)
     dbLogoUrl.value = dataUrl
-    setLogoUrl(dataUrl)
+    setLogoUrl(dataUrl)   // setLogoUrl 이 파비콘도 갱신
   }
 
   async function saveLogoTextToServer(text) {

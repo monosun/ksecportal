@@ -49,7 +49,14 @@ public class RssService {
     }
 
     public List<RssItemDto> fetchKrcert() {
-        int days = resolveDays();
+        return fetchKrcert(null);
+    }
+
+    /** daysOverride 가 있으면 그 기간(1~366일)으로, 없으면 설정관리의 rss.days 로 필터링 */
+    public List<RssItemDto> fetchKrcert(Integer daysOverride) {
+        int days = (daysOverride != null)
+                ? Math.max(1, Math.min(366, daysOverride))
+                : resolveDays();
         LocalDate cutoff = LocalDate.now().minusDays(days);
         List<Map<String, String>> feeds = resolveFeeds();
 

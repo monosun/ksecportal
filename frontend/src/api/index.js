@@ -210,7 +210,7 @@ export const inboxApi = {
 }
 
 export const rssApi = {
-  krcert: () => api.get('/rss/krcert')
+  krcert: (days) => api.get('/rss/krcert', { params: days ? { days } : {} })
 }
 
 export const securityIntegrationApi = {

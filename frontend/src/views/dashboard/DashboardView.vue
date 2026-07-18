@@ -223,17 +223,25 @@
                   </svg>
                 </div>
                 <h2 class="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-                  {{ activeIsLegal ? '법령 개정정보' : 'KRCERT 보안공지' }}
+                  {{ rssTitle }}
                   <span class="text-xs text-gray-400 font-normal">최근</span>
+                  <!-- 법령: 월 단위 -->
                   <select v-if="activeIsLegal" v-model.number="legalDays" @change="onLegalDaysChange"
                     title="조회 기간 변경"
                     class="text-xs text-gray-600 font-normal border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-300">
                     <option v-for="p in LEGAL_PERIODS" :key="p.days" :value="p.days">{{ p.label }}</option>
                   </select>
-                  <select v-else v-model.number="rssDays" @change="onRssDaysChange"
+                  <!-- 취약점: 월 단위 -->
+                  <select v-else-if="activeIsVuln" v-model.number="vulnDays" @change="onVulnDaysChange"
                     title="조회 기간 변경"
                     class="text-xs text-gray-600 font-normal border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-300">
-                    <option v-for="d in RSS_PERIODS" :key="d" :value="d">{{ d }}일</option>
+                    <option v-for="p in LEGAL_PERIODS" :key="p.days" :value="p.days">{{ p.label }}</option>
+                  </select>
+                  <!-- 보안공지: 일 단위 -->
+                  <select v-else v-model.number="noticeDays" @change="onNoticeDaysChange"
+                    title="조회 기간 변경"
+                    class="text-xs text-gray-600 font-normal border border-gray-200 rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary-300">
+                    <option v-for="d in NOTICE_PERIODS" :key="d" :value="d">{{ d }}일</option>
                   </select>
                 </h2>
               </div>
@@ -282,7 +290,7 @@
                 <div v-if="rssLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
                 <div v-else-if="rssError" class="py-8 text-center text-xs text-red-400">{{ rssError }}</div>
                 <template v-else>
-                  <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssDays }}일간 게시물이 없습니다</div>
+                  <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssEmptyLabel }}간 게시물이 없습니다</div>
                   <div v-else class="divide-y divide-gray-50">
                     <a v-for="item in filteredRss" :key="item.link"
                       :href="item.link" target="_blank" rel="noopener noreferrer"
@@ -529,7 +537,9 @@ const rssItems = ref([])
 const rssLoading = ref(false)
 const rssError = ref('')
 const rssTab = ref('vuln')
-const rssDays = ref(7)
+// 취약점·보안공지는 갱신 주기가 달라 조회 기간을 탭별로 따로 관리한다.
+const vulnDays = ref(30)    // 취약점: 월 단위 프리셋 (기본 1개월)
+const noticeDays = ref(7)   // 보안공지: 일 단위 프리셋 (기본 7일)
 const rssTabList = ref([
   { category: 'vuln',   label: '취약점 정보' },
   { category: 'notice', label: '보안공지' }
@@ -538,7 +548,8 @@ const rssTabList = ref([
 const legalTab = { category: 'legal', label: '법령 개정' }
 const allTabs = computed(() => [...rssTabList.value, legalTab])
 const activeIsLegal = computed(() => rssTab.value === 'legal')
-// 법령 개정 조회 기간 프리셋 (설정관리 > 업종설정과 동일)
+const activeIsVuln  = computed(() => rssTab.value === 'vuln')
+// 법령·취약점 조회 기간 프리셋 (월 단위)
 const LEGAL_PERIODS = [
   { days: 7, label: '1주일' },
   { days: 30, label: '1개월' },
@@ -546,26 +557,31 @@ const LEGAL_PERIODS = [
   { days: 180, label: '6개월' },
   { days: 365, label: '12개월' },
 ]
-// 법령 탭은 기간 라벨(1주일·1개월…)로, RSS 탭은 "N일"로 표시
+// 보안공지 조회 기간 프리셋 (일 단위)
+const NOTICE_PERIODS = [1, 3, 7, 14, 30]
+// 월 단위 기간 라벨(1주일·1개월…)
 function daysToPeriodLabel(d) {
   return { 7: '1주일', 30: '1개월', 90: '3개월', 180: '6개월', 365: '12개월' }[d] || `${d}일`
 }
 const legalPeriodLabel = computed(() => daysToPeriodLabel(legalDays.value))
-const activeDaysLabel = computed(() => activeIsLegal.value ? legalPeriodLabel.value : `${rssDays.value}일`)
 
-// RSS(취약점·보안공지) 조회 기간 프리셋
-const RSS_PERIODS = [1, 3, 7, 14, 30]
+// 활성 RSS 탭의 조회 기간 및 표시
+const activeRssDays = computed(() => activeIsVuln.value ? vulnDays.value : noticeDays.value)
+const rssEmptyLabel = computed(() => activeIsVuln.value ? daysToPeriodLabel(vulnDays.value) : `${noticeDays.value}일`)
 
-const filteredRss = computed(() => {
-  const cutoff = Date.now() - rssDays.value * 86400000
-  return rssItems.value.filter(item => {
-    if (item.category !== rssTab.value) return false
-    if (!item.pubDate) return true
-    const t = new Date(item.pubDate).getTime()
-    if (isNaN(t)) return true            // 날짜 파싱 불가 항목은 숨기지 않음
-    return t >= cutoff
-  })
+// 위젯 타이틀 — 탭별로 다르게 표시
+const rssTitle = computed(() => {
+  if (activeIsLegal.value) return '법령 개정정보'
+  if (rssTab.value === 'vuln') return 'KRCERT 취약점정보'
+  if (rssTab.value === 'notice') return 'KRCERT 보안공지'
+  const t = allTabs.value.find(x => x.category === rssTab.value)
+  return 'KRCERT ' + (t?.label || '')
 })
+
+// 날짜 필터는 백엔드(rss.days/days 파라미터)가 수행하므로 여기서는 탭(카테고리)만 분류
+const filteredRss = computed(() =>
+  rssItems.value.filter(item => item.category === rssTab.value)
+)
 
 function fmtRssDate(pubDate) {
   if (!pubDate) return ''
@@ -582,7 +598,7 @@ async function loadRss() {
   rssLoading.value = true
   rssError.value = ''
   try {
-    const res = await rssApi.krcert()
+    const res = await rssApi.krcert(activeRssDays.value)
     rssItems.value = res.data || []
   } catch {
     rssError.value = 'RSS 데이터를 불러오지 못했습니다'
@@ -595,7 +611,8 @@ async function loadRssSettings() {
   try {
     const res = await import('@/api').then(m => m.appSettingApi.getAll())
     const s = res.data || {}
-    if (s['rss.days']) rssDays.value = parseInt(s['rss.days']) || 7
+    if (s['rss.days']) noticeDays.value = parseInt(s['rss.days']) || 7
+    if (s['rss.vuln.days']) vulnDays.value = parseInt(s['rss.vuln.days']) || 30
     if (s['rss.feeds']) {
       const feeds = JSON.parse(s['rss.feeds'])
       if (Array.isArray(feeds) && feeds.length > 0) {
@@ -707,8 +724,11 @@ async function loadLegal() {
   }
 }
 
-// 법령 개정 탭을 처음 열 때만 조회 (불필요한 API 호출 방지)
-watch(rssTab, (t) => { if (t === 'legal' && !legalLoaded.value) loadLegal() })
+// 탭 전환 시: 법령 탭은 최초 1회 조회, RSS 탭은 해당 탭의 조회 기간으로 재조회
+watch(rssTab, (t) => {
+  if (t === 'legal') { if (!legalLoaded.value) loadLegal() }
+  else loadRss()
+})
 
 // 대시보드에서 직접 조회 기간 변경 → 즉시 재조회, 관리자는 설정값도 함께 갱신
 async function onLegalDaysChange() {
@@ -719,15 +739,23 @@ async function onLegalDaysChange() {
   }
 }
 
-// RSS 조회 기간 변경 → 목록은 클라이언트에서 즉시 필터링, 관리자는 설정값도 갱신
-async function onRssDaysChange() {
+// RSS 조회 기간 변경 → 선택 기간으로 서버 재조회, 관리자는 설정값도 갱신 (탭별 분리)
+async function onVulnDaysChange() {
+  loadRss()
   if (auth.isAdmin) {
-    try { await appSettingApi.update('rss.days', String(rssDays.value)) } catch {}
+    try { await appSettingApi.update('rss.vuln.days', String(vulnDays.value)) } catch {}
+  }
+}
+async function onNoticeDaysChange() {
+  loadRss()
+  if (auth.isAdmin) {
+    try { await appSettingApi.update('rss.days', String(noticeDays.value)) } catch {}
   }
 }
 
 onMounted(async () => {
-  loadRssSettings()
+  // 설정(rss.days 등)을 먼저 로드한 뒤 그 기간으로 RSS 조회
+  await loadRssSettings()
   loadRss()
   try {
     const [metricsRes, vulnStatsRes] = await Promise.all([
