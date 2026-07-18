@@ -649,7 +649,19 @@ export const privacyRetentionApi = {
 export const privacyDisposalApi = privacyCrud('disposals')
 
 /** 개인정보 영향평가(DPIA) */
-export const privacyDpiaApi = privacyCrud('dpia')
+export const privacyDpiaApi = {
+  ...privacyCrud('dpia'),
+  listFiles: (id) => api.get(`/privacy/dpia/${id}/files`),
+  addFile: (id, data, file) => {
+    const fd = new FormData()
+    fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+    fd.append('file', file)
+    return api.post(`/privacy/dpia/${id}/files`, fd)
+  },
+  deleteFile: (fileId) => api.delete(`/privacy/dpia/files/${fileId}`),
+  downloadFile: (fileId, fileName) =>
+    downloadBlob(`/privacy/dpia/files/${fileId}/download`, fileName),
+}
 
 /** 개인정보 유출관리 */
 export const privacyBreachApi = privacyCrud('breaches')

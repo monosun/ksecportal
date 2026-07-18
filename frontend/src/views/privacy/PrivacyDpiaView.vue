@@ -1,5 +1,6 @@
 <template>
   <PrivacyCrudView
+    ref="crud"
     title="개인정보 영향평가(DPIA)"
     description="영향평가 대상 선정부터 체크리스트·위험도·개선계획·완료보고까지 관리합니다. 공공기관 PIA 및 민간 자체 영향평가에 사용합니다."
     :api="privacyDpiaApi"
@@ -10,12 +11,42 @@
     :search-keys="['title', 'targetSystem', 'department', 'assessor']"
     title-key="title"
     :stats-fn="statsFn"
+  >
+    <template #row-actions="{ row }">
+      <button @click="openFiles(row)"
+        class="text-xs text-primary-600 hover:text-primary-700 px-2 py-1">
+        첨부{{ row.fileCount ? ` ${row.fileCount}` : '' }}
+      </button>
+    </template>
+  </PrivacyCrudView>
+
+  <DpiaFileModal
+    :open="fileOpen"
+    :dpia="fileTarget"
+    @close="fileOpen = false"
+    @changed="onFilesChanged"
   />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import PrivacyCrudView from '@/components/privacy/PrivacyCrudView.vue'
+import DpiaFileModal from '@/components/privacy/DpiaFileModal.vue'
 import { privacyDpiaApi } from '@/api'
+
+const crud = ref(null)
+const fileOpen = ref(false)
+const fileTarget = ref(null)
+
+function openFiles(row) {
+  fileTarget.value = row
+  fileOpen.value = true
+}
+
+// 첨부 건수 컬럼이 목록에 표시되므로 변경 후 목록을 다시 읽는다.
+function onFilesChanged() {
+  crud.value?.reload()
+}
 
 const RISK = { HIGH: '높음', MEDIUM: '보통', LOW: '낮음' }
 const STATUS = { PLANNED: '대상선정', IN_PROGRESS: '평가중', IMPROVING: '개선중', COMPLETED: '완료' }
@@ -56,6 +87,7 @@ const columns = [
     badges: { HIGH: 'badge-red', MEDIUM: 'badge-yellow', LOW: 'badge-green' } },
   { key: 'status', label: '상태', type: 'badge', labels: STATUS,
     badges: { PLANNED: 'badge-gray', IN_PROGRESS: 'badge-blue', IMPROVING: 'badge-yellow', COMPLETED: 'badge-green' } },
+  { key: 'fileCount', label: '첨부', render: (r) => r.fileCount ? `${r.fileCount}건` : '—' },
 ]
 
 const filters = [

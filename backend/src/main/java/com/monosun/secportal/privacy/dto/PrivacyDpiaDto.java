@@ -55,11 +55,18 @@ public class PrivacyDpiaDto {
         private LocalDate completedDate;
         private String status;
         private String notes;
+        /** 첨부된 보고서 등 파일 건수 */
+        private long fileCount;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
         public static Response from(PrivacyDpia d) {
+            return from(d, 0L);
+        }
+
+        public static Response from(PrivacyDpia d, long fileCount) {
             return Response.builder()
+                    .fileCount(fileCount)
                     .id(d.getId())
                     .title(d.getTitle())
                     .targetSystem(d.getTargetSystem())
