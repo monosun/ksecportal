@@ -2,6 +2,7 @@ package com.monosun.secportal.isms.dto;
 
 import com.monosun.secportal.isms.entity.IsmsEvidence;
 import com.monosun.secportal.isms.entity.IsmsItem;
+import com.monosun.secportal.isms.entity.IsmsItemNote;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -34,6 +35,7 @@ public class IsmsDto {
         private int sectionNum;
         private String sectionName;
         private String description;
+        private String guide;
         private int sortOrder;
         private long evidenceCount;
         private String latestStatus;
@@ -49,6 +51,7 @@ public class IsmsDto {
                     .sectionNum(item.getSectionNum())
                     .sectionName(item.getSectionName())
                     .description(item.getDescription())
+                    .guide(item.getGuide())
                     .sortOrder(item.getSortOrder())
                     .mappedPolicies(List.of())
                     .build();
@@ -65,6 +68,7 @@ public class IsmsDto {
                     .sectionNum(item.getSectionNum())
                     .sectionName(item.getSectionName())
                     .description(item.getDescription())
+                    .guide(item.getGuide())
                     .sortOrder(item.getSortOrder())
                     .evidenceCount(evidenceCount)
                     .latestStatus(latestStatus)
@@ -156,6 +160,49 @@ public class IsmsDto {
         private String status;
         @NotNull
         private Long sourceEvidenceId;
+    }
+
+    /** 항목별 의견·현재 상태 (연도별) */
+    @Getter
+    @Builder
+    public static class ItemNoteResponse {
+        private Long itemId;
+        private int year;
+        private String statusNote;
+        private String opinion;
+        private String updaterName;
+        private LocalDateTime updatedAt;
+
+        public static ItemNoteResponse empty(Long itemId, int year) {
+            return ItemNoteResponse.builder().itemId(itemId).year(year).build();
+        }
+
+        public static ItemNoteResponse from(IsmsItemNote n) {
+            return ItemNoteResponse.builder()
+                    .itemId(n.getItem().getId())
+                    .year(n.getYear())
+                    .statusNote(n.getStatusNote())
+                    .opinion(n.getOpinion())
+                    .updaterName(n.getUpdater() != null ? n.getUpdater().getName() : null)
+                    .updatedAt(n.getUpdatedAt())
+                    .build();
+        }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ItemNoteRequest {
+        private String statusNote;
+        private String opinion;
+    }
+
+    /** 항목 이행 가이드 (연도 무관) */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ItemGuideRequest {
+        private String guide;
     }
 
     @Getter

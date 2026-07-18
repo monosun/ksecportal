@@ -42,6 +42,36 @@ public class IsmsController {
         return ApiResponse.ok(ismsService.getItem(id));
     }
 
+    /** 항목의 연도별 의견·현재 상태 조회 (없으면 빈 값) */
+    @GetMapping("/items/{id}/note")
+    public ApiResponse<IsmsDto.ItemNoteResponse> getItemNote(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer year) {
+        int y = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.getItemNote(id, y));
+    }
+
+    /** 항목의 연도별 의견·현재 상태 저장 (항목·연도당 1건, upsert) */
+    @PutMapping("/items/{id}/note")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.ItemNoteResponse> saveItemNote(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer year,
+            @RequestBody IsmsDto.ItemNoteRequest req,
+            @AuthenticationPrincipal User user) {
+        int y = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.saveItemNote(id, y, req, user));
+    }
+
+    /** 항목 이행 가이드 저장 (연도 무관) */
+    @PatchMapping("/items/{id}/guide")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.ItemResponse> updateItemGuide(
+            @PathVariable Long id,
+            @RequestBody IsmsDto.ItemGuideRequest req) {
+        return ApiResponse.ok(ismsService.updateItemGuide(id, req));
+    }
+
     @PostMapping("/items/{itemId}/policies/{policyId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> mapPolicy(@PathVariable Long itemId, @PathVariable Long policyId) {

@@ -106,7 +106,7 @@
           </tr>
           <tr v-for="item in filteredItems" :key="item.id"
             class="hover:bg-gray-50 cursor-pointer transition-colors"
-            @click="$router.push(`/isms/${item.id}?year=${selectedYear}`)">
+            @click="openItem(item)">
             <td class="px-6 py-4 font-mono text-sm font-semibold text-primary-700">{{ item.itemCode }}</td>
             <td class="px-6 py-4">
               <p class="text-sm font-medium text-gray-900">{{ item.itemName }}</p>
@@ -125,6 +125,18 @@
       </table>
     </div>
   </div>
+
+  <!-- 항목 증적 팝업 -->
+  <IsmsEvidenceModal
+    :open="evidenceOpen"
+    :item-id="evidenceItem?.id"
+    :item-code="evidenceItem?.itemCode"
+    :item-name="evidenceItem?.itemName"
+    :year="selectedYear"
+    @close="evidenceOpen = false"
+    @changed="loadItems"
+    @update:year="onModalYearChange"
+  />
 
   <!-- 일괄 등록 모달 -->
   <div v-if="showImportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -227,6 +239,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { ismsApi, exportApi } from '@/api'
 import StatusBadge from './IsmsStatusBadge.vue'
+import IsmsEvidenceModal from './IsmsEvidenceModal.vue'
+
+// 항목 클릭 시 상세 페이지로 이동하지 않고 팝업으로 연다.
+const evidenceOpen = ref(false)
+const evidenceItem = ref(null)
+
+function openItem(item) {
+  evidenceItem.value = item
+  evidenceOpen.value = true
+}
+
+// 팝업 안에서 연도를 바꾸면 목록의 연도도 맞춰 다시 읽는다.
+function onModalYearChange(year) {
+  selectedYear.value = year
+  loadItems()
+}
 
 const selectedYear = ref(new Date().getFullYear())
 const selectedDomain = ref('')

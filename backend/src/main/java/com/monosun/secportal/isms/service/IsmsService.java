@@ -7,8 +7,10 @@ import com.monosun.secportal.common.service.FileStorageService;
 import com.monosun.secportal.isms.dto.IsmsDto;
 import com.monosun.secportal.isms.entity.IsmsEvidence;
 import com.monosun.secportal.isms.entity.IsmsItem;
+import com.monosun.secportal.isms.entity.IsmsItemNote;
 import com.monosun.secportal.isms.entity.IsmsPolicyMapping;
 import com.monosun.secportal.isms.repository.IsmsEvidenceRepository;
+import com.monosun.secportal.isms.repository.IsmsItemNoteRepository;
 import com.monosun.secportal.isms.repository.IsmsItemRepository;
 import com.monosun.secportal.isms.repository.IsmsPolicyMappingRepository;
 import com.monosun.secportal.policy.entity.Policy;
@@ -38,6 +40,7 @@ public class IsmsService {
     private final FileStorageService fileStorageService;
     private final IsmsPolicyMappingRepository policyMappingRepository;
     private final PolicyRepository policyRepository;
+    private final IsmsItemNoteRepository itemNoteRepository;
 
     @Transactional(readOnly = true)
     public List<IsmsDto.ItemResponse> listItems(Integer year, String domainCode) {
@@ -106,6 +109,39 @@ public class IsmsService {
         IsmsItem item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", id));
         return IsmsDto.ItemResponse.from(item);
+    }
+
+    // ── 항목별 의견·현재 상태 (연도별) / 이행 가이드 (연도 무관) ────────
+
+    @Transactional(readOnly = true)
+    public IsmsDto.ItemNoteResponse getItemNote(Long itemId, int year) {
+        return itemNoteRepository.findByItemIdAndYear(itemId, year)
+                .map(IsmsDto.ItemNoteResponse::from)
+                .orElseGet(() -> IsmsDto.ItemNoteResponse.empty(itemId, year));
+    }
+
+    /** 항목·연도 조합당 1건이므로 없으면 만들고 있으면 갱신한다. */
+    @Transactional
+    public IsmsDto.ItemNoteResponse saveItemNote(Long itemId, int year, IsmsDto.ItemNoteRequest req, User user) {
+        IsmsItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
+
+        IsmsItemNote note = itemNoteRepository.findByItemIdAndYear(itemId, year)
+                .orElseGet(() -> IsmsItemNote.builder().item(item).year(year).build());
+
+        note.setStatusNote(req.getStatusNote());
+        note.setOpinion(req.getOpinion());
+        note.setUpdater(user);
+
+        return IsmsDto.ItemNoteResponse.from(itemNoteRepository.save(note));
+    }
+
+    @Transactional
+    public IsmsDto.ItemResponse updateItemGuide(Long itemId, IsmsDto.ItemGuideRequest req) {
+        IsmsItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
+        item.setGuide(req.getGuide());
+        return IsmsDto.ItemResponse.from(itemRepository.save(item));
     }
 
     @Transactional(readOnly = true)

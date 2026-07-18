@@ -40,6 +40,12 @@ public class IsmsItem {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /** 이행 가이드 — 이 인증기준을 어떻게 충족·준비하는지에 대한 설명.
+     *  인증기준 자체에 대한 안내이므로 연도와 무관하게 항목에 저장한다.
+     *  (시더는 없는 항목만 INSERT 하므로 사용자가 작성한 값은 유지된다) */
+    @Column(columnDefinition = "TEXT")
+    private String guide;
+
     @Column(nullable = false)
     private int sortOrder;
 
