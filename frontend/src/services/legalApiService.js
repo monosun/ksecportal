@@ -292,6 +292,56 @@ function matchHit(목록, lawName) {
     ?? 목록.find(l => normFull(lawName).includes(normFull(l.법령명한글)))
 }
 
+// law.go.kr 법령구분/행정규칙종류 → 앱에서 쓰는 구분 뱃지 라벨
+function mapLawType(raw, target) {
+  const t = (raw || '').trim()
+  if (target === 'admrul') {
+    if (t.includes('고시')) return '고시'
+    if (t.includes('규정')) return '규정'
+    if (t.includes('세칙')) return '시행세칙'
+    return '고시'
+  }
+  if (!t || t.includes('법률')) return '법령'
+  if (t.includes('대통령령')) return '시행령'
+  if (t.includes('총리령') || t.includes('부령')) return '시행규칙'
+  if (t.includes('세칙')) return '시행세칙'
+  if (t.includes('규정')) return '규정'
+  return '법령'
+}
+
+// 법령/행정규칙 검색 결과 목록 반환 (설정관리>업종설정 법령 추가용)
+// target=law + target=admrul 를 모두 조회해 { name, type, ministry, url } 배열로 반환
+export async function searchLaws(query) {
+  const q = (query || '').replace(/\s+/g, ' ').trim()
+  if (!q) return []
+  const out = []
+  const seen = new Set()
+  // 검색 응답의 상세링크는 OC 키가 포함된 DRF URL이라 저장하지 않고,
+  // 법령명 기반 law.go.kr 바로가기 URL로 생성(기존 정적 데이터와 동일 형식)
+  const add = (name, rawType, ministry, target) => {
+    const nm = (name || '').trim()
+    if (!nm || seen.has(nm)) return
+    seen.add(nm)
+    const url = `https://www.law.go.kr/${target === 'admrul' ? '행정규칙' : '법령'}/${nm.replace(/\s+/g, '')}`
+    out.push({ name: nm, type: mapLawType(rawType, target), ministry: (ministry || '').trim(), url })
+  }
+  // 법령(법률·시행령·시행규칙)
+  try {
+    const { data } = await axios.get(PROXY + '/search', { params: { query: q, target: 'law' }, headers: authHeaders() })
+    for (const l of toArr(data?.LawSearch?.law)) {
+      add(l.법령명한글, l.법령구분명, l.소관부처명, 'law')
+    }
+  } catch { /* 무시 — admrul 결과라도 반환 */ }
+  // 행정규칙(고시·규정·훈령·예규·지침)
+  try {
+    const { data } = await axios.get(PROXY + '/search', { params: { query: q, target: 'admrul' }, headers: authHeaders() })
+    for (const r of toArr(data?.AdmRulSearch?.admrul)) {
+      add(r.행정규칙명, r.행정규칙종류, r.소관부처명, 'admrul')
+    }
+  } catch { /* 무시 */ }
+  return out
+}
+
 // 검색 + 매칭 (target 별)
 // admrul(행정규칙) 검색 응답은 AdmRulSearch.admrul + 행정규칙명/행정규칙일련번호 구조 →
 // 법령 검색과 같은 필드명으로 매핑해 matchHit을 공용으로 사용

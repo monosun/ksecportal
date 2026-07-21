@@ -200,7 +200,7 @@ const showReviewModal = ref(false)
 const selectedLawsForReview = computed(() => {
   const result = []
   const seen = new Set()
-  for (const ind of INDUSTRIES) {
+  for (const ind of industriesData.value) {
     for (const law of ind.laws) {
       if (!(checkedKey(ind.id, law.name) in checkedLaws.value)) continue
       if (!seen.has(law.name)) {
@@ -220,6 +220,16 @@ const showMyIndustryOnly = ref(false)
 const companyIndustryIds = ref([])
 // 업종별 개별 법령 선택 { [업종id]: [법령명, ...] }. 항목 없으면 전체 법령.
 const companyIndustryLaws = ref({})
+// 설정관리>업종설정에서 검색으로 추가한 업종별 법령 { [업종id]: [{name,type,ministry,url}] }
+const customLaws = ref({})
+
+// 정적 업종 법령 + 사용자 추가 법령 병합
+const industriesData = computed(() =>
+  INDUSTRIES.map(ind => {
+    const extra = customLaws.value[ind.id]
+    return extra?.length ? { ...ind, laws: [...ind.laws, ...extra] } : ind
+  })
+)
 
 // "우리 업종만 보기"가 켜져 있고 해당 업종에 개별 법령 설정이 있으면 선택된 법령만 노출
 function visibleLaws(industry) {
@@ -299,7 +309,7 @@ const filteredIndustries = computed(() => {
   const cat = selectedCategory.value
   const myIds = companyIndustryIds.value
 
-  return INDUSTRIES.filter(ind => {
+  return industriesData.value.filter(ind => {
     // 우리 업종만 필터
     if (showMyIndustryOnly.value && myIds.length > 0 && !myIds.includes(ind.id)) return false
     // 카테고리 필터
@@ -350,6 +360,11 @@ onMounted(async () => {
     if (rawLaws) {
       const m = JSON.parse(rawLaws)
       if (m && typeof m === 'object') companyIndustryLaws.value = m
+    }
+    const rawCustom = res.data?.['company.customLaws']
+    if (rawCustom) {
+      const c = JSON.parse(rawCustom)
+      if (c && typeof c === 'object') customLaws.value = c
     }
   } catch {}
 })

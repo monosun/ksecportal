@@ -274,7 +274,7 @@
             </button>
           </div>
         </div>
-        <p class="text-sm text-gray-400 mb-5">해당하는 업종을 선택하면 법령준수관리 화면에서 관련 법령만 우선 표시됩니다. 복수 선택 가능합니다. 업종을 선택한 뒤 <svg class="inline w-3.5 h-3.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg> 를 눌러 업종 내 개별 법령만 선택할 수도 있습니다.</p>
+        <p class="text-sm text-gray-400 mb-5">해당하는 업종을 선택하면 법령준수관리 화면에서 관련 법령만 우선 표시됩니다. 복수 선택 가능합니다. 업종을 선택한 뒤 <svg class="inline w-3.5 h-3.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg> 를 눌러 업종 내 개별 법령을 선택하거나, 목록에 없는 법령·고시를 <strong>검색해서 추가</strong>할 수 있습니다.</p>
 
         <div class="space-y-5">
           <div v-for="cat in CATEGORIES" :key="cat.key">
@@ -301,10 +301,10 @@
                     <span class="text-sm text-gray-700 truncate">{{ ind.name }}</span>
                   </label>
                   <span class="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
-                    <template v-if="selectedIndustryIds.includes(ind.id) && selectedLawCount(ind.id) < ind.laws.length">
-                      법령 <strong class="text-primary-600">{{ selectedLawCount(ind.id) }}</strong>/{{ ind.laws.length }}개
+                    <template v-if="selectedIndustryIds.includes(ind.id) && selectedLawCount(ind.id) < mergedLaws(ind).length">
+                      법령 <strong class="text-primary-600">{{ selectedLawCount(ind.id) }}</strong>/{{ mergedLaws(ind).length }}개
                     </template>
-                    <template v-else>법령 {{ ind.laws.length }}개</template>
+                    <template v-else>법령 {{ mergedLaws(ind).length }}개</template>
                   </span>
                   <button v-if="selectedIndustryIds.includes(ind.id)" type="button"
                     @click="toggleExpand(ind.id)"
@@ -327,14 +327,57 @@
                     <span class="text-xs font-semibold text-gray-500">전체 법령 선택</span>
                   </label>
                   <div class="space-y-0.5">
-                    <label v-for="law in ind.laws" :key="law.name"
+                    <label v-for="law in mergedLaws(ind)" :key="law.name"
                       class="flex items-center gap-2 px-1.5 py-1 rounded-lg cursor-pointer hover:bg-gray-50">
                       <input type="checkbox" class="w-3.5 h-3.5 rounded text-primary-500 cursor-pointer flex-shrink-0"
                         :checked="isLawSelected(ind.id, law.name)"
                         @change="toggleLaw(ind.id, law.name)" />
                       <span class="text-xs text-gray-600 truncate">{{ law.name }}</span>
-                      <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" :class="typeColor(law.type)">{{ law.type }}</span>
+                      <span v-if="law.custom" class="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600 font-semibold flex-shrink-0">추가</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" :class="typeColor(law.type)">{{ law.type }}</span>
+                      <button v-if="law.custom" type="button" @click.prevent="removeCustomLaw(ind.id, law.name)"
+                        class="flex-shrink-0 p-0.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="추가 법령 삭제">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </label>
+                  </div>
+
+                  <!-- 법령 검색 추가 -->
+                  <div class="mt-2 pt-2 border-t border-primary-100">
+                    <button type="button" @click="openLawSearch(ind.id)"
+                      class="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 hover:text-primary-800">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      법령·고시 검색 추가
+                    </button>
+                    <div v-if="lawSearchFor === ind.id" class="mt-2 rounded-lg border border-gray-200 bg-white p-2">
+                      <div class="flex gap-1.5">
+                        <input v-model="lawSearchQuery" @keyup.enter="runLawSearch"
+                          class="input flex-1 text-xs py-1"
+                          placeholder="법령/고시명 검색 (예: 전자금융거래법, 클라우드보안인증)" />
+                        <button type="button" @click="runLawSearch" :disabled="lawSearching || !lawSearchQuery.trim()"
+                          class="btn-primary text-xs px-3 py-1 disabled:opacity-50 whitespace-nowrap">
+                          {{ lawSearching ? '검색 중…' : '검색' }}
+                        </button>
+                      </div>
+                      <p class="text-[10px] text-gray-400 mt-1">국가법령정보센터(law.go.kr)에서 실시간 검색합니다. 법제처 API 키 설정이 필요합니다.</p>
+                      <div v-if="lawSearchResults.length" class="mt-2 max-h-56 overflow-y-auto space-y-0.5">
+                        <div v-for="r in lawSearchResults" :key="r.name"
+                          class="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-gray-50">
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0" :class="typeColor(r.type)">{{ r.type }}</span>
+                          <span class="text-xs text-gray-700 truncate flex-1 min-w-0">{{ r.name }}</span>
+                          <span class="text-[10px] text-gray-400 truncate max-w-24 flex-shrink-0">{{ r.ministry }}</span>
+                          <button v-if="lawAlreadyIn(ind.id, r.name)" type="button" disabled
+                            class="flex-shrink-0 text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-400 font-semibold">추가됨</button>
+                          <button v-else type="button" @click="addCustomLaw(ind.id, r)"
+                            class="flex-shrink-0 text-[10px] px-2 py-0.5 rounded bg-primary-100 text-primary-700 hover:bg-primary-200 font-semibold">추가</button>
+                        </div>
+                      </div>
+                      <p v-else-if="lawSearchDone && !lawSearching" class="text-[11px] text-gray-400 mt-2 text-center py-2">검색 결과가 없습니다.</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -823,7 +866,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useUiSettingsStore } from '@/stores/uiSettings'
 import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi } from '@/api/index.js'
 import { INDUSTRIES, CATEGORIES } from '@/data/legalIndustries.js'
-import { setLawApiKeySet } from '@/services/legalApiService.js'
+import { setLawApiKeySet, searchLaws } from '@/services/legalApiService.js'
 
 const ui = useUiSettingsStore()
 const isDark = computed(() => ui.sidebarStyle === 'dark')
@@ -1218,9 +1261,77 @@ const selectedIndustryIds = ref([])
 // 선택된 업종별로 개별 적용할 법령명 목록 { [업종id]: [법령명, ...] }
 // 항목이 없으면 해당 업종의 전체 법령 적용(기본값). 부분 선택 시에만 목록을 보관.
 const industryLaws = ref({})
+// 검색으로 추가한 업종별 법령 { [업종id]: [{name,type,ministry,url,custom:true}] }
+const customLaws = ref({})
 const expandedIndustries = ref([])
 const industrySaving = ref(false)
 const industrySaved  = ref(false)
+
+// 정적 업종 법령 + 사용자 추가 법령 병합
+function mergedLaws(ind) {
+  const extra = customLaws.value[ind.id]
+  return extra?.length ? [...ind.laws, ...extra] : ind.laws
+}
+
+// ── 법령 검색 추가 ─────────────────────────────────
+const lawSearchFor     = ref(null)   // 검색창을 연 업종 id (null이면 닫힘)
+const lawSearchQuery   = ref('')
+const lawSearchResults = ref([])
+const lawSearching     = ref(false)
+const lawSearchDone    = ref(false)
+
+function openLawSearch(indId) {
+  if (lawSearchFor.value === indId) { lawSearchFor.value = null; return }
+  lawSearchFor.value = indId
+  lawSearchQuery.value = ''
+  lawSearchResults.value = []
+  lawSearchDone.value = false
+}
+
+async function runLawSearch() {
+  const q = lawSearchQuery.value.trim()
+  if (!q) return
+  lawSearching.value = true; lawSearchDone.value = false
+  try {
+    lawSearchResults.value = await searchLaws(q)
+  } catch {
+    lawSearchResults.value = []
+  } finally {
+    lawSearching.value = false; lawSearchDone.value = true
+  }
+}
+
+// 이미 (정적/추가) 목록에 있는 법령인지
+function lawAlreadyIn(indId, name) {
+  const ind = INDUSTRIES.find(i => i.id === indId)
+  if (ind?.laws.some(l => l.name === name)) return true
+  return (customLaws.value[indId] || []).some(l => l.name === name)
+}
+
+function addCustomLaw(indId, law) {
+  if (!lawAlreadyIn(indId, law.name)) {
+    const existing = customLaws.value[indId] || []
+    customLaws.value = {
+      ...customLaws.value,
+      [indId]: [...existing, { name: law.name, type: law.type, ministry: law.ministry, url: law.url, custom: true }],
+    }
+  }
+  // 추가 즉시 선택 상태로
+  const sel = industryLaws.value[indId] ? [...industryLaws.value[indId]] : []
+  if (!sel.includes(law.name)) sel.push(law.name)
+  industryLaws.value = { ...industryLaws.value, [indId]: sel }
+}
+
+function removeCustomLaw(indId, name) {
+  const existing = (customLaws.value[indId] || []).filter(l => l.name !== name)
+  const copy = { ...customLaws.value }
+  if (existing.length) copy[indId] = existing; else delete copy[indId]
+  customLaws.value = copy
+  industryLaws.value = {
+    ...industryLaws.value,
+    [indId]: (industryLaws.value[indId] || []).filter(n => n !== name),
+  }
+}
 
 // 법령 개정정보 조회 기간
 const LEGAL_PRESETS = [
@@ -1251,7 +1362,7 @@ function toggleIndustry(id) {
     selectedIndustryIds.value = [...selectedIndustryIds.value, id]
     // 신규 선택 시 전체 법령 선택 상태로 초기화
     const ind = INDUSTRIES.find(i => i.id === id)
-    industryLaws.value = { ...industryLaws.value, [id]: ind ? ind.laws.map(l => l.name) : [] }
+    industryLaws.value = { ...industryLaws.value, [id]: ind ? mergedLaws(ind).map(l => l.name) : [] }
   } else {
     selectedIndustryIds.value = selectedIndustryIds.value.filter(x => x !== id)
     const copy = { ...industryLaws.value }; delete copy[id]; industryLaws.value = copy
@@ -1279,16 +1390,16 @@ function selectedLawCount(id) {
   return (industryLaws.value[id] || []).length
 }
 function isIndustryLawsAllSelected(ind) {
-  return selectedLawCount(ind.id) >= ind.laws.length
+  return selectedLawCount(ind.id) >= mergedLaws(ind).length
 }
 function isIndustryLawsPartial(ind) {
   const n = selectedLawCount(ind.id)
-  return n > 0 && n < ind.laws.length
+  return n > 0 && n < mergedLaws(ind).length
 }
 function toggleAllLaws(ind, checked) {
   industryLaws.value = {
     ...industryLaws.value,
-    [ind.id]: checked ? ind.laws.map(l => l.name) : [],
+    [ind.id]: checked ? mergedLaws(ind).map(l => l.name) : [],
   }
 }
 function typeColor(type) {
@@ -1324,7 +1435,7 @@ function toggleCategory(catKey, checked) {
     // 새로 선택된 업종은 전체 법령 선택 상태로 초기화(기존 선택 상태는 유지)
     const nextLaws = { ...industryLaws.value }
     for (const ind of inds) {
-      if (!(ind.id in nextLaws)) nextLaws[ind.id] = ind.laws.map(l => l.name)
+      if (!(ind.id in nextLaws)) nextLaws[ind.id] = mergedLaws(ind).map(l => l.name)
     }
     industryLaws.value = nextLaws
   } else {
@@ -1346,6 +1457,13 @@ async function loadIndustryConfig() {
       if (Array.isArray(parsed)) ids = parsed
     }
     selectedIndustryIds.value = ids
+    // 검색으로 추가한 커스텀 법령 로드
+    let custom = {}
+    const rawCustom = res.data?.['company.customLaws']
+    if (rawCustom) {
+      try { const c = JSON.parse(rawCustom); if (c && typeof c === 'object') custom = c } catch {}
+    }
+    customLaws.value = custom
     // 업종별 개별 법령 선택 로드(없는 항목은 전체 선택으로 간주)
     let savedLaws = {}
     const rawLaws = res.data?.['company.industryLaws']
@@ -1356,9 +1474,10 @@ async function loadIndustryConfig() {
     for (const id of ids) {
       const ind = INDUSTRIES.find(i => i.id === id)
       if (!ind) continue
+      const all = mergedLaws(ind)
       const sel = savedLaws[id]
-      laws[id] = Array.isArray(sel) ? ind.laws.filter(l => sel.includes(l.name)).map(l => l.name)
-                                    : ind.laws.map(l => l.name)
+      laws[id] = Array.isArray(sel) ? all.filter(l => sel.includes(l.name)).map(l => l.name)
+                                    : all.map(l => l.name)
     }
     industryLaws.value = laws
     const ld = res.data?.['legal.days']
@@ -1370,13 +1489,20 @@ async function saveIndustryConfig() {
   industrySaving.value = true; industrySaved.value = false
   try {
     await appSettingApi.update('company.industries', JSON.stringify(selectedIndustryIds.value))
+    // 검색으로 추가한 법령은 선택 업종 분만 저장(정리)
+    const customMap = {}
+    for (const id of selectedIndustryIds.value) {
+      if (customLaws.value[id]?.length) customMap[id] = customLaws.value[id]
+    }
+    await appSettingApi.update('company.customLaws', JSON.stringify(customMap))
     // 부분 선택된 업종만 법령 목록을 저장(전체 선택은 생략 → 기본 전체 적용)
     const map = {}
     for (const id of selectedIndustryIds.value) {
       const ind = INDUSTRIES.find(i => i.id === id)
       if (!ind) continue
-      const sel = industryLaws.value[id] || ind.laws.map(l => l.name)
-      if (sel.length < ind.laws.length) map[id] = sel
+      const all = mergedLaws(ind)
+      const sel = industryLaws.value[id] || all.map(l => l.name)
+      if (sel.length < all.length) map[id] = sel
     }
     await appSettingApi.update('company.industryLaws', JSON.stringify(map))
     industrySaved.value = true
