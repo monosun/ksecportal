@@ -275,7 +275,7 @@
     "name": "자산명",
     "type": "유형",
     "ipAddress": "IP 주소",
-    "owner": "담당자",
+    "owner": "책임자",
     "department": "부서",
     "description": "설명",
     "criticality": "중요도",
