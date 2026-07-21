@@ -19,7 +19,6 @@ export const INDUSTRIES = [
       // 개인정보 보호법 관련 법령 및 고시
       { name: '개인정보 보호법',                                             ministry: '개인정보보호위원회', type: '법령',    url: 'https://www.law.go.kr/법령/개인정보보호법' },
       { name: '개인정보 보호법 시행령',                                       ministry: '개인정보보호위원회', type: '시행령',  url: 'https://www.law.go.kr/법령/개인정보보호법시행령' },
-      { name: '개인정보 보호법 시행규칙',                                     ministry: '개인정보보호위원회', type: '시행규칙', url: 'https://www.law.go.kr/법령/개인정보보호법시행규칙' },
       { name: '개인정보의 안전성 확보조치 기준',                               ministry: '개인정보보호위원회', type: '고시',    url: 'https://www.law.go.kr/행정규칙/개인정보의안전성확보조치기준' },
       { name: '표준 개인정보보호 지침',                                        ministry: '개인정보보호위원회', type: '고시',    url: 'https://www.law.go.kr/행정규칙/표준개인정보보호지침' },
       { name: '개인정보 영향평가에 관한 고시',                                 ministry: '개인정보보호위원회', type: '고시',    url: 'https://www.law.go.kr/행정규칙/개인정보영향평가에관한고시' },
