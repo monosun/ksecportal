@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,6 +42,17 @@ public class ReportController {
                 ? "개인정보-현황보고서-" + today() + ".pdf"
                 : "privacy-status-report-" + today() + ".pdf";
         return pdfResponse(reportService.generatePrivacyReport(lang), filename);
+    }
+
+    /** 소스 취약점 점검(SAST) 결과 보고서 — 점검 1건 */
+    @GetMapping("/source-scan/{scanId}/pdf")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<byte[]> sourceScanPdf(@PathVariable Long scanId,
+                                                @RequestParam(defaultValue = "ko") String lang) {
+        String filename = "ko".equalsIgnoreCase(lang)
+                ? "소스취약점점검-보고서-" + today() + ".pdf"
+                : "source-scan-report-" + today() + ".pdf";
+        return pdfResponse(reportService.generateSourceScanReport(scanId, lang), filename);
     }
 
     @GetMapping("/policies/pdf")

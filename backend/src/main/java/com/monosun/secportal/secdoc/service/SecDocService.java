@@ -26,6 +26,7 @@ public class SecDocService {
 
     private final SecDocRepository repository;
     private final FileStorageService fileStorageService;
+    private final com.monosun.secportal.audit.service.AuditLogService auditLogService;
 
     private static final java.util.Set<String> SEARCH_FIELDS =
             java.util.Set.of("ALL", "TITLE", "DESCRIPTION", "FILENAME", "VERSION", "ORG");
@@ -89,6 +90,8 @@ public class SecDocService {
             doc.setFileSize(file.getSize());
         }
 
+        auditLogService.log("SEC_DOC_CREATED", "SEC_DOC", doc.getId(),
+                doc.getTitle() + " (" + doc.getCategory() + " v" + doc.getVersion() + ")");
         return SecDocDto.Response.from(doc, 1);
     }
 
@@ -124,6 +127,8 @@ public class SecDocService {
         }
 
         int versionCount = repository.findByDocumentKeyOrderByCreatedAtDesc(newDoc.getDocumentKey()).size();
+        auditLogService.log("SEC_DOC_VERSION_ADDED", "SEC_DOC", newDoc.getId(),
+                newDoc.getTitle() + " v" + newDoc.getVersion());
         return SecDocDto.Response.from(newDoc, versionCount);
     }
 
@@ -148,6 +153,9 @@ public class SecDocService {
         for (SecDoc v : versions) {
             if (v.getFilePath() != null) fileStorageService.delete(v.getFilePath());
         }
+        // 문서가 없어졌을 때 누가·언제 지웠는지 추적할 수 있도록 남긴다
+        auditLogService.log("SEC_DOC_DELETED", "SEC_DOC", id,
+                doc.getTitle() + " (" + doc.getCategory() + ", 전체 " + versions.size() + "개 버전)");
         repository.deleteByDocumentKey(doc.getDocumentKey());
     }
 
@@ -155,6 +163,8 @@ public class SecDocService {
     public void deleteVersion(Long id) throws IOException {
         SecDoc doc = find(id);
         if (doc.getFilePath() != null) fileStorageService.delete(doc.getFilePath());
+        auditLogService.log("SEC_DOC_VERSION_DELETED", "SEC_DOC", id,
+                doc.getTitle() + " v" + doc.getVersion());
 
         List<SecDoc> remaining = repository.findByDocumentKeyOrderByCreatedAtDesc(doc.getDocumentKey())
                 .stream().filter(d -> !d.getId().equals(id)).collect(Collectors.toList());

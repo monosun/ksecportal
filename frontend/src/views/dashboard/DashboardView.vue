@@ -297,7 +297,9 @@
                       class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
                       <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.title }}</p>
-                        <p v-if="item.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                        <!-- 요약이 제목과 같은 피드(구글 뉴스 등)는 같은 문장이 두 줄로 보이므로 표시하지 않는다 -->
+                        <p v-if="showRssDescription(item)"
+                          class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
                       </div>
                       <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">{{ fmtRssDate(item.pubDate) }}</span>
                     </a>
@@ -582,6 +584,18 @@ const rssTitle = computed(() => {
 const filteredRss = computed(() =>
   rssItems.value.filter(item => item.category === rssTab.value)
 )
+
+/** 요약이 제목과 같은 문장이면(구글 뉴스는 제목에서 ' - ' 만 빠진 형태) 두 줄로 보이므로 감춘다 */
+function showRssDescription(item) {
+  if (!item.description) return false
+  const compact = s => (s || '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()
+  const t = compact(item.title)
+  const d = compact(item.description)
+  if (!t || !d) return true
+  if (t === d) return false
+  const [shorter, longer] = t.length <= d.length ? [t, d] : [d, t]
+  return !(longer.startsWith(shorter) && longer.length - shorter.length <= 3)
+}
 
 function fmtRssDate(pubDate) {
   if (!pubDate) return ''

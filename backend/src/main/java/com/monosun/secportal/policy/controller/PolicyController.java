@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/policies")
@@ -69,6 +70,13 @@ public class PolicyController {
     public ApiResponse<Void> delete(@PathVariable Long id) {
         policyService.delete(id);
         return ApiResponse.noContent();
+    }
+
+    /** 목록에서 선택한 정책 일괄 삭제 — 삭제 건수를 반환 */
+    @DeleteMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Integer> deleteBulk(@RequestParam List<Long> ids) {
+        return ApiResponse.ok(policyService.deleteAll(ids));
     }
 
     @PostMapping("/{id}/acknowledge")

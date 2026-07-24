@@ -18,6 +18,11 @@ import com.monosun.secportal.isms.repository.IsmsEvidenceRepository;
 import com.monosun.secportal.isms.repository.IsmsItemRepository;
 import com.monosun.secportal.policy.entity.Policy;
 import com.monosun.secportal.policy.repository.PolicyRepository;
+import com.monosun.secportal.common.exception.ResourceNotFoundException;
+import com.monosun.secportal.privacy.dto.PrivacyReportDto;
+import com.monosun.secportal.sourcescan.entity.SourceScan;
+import com.monosun.secportal.sourcescan.entity.SourceScanFinding;
+import com.monosun.secportal.sourcescan.repository.SourceScanRepository;
 import com.monosun.secportal.training.entity.TrainingCompletion;
 import com.monosun.secportal.training.entity.TrainingCourse;
 import com.monosun.secportal.training.repository.TrainingCompletionRepository;
@@ -57,6 +62,7 @@ public class ReportService {
     private final IsmsEvidenceRepository ismsEvidenceRepository;
     private final com.monosun.secportal.setting.service.AppSettingService appSettingService;
     private final com.monosun.secportal.privacy.service.PrivacyReportService privacyReportService;
+    private final SourceScanRepository sourceScanRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -784,95 +790,213 @@ public class ReportService {
 
     private String nvl(Object o) { return o != null ? o.toString() : ""; }
 
-    // ── 개인정보 현황보고서 ──────────────────────────────────────────────────
+    // ── 소스 취약점 점검(SAST) 보고서 ────────────────────────────────────────
 
     /**
-     * 개인정보 현황보고서 PDF — 화면(개인정보보호 > 개인정보 현황보고서)과 같은 9개 영역을 담는다.
+     * 소스 취약점 점검 결과 PDF — 화면(보안 운영 > 소스 취약점 점검)의 점검 1건을 그대로 옮긴다.
+     * 요약(심각도·카테고리) → 심각도 분포 막대 → 발견 목록 순서.
+     */
+    @Transactional(readOnly = true)
+    public byte[] generateSourceScanReport(Long scanId, String lang) {
+        SourceScan scan = sourceScanRepository.findById(scanId)
+                .orElseThrow(() -> new ResourceNotFoundException("SourceScan", scanId));
+        List<SourceScanFinding> findings = scan.getFindings();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document doc = new Document(PageSize.A4.rotate(), 30, 30, 32, 30);
+        try {
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+
+            addCenteredTitle(doc, t(lang, "소스 취약점 점검 보고서", "Source Code Scan Report"), kFont(17, Font.BOLD));
+            addCompanyLine(doc);
+            addCenteredSubtitle(doc, scan.getRepository() + "   ·   "
+                    + t(lang, "점검일시 ", "Scanned at ")
+                    + scan.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+            doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
+
+            // 점검 상태 (일부 카테고리 실패 시 사유를 함께 싣는다)
+            if (scan.getStatus() != SourceScan.Status.SUCCESS && notBlankStr(scan.getMessage())) {
+                PdfPTable note = new PdfPTable(1);
+                note.setWidthPercentage(100);
+                PdfPCell nc = new PdfPCell();
+                nc.setPadding(7);
+                nc.setBackgroundColor(new Color(0xFF, 0xFB, 0xEB));
+                nc.setBorderColor(new Color(0xFD, 0xE6, 0x8A));
+                nc.addElement(new Paragraph(t(lang, "점검 상태: ", "Status: ") + scan.getStatus().name(),
+                        kFont(8.5f, Font.BOLD, new Color(0x92, 0x40, 0x0E))));
+                nc.addElement(new Paragraph(scan.getMessage(), kFont(8, Font.NORMAL, C_INK2)));
+                note.addCell(nc);
+                doc.add(note);
+                doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
+            }
+
+            int total = scan.getDependencyCount() + scan.getCodeCount() + scan.getSecretCount() + scan.getSastCount();
+
+            // 심각도 요약 타일
+            String[][] tiles = {
+                    {t(lang, "전체", "Total"), String.valueOf(total)},
+                    {t(lang, "심각(Critical)", "Critical"), String.valueOf(scan.getCriticalCount())},
+                    {t(lang, "높음(High)", "High"), String.valueOf(scan.getHighCount())},
+                    {t(lang, "중간(Medium)", "Medium"), String.valueOf(scan.getMediumCount())},
+                    {t(lang, "낮음(Low)", "Low"), String.valueOf(scan.getLowCount())},
+            };
+            PdfPTable tileTable = new PdfPTable(tiles.length);
+            tileTable.setWidthPercentage(100);
+            for (String[] tile : tiles) {
+                PdfPCell cell = new PdfPCell();
+                Paragraph v = new Paragraph(tile[1], kFont(17, Font.BOLD));
+                v.setAlignment(Element.ALIGN_CENTER);
+                Paragraph l = new Paragraph(tile[0], kFont(8, Font.NORMAL, C_INK2));
+                l.setAlignment(Element.ALIGN_CENTER);
+                cell.addElement(v);
+                cell.addElement(l);
+                cell.setPadding(7);
+                cell.setBackgroundColor(new Color(0xF9, 0xFA, 0xFB));
+                cell.setBorderColor(C_LINE);
+                tileTable.addCell(cell);
+            }
+            doc.add(tileTable);
+            doc.add(new Paragraph(" ", kFont(7, Font.NORMAL)));
+
+            // 심각도 분포 · 카테고리 분포 (화면과 같은 색)
+            PdfPTable charts = new PdfPTable(2);
+            charts.setWidthPercentage(100);
+            addStackCell(charts, t(lang, "심각도 분포", "By severity"), List.of(
+                    new Seg(t(lang, "심각", "Critical"), scan.getCriticalCount(), C_CRITICAL),
+                    new Seg(t(lang, "높음", "High"), scan.getHighCount(), C_SERIOUS),
+                    new Seg(t(lang, "중간", "Medium"), scan.getMediumCount(), C_WARNING),
+                    new Seg(t(lang, "낮음", "Low"), scan.getLowCount(), C_SEQ)));
+            addStackCell(charts, t(lang, "카테고리 분포", "By category"), List.of(
+                    new Seg(t(lang, "의존성", "Dependency"), scan.getDependencyCount(), C_SEQ),
+                    new Seg(t(lang, "코드스캔", "Code scanning"), scan.getCodeCount(), C_SERIOUS),
+                    new Seg(t(lang, "시크릿", "Secret"), scan.getSecretCount(), C_CRITICAL),
+                    new Seg("SAST", scan.getSastCount(), C_NEUTRAL)));
+            doc.add(charts);
+            doc.add(new Paragraph(" ", kFont(9, Font.NORMAL)));
+
+            // 발견 목록
+            doc.add(new Paragraph(t(lang, "발견 내역 (" + findings.size() + "건)",
+                    "Findings (" + findings.size() + ")"), kFont(11, Font.BOLD)));
+            doc.add(new Paragraph(" ", kFont(4, Font.NORMAL)));
+
+            if (findings.isEmpty()) {
+                doc.add(new Paragraph(t(lang, "발견된 취약점이 없습니다.", "No findings."),
+                        kFont(9, Font.NORMAL, C_INK2)));
+            } else {
+                PdfPTable table = new PdfPTable(new float[]{1.1f, 1.4f, 5f, 2.6f, 3.2f, 1.4f});
+                table.setWidthPercentage(100);
+                table.setHeaderRows(1);
+                Font hf = kFont(8.5f, Font.BOLD, Color.WHITE);
+                addHeaderCell(table, t(lang, "심각도", "Severity"), hf);
+                addHeaderCell(table, t(lang, "구분", "Category"), hf);
+                addHeaderCell(table, t(lang, "제목", "Title"), hf);
+                addHeaderCell(table, t(lang, "식별자", "Identifier"), hf);
+                addHeaderCell(table, t(lang, "위치", "Location"), hf);
+                addHeaderCell(table, "CVE", hf);
+
+                for (SourceScanFinding f : findings) {
+                    PdfPCell sev = new PdfPCell(new Phrase(tScanSeverity(lang, f.getSeverity()),
+                            kFont(8, Font.BOLD, severityColor(f.getSeverity()))));
+                    table.addCell(padded(sev));
+                    table.addCell(padded(new PdfPCell(new Phrase(
+                            tScanCategory(lang, f.getCategory()), kFont(8, Font.NORMAL, C_INK2)))));
+                    table.addCell(padded(new PdfPCell(new Phrase(nvl(f.getTitle()), kFont(8, Font.NORMAL)))));
+                    table.addCell(padded(new PdfPCell(new Phrase(nvl(f.getIdentifier()), kFont(8, Font.NORMAL, C_INK2)))));
+                    table.addCell(padded(new PdfPCell(new Phrase(nvl(f.getLocation()), kFont(8, Font.NORMAL, C_INK2)))));
+                    table.addCell(padded(new PdfPCell(new Phrase(nvl(f.getCveId()), kFont(8, Font.NORMAL, C_INK2)))));
+                }
+                doc.add(table);
+            }
+
+            doc.close();
+        } catch (Exception e) {
+            log.error("Failed to generate source scan report", e);
+            throw new RuntimeException("Failed to generate source scan report", e);
+        }
+        return out.toByteArray();
+    }
+
+    private PdfPCell padded(PdfPCell cell) {
+        cell.setPadding(4);
+        cell.setBorderColor(C_LINE);
+        return cell;
+    }
+
+    private Color severityColor(SourceScanFinding.Severity s) {
+        return switch (s) {
+            case CRITICAL -> C_CRITICAL;
+            case HIGH -> C_SERIOUS;
+            case MEDIUM -> new Color(0xB4, 0x7C, 0x00);   // 노랑은 흰 배경에서 흐려 어둡게 조정
+            case LOW -> C_SEQ;
+            default -> C_INK2;
+        };
+    }
+
+    private String tScanSeverity(String lang, SourceScanFinding.Severity s) {
+        if (!"ko".equalsIgnoreCase(lang)) return s.name();
+        return switch (s) {
+            case CRITICAL -> "심각";
+            case HIGH -> "높음";
+            case MEDIUM -> "중간";
+            case LOW -> "낮음";
+            default -> "정보";
+        };
+    }
+
+    private String tScanCategory(String lang, SourceScanFinding.Category c) {
+        if (!"ko".equalsIgnoreCase(lang)) return c.name();
+        return switch (c) {
+            case DEPENDENCY -> "의존성";
+            case CODE_SCANNING -> "코드스캔";
+            case SECRET -> "시크릿";
+            case SAST -> "SAST";
+        };
+    }
+
+    private static boolean notBlankStr(String s) { return s != null && !s.isBlank(); }
+
+    // ── 개인정보 현황보고서 ──────────────────────────────────────────────────
+
+    // 화면(PrivacyReportView)과 같은 색 — 상태색은 상태 전용, SEQ(파랑)는 크기 비교용 단일 색
+    private static final Color C_GOOD = new Color(0x0C, 0xA3, 0x0C);
+    private static final Color C_WARNING = new Color(0xFA, 0xB2, 0x19);
+    private static final Color C_SERIOUS = new Color(0xEC, 0x83, 0x5A);
+    private static final Color C_CRITICAL = new Color(0xD0, 0x3B, 0x3B);
+    private static final Color C_NEUTRAL = new Color(0xB9, 0xB8, 0xB2);
+    private static final Color C_SEQ = new Color(0x2A, 0x78, 0xD6);
+    private static final Color C_TRACK = new Color(0xF1, 0xF2, 0xF4);
+    private static final Color C_LINE = new Color(0xE5, 0xE7, 0xEB);
+    private static final Color C_INK2 = new Color(0x6B, 0x72, 0x80);
+
+    /** 막대 한 조각 — 화면의 스택 막대 세그먼트와 같은 의미 */
+    private record Seg(String label, long value, Color color) {}
+
+    /**
+     * 개인정보 현황보고서 PDF — 화면(개인정보보호 > 개인정보 현황보고서)을 그대로 옮긴다.
+     * 조치 필요 → 핵심 지표 → 이행률 미터 → 영역별 누적 막대 → 유형별 막대 → 상세 수치(표 보기).
      * 집계는 PrivacyReportService를 재사용하므로 화면과 값이 항상 일치한다.
      */
     @Transactional(readOnly = true)
     public byte[] generatePrivacyReport(String lang) {
         var s = privacyReportService.generate();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4);
+        Document doc = new Document(PageSize.A4, 36, 36, 36, 36);
         try {
             PdfWriter.getInstance(doc, out);
             doc.open();
-            Font titleFont = kFont(18, Font.BOLD);
 
-            addCenteredTitle(doc, t(lang, "개인정보 현황보고서", "Privacy Status Report"), titleFont);
+            addCenteredTitle(doc, t(lang, "개인정보 현황보고서", "Privacy Status Report"), kFont(18, Font.BOLD));
             addCompanyLine(doc);
             addCenteredSubtitle(doc, t(lang, "기준일: ", "As of: ") + s.getGeneratedAt().format(DATE_FMT));
-            doc.add(new Paragraph(" "));
+            doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
 
-            addPrivacySection(doc, lang, t(lang, "1. 개인정보 처리현황", "1. Processing Activities"), new String[][]{
-                    {t(lang, "전체 처리업무", "Total"), String.valueOf(s.getProcessing().getTotal())},
-                    {t(lang, "운영중", "Active"), String.valueOf(s.getProcessing().getActive())},
-                    {t(lang, "중단", "Inactive"), String.valueOf(s.getProcessing().getInactive())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "2. 개인정보파일 현황", "2. Personal Data Files"), new String[][]{
-                    {t(lang, "전체 파일", "Total"), String.valueOf(s.getFiles().getTotal())},
-                    {t(lang, "운영중", "Active"), String.valueOf(s.getFiles().getActive())},
-                    {t(lang, "민감정보 포함", "Sensitive"), String.valueOf(s.getFiles().getSensitive())},
-                    {t(lang, "고유식별정보 포함", "Unique ID"), String.valueOf(s.getFiles().getUniqueIdentifier())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "3. 수탁사 현황", "3. Contractors"), new String[][]{
-                    {t(lang, "전체 수탁사", "Total"), String.valueOf(s.getContractors().getTotal())},
-                    {t(lang, "점검 이력 있음", "Inspected"), String.valueOf(s.getContractors().getChecked())},
-                    {t(lang, "점검 이력 없음", "Not inspected"), String.valueOf(s.getContractors().getUnchecked())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "4. 제3자 제공 현황", "4. Data Provision"), new String[][]{
-                    {t(lang, "전체", "Total"), String.valueOf(s.getProvisions().getTotal())},
-                    {t(lang, "제3자 제공", "Third party"), String.valueOf(s.getProvisions().getThirdParty())},
-                    {t(lang, "공동이용", "Joint use"), String.valueOf(s.getProvisions().getJointUse())},
-                    {t(lang, "국외이전", "Overseas"), String.valueOf(s.getProvisions().getOverseas())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "5. 보유기간 현황", "5. Retention"), new String[][]{
-                    {t(lang, "전체", "Total"), String.valueOf(s.getRetentions().getTotal())},
-                    {t(lang, "30일 내 만료예정", "Expiring in 30d"), String.valueOf(s.getRetentions().getExpiringIn30Days())},
-                    {t(lang, "만료 경과·미파기", "Overdue"), String.valueOf(s.getRetentions().getOverdue())},
-                    {t(lang, "파기완료", "Disposed"), String.valueOf(s.getRetentions().getDisposed())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "6. 파기 현황", "6. Disposal"), new String[][]{
-                    {t(lang, "전체 파기계획", "Total"), String.valueOf(s.getDisposals().getTotal())},
-                    {t(lang, "계획", "Planned"), String.valueOf(s.getDisposals().getPlanned())},
-                    {t(lang, "승인대기", "Pending approval"), String.valueOf(s.getDisposals().getPendingApproval())},
-                    {t(lang, "파기완료", "Completed"), String.valueOf(s.getDisposals().getCompleted())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "7. 정보주체 권리행사 현황", "7. Data Subject Rights"), new String[][]{
-                    {t(lang, "전체 요청", "Total"), String.valueOf(s.getRights().getTotal())},
-                    {t(lang, "처리중", "In progress"), String.valueOf(s.getRights().getInProgress())},
-                    {t(lang, "완료", "Completed"), String.valueOf(s.getRights().getCompleted())},
-                    {t(lang, "처리기한 초과", "SLA breached"), String.valueOf(s.getRights().getSlaBreached())},
-            });
-
-            if (s.getRights().getByType() != null && !s.getRights().getByType().isEmpty()) {
-                addPrivacyKeyValueLine(doc, lang, t(lang, "요청 유형별", "By type"),
-                        s.getRights().getByType().entrySet().stream()
-                                .map(e -> tRightsType(lang, e.getKey()) + " " + e.getValue())
-                                .collect(Collectors.joining("   ")));
-            }
-
-            addPrivacySection(doc, lang, t(lang, "8. 유출사고 현황", "8. Breaches"), new String[][]{
-                    {t(lang, "전체 사고", "Total"), String.valueOf(s.getBreaches().getTotal())},
-                    {t(lang, "미종결", "Open"), String.valueOf(s.getBreaches().getOpen())},
-                    {t(lang, "신고기한 경과", "Report overdue"), String.valueOf(s.getBreaches().getReportOverdue())},
-                    {t(lang, "유출 정보주체", "Affected"), String.valueOf(s.getBreaches().getAffectedSubjects())},
-            });
-
-            addPrivacySection(doc, lang, t(lang, "9. 법령 준수현황", "9. Compliance"), new String[][]{
-                    {t(lang, "DPIA 전체", "DPIA total"), String.valueOf(s.getCompliance().getDpiaTotal())},
-                    {t(lang, "DPIA 완료", "DPIA completed"), String.valueOf(s.getCompliance().getDpiaCompleted())},
-                    {t(lang, "DPIA 위험도 높음", "DPIA high risk"), String.valueOf(s.getCompliance().getDpiaHighRisk())},
-                    {t(lang, "보호조치 전체", "Safeguards"), String.valueOf(s.getCompliance().getSafeguardTotal())},
-                    {t(lang, "보호조치 완료", "Completed"), String.valueOf(s.getCompliance().getSafeguardCompleted())},
-            });
+            addPrivacyAlerts(doc, lang, s);
+            addPrivacyKpis(doc, lang, s);
+            addPrivacyMeters(doc, lang, s);
+            addPrivacyComposition(doc, lang, s);
+            addPrivacyByType(doc, lang, s);
+            addPrivacyDetailTable(doc, lang, s);
 
             doc.close();
         } catch (Exception e) {
@@ -882,37 +1006,409 @@ public class ReportService {
         return out.toByteArray();
     }
 
-    /** 보고서 섹션 — 제목 + 지표 표 */
-    private void addPrivacySection(Document doc, String lang, String title, String[][] metrics)
-            throws DocumentException {
-        doc.add(new Paragraph(title, kFont(12, Font.BOLD)));
-        doc.add(new Paragraph(" ", kFont(4, Font.NORMAL)));
-
-        PdfPTable table = new PdfPTable(metrics.length);
-        table.setWidthPercentage(100);
-        for (String[] m : metrics) {
-            PdfPCell cell = new PdfPCell();
-            Paragraph value = new Paragraph(m[1], kFont(15, Font.BOLD));
-            value.setAlignment(Element.ALIGN_CENTER);
-            Paragraph label = new Paragraph(m[0], kFont(8, Font.NORMAL, Color.GRAY));
-            label.setAlignment(Element.ALIGN_CENTER);
-            cell.addElement(value);
-            cell.addElement(label);
-            cell.setPadding(7);
-            cell.setBackgroundColor(new Color(249, 250, 251));
-            cell.setBorderColor(new Color(229, 231, 235));
-            table.addCell(cell);
+    /** 즉시 조치 필요 — 0이 아닌 항목만 (화면 상단 배너와 동일) */
+    private void addPrivacyAlerts(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        String[][] candidates = {
+                {t(lang, "보유기간 만료 경과", "Retention overdue"), String.valueOf(s.getRetentions().getOverdue())},
+                {t(lang, "유출 신고기한 경과", "Breach report overdue"), String.valueOf(s.getBreaches().getReportOverdue())},
+                {t(lang, "권리행사 처리기한 초과", "Rights SLA breached"), String.valueOf(s.getRights().getSlaBreached())},
+                {t(lang, "유출사고 미종결", "Breaches open"), String.valueOf(s.getBreaches().getOpen())},
+                {t(lang, "수탁사 미점검", "Contractors not inspected"), String.valueOf(s.getContractors().getUnchecked())},
+                {t(lang, "영향평가 위험 높음", "DPIA high risk"), String.valueOf(s.getCompliance().getDpiaHighRisk())},
+        };
+        StringBuilder sb = new StringBuilder();
+        for (String[] c : candidates) {
+            if (Long.parseLong(c[1]) > 0) {
+                if (sb.length() > 0) sb.append("    ");
+                sb.append(c[0]).append(' ').append(c[1]).append(t(lang, "건", ""));
+            }
         }
-        doc.add(table);
+        boolean clean = sb.length() == 0;
+
+        PdfPTable box = new PdfPTable(1);
+        box.setWidthPercentage(100);
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(8);
+        cell.setBackgroundColor(clean ? new Color(0xEC, 0xFD, 0xF5) : new Color(0xFE, 0xF2, 0xF2));
+        cell.setBorderColor(clean ? new Color(0xA7, 0xF3, 0xD0) : new Color(0xFE, 0xCA, 0xCA));
+        if (clean) {
+            cell.addElement(new Paragraph(
+                    t(lang, "기한 초과·미조치 항목이 없습니다.", "No overdue or unhandled items."),
+                    kFont(9, Font.BOLD, new Color(0x04, 0x78, 0x57))));
+        } else {
+            cell.addElement(new Paragraph(t(lang, "즉시 조치 필요", "Action required"),
+                    kFont(9, Font.BOLD, new Color(0xB9, 0x1C, 0x1C))));
+            cell.addElement(new Paragraph(sb.toString(), kFont(9, Font.NORMAL, new Color(0x37, 0x41, 0x51))));
+        }
+        box.addCell(cell);
+        doc.add(box);
         doc.add(new Paragraph(" ", kFont(7, Font.NORMAL)));
     }
 
-    /** 섹션 아래 보조 설명 한 줄 */
-    private void addPrivacyKeyValueLine(Document doc, String lang, String label, String value)
-            throws DocumentException {
-        Paragraph p = new Paragraph(label + ": " + value, kFont(8, Font.NORMAL, Color.DARK_GRAY));
-        doc.add(p);
-        doc.add(new Paragraph(" ", kFont(7, Font.NORMAL)));
+    /** 핵심 지표 4타일 (화면 상단 KPI 행) */
+    private void addPrivacyKpis(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        String[][] kpis = {
+                {t(lang, "개인정보파일", "Personal data files"), String.valueOf(s.getFiles().getTotal()),
+                        t(lang, "운영중 " + s.getFiles().getActive() + " · 민감 " + s.getFiles().getSensitive()
+                                        + " · 고유식별 " + s.getFiles().getUniqueIdentifier(),
+                                "Active " + s.getFiles().getActive() + " · Sensitive " + s.getFiles().getSensitive()
+                                        + " · Unique ID " + s.getFiles().getUniqueIdentifier())},
+                {t(lang, "개인정보 처리업무", "Processing activities"), String.valueOf(s.getProcessing().getTotal()),
+                        t(lang, "운영중 " + s.getProcessing().getActive() + " · 중단 " + s.getProcessing().getInactive(),
+                                "Active " + s.getProcessing().getActive() + " · Inactive " + s.getProcessing().getInactive())},
+                {t(lang, "수탁사", "Contractors"), String.valueOf(s.getContractors().getTotal()),
+                        t(lang, "점검 " + s.getContractors().getChecked() + " · 미점검 " + s.getContractors().getUnchecked(),
+                                "Inspected " + s.getContractors().getChecked() + " · Not " + s.getContractors().getUnchecked())},
+                {t(lang, "정보주체 권리행사", "Data subject rights"), String.valueOf(s.getRights().getTotal()),
+                        t(lang, "처리중 " + s.getRights().getInProgress() + " · 완료 " + s.getRights().getCompleted(),
+                                "In progress " + s.getRights().getInProgress() + " · Completed " + s.getRights().getCompleted())},
+        };
+
+        PdfPTable table = new PdfPTable(kpis.length);
+        table.setWidthPercentage(100);
+        for (String[] k : kpis) {
+            PdfPCell cell = new PdfPCell();
+            cell.addElement(new Paragraph(k[0], kFont(8, Font.NORMAL, C_INK2)));
+            cell.addElement(new Paragraph(k[1], kFont(19, Font.BOLD)));
+            cell.addElement(new Paragraph(k[2], kFont(7, Font.NORMAL, C_INK2)));
+            cell.setPadding(8);
+            cell.setBackgroundColor(new Color(0xF9, 0xFA, 0xFB));
+            cell.setBorderColor(C_LINE);
+            table.addCell(cell);
+        }
+        doc.add(table);
+        doc.add(new Paragraph(" ", kFont(8, Font.NORMAL)));
+    }
+
+    /** 이행률 — 화면의 비율 미터 4종 (90%↑ 녹색 / 70%↑ 노랑 / 그 미만 빨강) */
+    private void addPrivacyMeters(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        doc.add(new Paragraph(t(lang, "이행률", "Completion rate"), kFont(11, Font.BOLD)));
+        doc.add(new Paragraph(" ", kFont(4, Font.NORMAL)));
+
+        PdfPTable grid = new PdfPTable(2);
+        grid.setWidthPercentage(100);
+        grid.getDefaultCell().setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        addMeterCell(grid, t(lang, "수탁사 점검", "Contractor inspection"),
+                s.getContractors().getChecked(), s.getContractors().getTotal());
+        addMeterCell(grid, t(lang, "파기 완료", "Disposal completed"),
+                s.getDisposals().getCompleted(), s.getDisposals().getTotal());
+        addMeterCell(grid, t(lang, "영향평가(DPIA) 완료", "DPIA completed"),
+                s.getCompliance().getDpiaCompleted(), s.getCompliance().getDpiaTotal());
+        addMeterCell(grid, t(lang, "안전조치 완료", "Safeguards completed"),
+                s.getCompliance().getSafeguardCompleted(), s.getCompliance().getSafeguardTotal());
+        doc.add(grid);
+        doc.add(new Paragraph(" ", kFont(8, Font.NORMAL)));
+    }
+
+    private void addMeterCell(PdfPTable grid, String label, long value, long total) throws DocumentException {
+        int pct = total > 0 ? Math.round(value * 100f / total) : 0;
+        Color fill = total == 0 ? C_NEUTRAL : pct >= 90 ? C_GOOD : pct >= 70 ? C_WARNING : C_CRITICAL;
+
+        PdfPTable head = new PdfPTable(2);
+        head.setWidthPercentage(100);
+        head.addCell(textCell(label, kFont(8.5f, Font.NORMAL, C_INK2), Element.ALIGN_LEFT));
+        head.addCell(textCell(total > 0 ? pct + "%" : "—", kFont(9.5f, Font.BOLD), Element.ALIGN_RIGHT));
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setPadding(4);
+        cell.addElement(head);
+        cell.addElement(barTable(List.of(
+                new Seg(label, Math.max(value, 0), fill),
+                new Seg("", Math.max(total - value, 0), C_TRACK)), 7f));
+        cell.addElement(new Paragraph(value + " / " + total, kFont(7, Font.NORMAL, C_INK2)));
+        grid.addCell(cell);
+    }
+
+    /** 영역별 구성 — 화면의 가로 누적 막대 7종 (2열 배치) */
+    private void addPrivacyComposition(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        doc.add(new Paragraph(t(lang, "영역별 구성", "Composition by area"), kFont(11, Font.BOLD)));
+        doc.add(new Paragraph(" ", kFont(4, Font.NORMAL)));
+
+        var ret = s.getRetentions();
+        long retNormal = Math.max(ret.getTotal() - ret.getExpiringIn30Days() - ret.getOverdue() - ret.getDisposed(), 0);
+
+        PdfPTable grid = new PdfPTable(2);
+        grid.setWidthPercentage(100);
+        addStackCell(grid, t(lang, "개인정보 처리업무", "Processing activities"), List.of(
+                new Seg(t(lang, "운영중", "Active"), s.getProcessing().getActive(), C_GOOD),
+                new Seg(t(lang, "중단", "Inactive"), s.getProcessing().getInactive(), C_NEUTRAL)));
+        addStackCell(grid, t(lang, "보유기간", "Retention"), List.of(
+                new Seg(t(lang, "기간 내", "Within period"), retNormal, C_GOOD),
+                new Seg(t(lang, "30일 내 만료", "Expiring in 30d"), ret.getExpiringIn30Days(), C_WARNING),
+                new Seg(t(lang, "만료 경과", "Overdue"), ret.getOverdue(), C_CRITICAL),
+                new Seg(t(lang, "파기 완료", "Disposed"), ret.getDisposed(), C_NEUTRAL)));
+        addStackCell(grid, t(lang, "개인정보파일", "Personal data files"), List.of(
+                new Seg(t(lang, "운영중", "Active"), s.getFiles().getActive(), C_GOOD),
+                new Seg(t(lang, "그 외", "Others"),
+                        Math.max(s.getFiles().getTotal() - s.getFiles().getActive(), 0), C_NEUTRAL)));
+        addStackCell(grid, t(lang, "파기", "Disposal"), List.of(
+                new Seg(t(lang, "완료", "Completed"), s.getDisposals().getCompleted(), C_GOOD),
+                new Seg(t(lang, "승인대기", "Pending approval"), s.getDisposals().getPendingApproval(), C_WARNING),
+                new Seg(t(lang, "계획", "Planned"), s.getDisposals().getPlanned(), C_NEUTRAL)));
+        addStackCell(grid, t(lang, "제3자 제공·위탁", "Data provision"), List.of(
+                new Seg(t(lang, "제3자 제공", "Third party"), s.getProvisions().getThirdParty(), C_SEQ),
+                new Seg(t(lang, "공동이용", "Joint use"), s.getProvisions().getJointUse(), C_NEUTRAL),
+                new Seg(t(lang, "국외이전", "Overseas"), s.getProvisions().getOverseas(), C_SERIOUS)));
+        addStackCell(grid, t(lang, "정보주체 권리행사", "Data subject rights"), List.of(
+                new Seg(t(lang, "완료", "Completed"), s.getRights().getCompleted(), C_GOOD),
+                new Seg(t(lang, "처리중", "In progress"), s.getRights().getInProgress(), C_SEQ),
+                new Seg(t(lang, "기한 초과", "SLA breached"), s.getRights().getSlaBreached(), C_CRITICAL)));
+        addStackCell(grid, t(lang, "유출사고", "Breaches"), List.of(
+                new Seg(t(lang, "종결", "Closed"),
+                        Math.max(s.getBreaches().getTotal() - s.getBreaches().getOpen(), 0), C_GOOD),
+                new Seg(t(lang, "미종결", "Open"), s.getBreaches().getOpen(), C_CRITICAL)));
+        // 2열 격자를 채우기 위한 빈 칸 (홀수 개일 때)
+        PdfPCell filler = new PdfPCell(new Phrase(" "));
+        filler.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        grid.addCell(filler);
+
+        doc.add(grid);
+        doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
+        doc.add(new Paragraph(t(lang,
+                        "유출 정보주체 누계 " + s.getBreaches().getAffectedSubjects() + "명 · 영향평가 위험 높음 "
+                                + s.getCompliance().getDpiaHighRisk() + "건",
+                        "Affected subjects " + s.getBreaches().getAffectedSubjects() + " · DPIA high risk "
+                                + s.getCompliance().getDpiaHighRisk()),
+                kFont(7.5f, Font.NORMAL, C_INK2)));
+        doc.add(new Paragraph(" ", kFont(8, Font.NORMAL)));
+    }
+
+    /** 누적 막대 한 칸 — 제목 + 총계 / 막대 / 색 범례 (화면과 동일 구성) */
+    private void addStackCell(PdfPTable grid, String title, List<Seg> segs) throws DocumentException {
+        long total = segs.stream().mapToLong(Seg::value).sum();
+
+        PdfPTable head = new PdfPTable(2);
+        head.setWidthPercentage(100);
+        head.addCell(textCell(title, kFont(8.5f, Font.BOLD), Element.ALIGN_LEFT));
+        head.addCell(textCell("총 " + total, kFont(7.5f, Font.NORMAL, C_INK2), Element.ALIGN_RIGHT));
+
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setPadding(4);
+        cell.addElement(head);
+        cell.addElement(barTable(segs, 9f));
+        cell.addElement(legendTable(segs));
+        grid.addCell(cell);
+    }
+
+    /** 색 범례 — 색 스와치 + 라벨 + 건수 (색만으로 구분하지 않는다) */
+    private PdfPTable legendTable(List<Seg> segs) {
+        PdfPTable legend = new PdfPTable(segs.size() * 2);
+        legend.setWidthPercentage(100);
+        float[] widths = new float[segs.size() * 2];
+        for (int i = 0; i < segs.size(); i++) {
+            widths[i * 2] = 1f;
+            widths[i * 2 + 1] = 7f;
+        }
+        try {
+            legend.setWidths(widths);
+        } catch (DocumentException ignored) {
+            // 폭 계산 실패 시 균등 분할로 둔다
+        }
+        for (Seg seg : segs) {
+            PdfPCell swatch = new PdfPCell(new Phrase(" "));
+            swatch.setBackgroundColor(seg.color());
+            swatch.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            swatch.setFixedHeight(6f);
+            swatch.setPaddingTop(2f);
+            legend.addCell(swatch);
+            legend.addCell(textCell(" " + seg.label() + " " + seg.value(),
+                    kFont(7, Font.NORMAL, C_INK2), Element.ALIGN_LEFT));
+        }
+        return legend;
+    }
+
+    /** 유형별 — 건수 순 가로 막대 (단일 색, 값은 막대 끝에 표기) */
+    private void addPrivacyByType(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        PdfPTable grid = new PdfPTable(2);
+        grid.setWidthPercentage(100);
+
+        List<Seg> rights = s.getRights().getByType() == null ? List.of()
+                : s.getRights().getByType().entrySet().stream()
+                .map(e -> new Seg(tRightsType(lang, e.getKey()), e.getValue(), C_SEQ))
+                .sorted((a, b) -> Long.compare(b.value(), a.value()))
+                .collect(Collectors.toList());
+        List<Seg> safeguards = s.getCompliance().getSafeguardByType() == null ? List.of()
+                : s.getCompliance().getSafeguardByType().stream()
+                .map(x -> new Seg(tSafeguardType(lang, x.getType()), x.getCount(), C_SEQ))
+                .sorted((a, b) -> Long.compare(b.value(), a.value()))
+                .collect(Collectors.toList());
+
+        addRankCell(grid, t(lang, "권리행사 유형별", "Rights by type"), rights,
+                t(lang, "접수된 권리행사가 없습니다.", "No requests."));
+        addRankCell(grid, t(lang, "안전조치 유형별", "Safeguards by type"), safeguards,
+                t(lang, "등록된 안전조치가 없습니다.", "No safeguards."));
+        doc.add(grid);
+    }
+
+    private void addRankCell(PdfPTable grid, String title, List<Seg> items, String empty) throws DocumentException {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setPadding(4);
+        cell.addElement(new Paragraph(title, kFont(8.5f, Font.BOLD)));
+        if (items.isEmpty()) {
+            cell.addElement(new Paragraph(empty, kFont(7.5f, Font.NORMAL, C_INK2)));
+            grid.addCell(cell);
+            return;
+        }
+        long max = items.stream().mapToLong(Seg::value).max().orElse(1);
+        for (Seg item : items) {
+            PdfPTable row = new PdfPTable(new float[]{3.2f, 5.5f, 1.3f});
+            row.setWidthPercentage(100);
+            row.addCell(textCell(item.label(), kFont(7.5f, Font.NORMAL, C_INK2), Element.ALIGN_LEFT));
+            PdfPCell barCell = new PdfPCell();
+            barCell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+            barCell.setPadding(1.5f);
+            barCell.addElement(barTable(List.of(
+                    new Seg(item.label(), item.value(), C_SEQ),
+                    new Seg("", Math.max(max - item.value(), 0), C_TRACK)), 7f));
+            row.addCell(barCell);
+            row.addCell(textCell(String.valueOf(item.value()), kFont(7.5f, Font.BOLD), Element.ALIGN_RIGHT));
+            cell.addElement(row);
+        }
+        grid.addCell(cell);
+    }
+
+    /**
+     * 가로 막대 — 값에 비례한 폭으로 조각을 이어 붙이고, 조각 사이는 흰 여백으로 띄운다.
+     * 값이 모두 0이면 빈 트랙만 그린다.
+     */
+    private PdfPTable barTable(List<Seg> segs, float height) {
+        List<Seg> visible = segs.stream().filter(x -> x.value() > 0).collect(Collectors.toList());
+        if (visible.isEmpty()) {
+            PdfPTable track = new PdfPTable(1);
+            track.setWidthPercentage(100);
+            track.addCell(barCell(C_TRACK, height, false));
+            return track;
+        }
+        float[] widths = new float[visible.size()];
+        for (int i = 0; i < visible.size(); i++) widths[i] = visible.get(i).value();
+        PdfPTable bar = new PdfPTable(widths);
+        bar.setWidthPercentage(100);
+        for (int i = 0; i < visible.size(); i++) {
+            bar.addCell(barCell(visible.get(i).color(), height, i < visible.size() - 1));
+        }
+        return bar;
+    }
+
+    private PdfPCell barCell(Color color, float height, boolean gapAfter) {
+        PdfPCell cell = new PdfPCell(new Phrase(" "));
+        cell.setFixedHeight(height);
+        cell.setBackgroundColor(color);
+        cell.setPadding(0);
+        if (gapAfter) {
+            cell.setBorder(com.lowagie.text.Rectangle.RIGHT);
+            cell.setBorderWidthRight(1.5f);
+            cell.setBorderColorRight(Color.WHITE);
+        } else {
+            cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        }
+        return cell;
+    }
+
+    private PdfPCell textCell(String text, Font font, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+        cell.setHorizontalAlignment(align);
+        cell.setPadding(1f);
+        return cell;
+    }
+
+    /** 상세 수치 — 화면의 '표로 보기'와 같은 값을 다음 장에 부록으로 싣는다 */
+    private void addPrivacyDetailTable(Document doc, String lang, PrivacyReportDto.Summary s) throws DocumentException {
+        doc.newPage();
+        doc.add(new Paragraph(t(lang, "상세 수치", "Detailed figures"), kFont(12, Font.BOLD)));
+        doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
+
+        PdfPTable table = new PdfPTable(new float[]{3f, 5f, 2f});
+        table.setWidthPercentage(100);
+        addHeaderCell(table, t(lang, "영역", "Area"), kFont(8.5f, Font.BOLD, Color.WHITE));
+        addHeaderCell(table, t(lang, "지표", "Metric"), kFont(8.5f, Font.BOLD, Color.WHITE));
+        addHeaderCell(table, t(lang, "값", "Value"), kFont(8.5f, Font.BOLD, Color.WHITE));
+
+        String[][] rows = {
+                {t(lang, "개인정보 처리현황", "Processing"), t(lang, "전체", "Total"), String.valueOf(s.getProcessing().getTotal())},
+                {"", t(lang, "운영중", "Active"), String.valueOf(s.getProcessing().getActive())},
+                {"", t(lang, "중단", "Inactive"), String.valueOf(s.getProcessing().getInactive())},
+                {t(lang, "개인정보파일", "Personal data files"), t(lang, "전체", "Total"), String.valueOf(s.getFiles().getTotal())},
+                {"", t(lang, "운영중", "Active"), String.valueOf(s.getFiles().getActive())},
+                {"", t(lang, "민감정보 포함", "Sensitive"), String.valueOf(s.getFiles().getSensitive())},
+                {"", t(lang, "고유식별정보 포함", "Unique ID"), String.valueOf(s.getFiles().getUniqueIdentifier())},
+                {t(lang, "수탁사", "Contractors"), t(lang, "전체", "Total"), String.valueOf(s.getContractors().getTotal())},
+                {"", t(lang, "점검함", "Inspected"), String.valueOf(s.getContractors().getChecked())},
+                {"", t(lang, "미점검", "Not inspected"), String.valueOf(s.getContractors().getUnchecked())},
+                {t(lang, "제3자 제공", "Data provision"), t(lang, "전체", "Total"), String.valueOf(s.getProvisions().getTotal())},
+                {"", t(lang, "제3자 제공", "Third party"), String.valueOf(s.getProvisions().getThirdParty())},
+                {"", t(lang, "공동이용", "Joint use"), String.valueOf(s.getProvisions().getJointUse())},
+                {"", t(lang, "국외이전", "Overseas"), String.valueOf(s.getProvisions().getOverseas())},
+                {t(lang, "보유기간", "Retention"), t(lang, "전체", "Total"), String.valueOf(s.getRetentions().getTotal())},
+                {"", t(lang, "30일 내 만료", "Expiring in 30d"), String.valueOf(s.getRetentions().getExpiringIn30Days())},
+                {"", t(lang, "만료 경과", "Overdue"), String.valueOf(s.getRetentions().getOverdue())},
+                {"", t(lang, "파기 완료", "Disposed"), String.valueOf(s.getRetentions().getDisposed())},
+                {t(lang, "파기", "Disposal"), t(lang, "전체", "Total"), String.valueOf(s.getDisposals().getTotal())},
+                {"", t(lang, "계획", "Planned"), String.valueOf(s.getDisposals().getPlanned())},
+                {"", t(lang, "승인대기", "Pending approval"), String.valueOf(s.getDisposals().getPendingApproval())},
+                {"", t(lang, "완료", "Completed"), String.valueOf(s.getDisposals().getCompleted())},
+                {t(lang, "권리행사", "Rights"), t(lang, "전체", "Total"), String.valueOf(s.getRights().getTotal())},
+                {"", t(lang, "처리중", "In progress"), String.valueOf(s.getRights().getInProgress())},
+                {"", t(lang, "완료", "Completed"), String.valueOf(s.getRights().getCompleted())},
+                {"", t(lang, "기한 초과", "SLA breached"), String.valueOf(s.getRights().getSlaBreached())},
+                {t(lang, "유출사고", "Breaches"), t(lang, "전체", "Total"), String.valueOf(s.getBreaches().getTotal())},
+                {"", t(lang, "미종결", "Open"), String.valueOf(s.getBreaches().getOpen())},
+                {"", t(lang, "신고기한 경과", "Report overdue"), String.valueOf(s.getBreaches().getReportOverdue())},
+                {"", t(lang, "유출 정보주체", "Affected subjects"), String.valueOf(s.getBreaches().getAffectedSubjects())},
+                {t(lang, "법령 준수", "Compliance"), t(lang, "DPIA 전체", "DPIA total"), String.valueOf(s.getCompliance().getDpiaTotal())},
+                {"", t(lang, "DPIA 완료", "DPIA completed"), String.valueOf(s.getCompliance().getDpiaCompleted())},
+                {"", t(lang, "DPIA 위험 높음", "DPIA high risk"), String.valueOf(s.getCompliance().getDpiaHighRisk())},
+                {"", t(lang, "안전조치 전체", "Safeguards"), String.valueOf(s.getCompliance().getSafeguardTotal())},
+                {"", t(lang, "안전조치 완료", "Safeguards completed"), String.valueOf(s.getCompliance().getSafeguardCompleted())},
+        };
+        for (String[] row : rows) addDetailRow(table, row[0], row[1], row[2]);
+
+        if (s.getRights().getByType() != null) {
+            boolean first = true;
+            for (Map.Entry<String, Long> e : s.getRights().getByType().entrySet()) {
+                addDetailRow(table, first ? t(lang, "권리행사 유형", "Rights by type") : "",
+                        tRightsType(lang, e.getKey()), String.valueOf(e.getValue()));
+                first = false;
+            }
+        }
+        if (s.getCompliance().getSafeguardByType() != null) {
+            boolean first = true;
+            for (var x : s.getCompliance().getSafeguardByType()) {
+                addDetailRow(table, first ? t(lang, "안전조치 유형", "Safeguards by type") : "",
+                        tSafeguardType(lang, x.getType()), String.valueOf(x.getCount()));
+                first = false;
+            }
+        }
+        doc.add(table);
+    }
+
+    private void addDetailRow(PdfPTable table, String area, String label, String value) {
+        PdfPCell areaCell = new PdfPCell(new Phrase(area, kFont(8, Font.NORMAL, C_INK2)));
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, kFont(8, Font.NORMAL)));
+        PdfPCell valueCell = new PdfPCell(new Phrase(value, kFont(8, Font.BOLD)));
+        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        for (PdfPCell c : List.of(areaCell, labelCell, valueCell)) {
+            c.setPadding(4);
+            c.setBorderColor(C_LINE);
+            table.addCell(c);
+        }
+    }
+
+    private String tSafeguardType(String lang, String type) {
+        if (!"ko".equalsIgnoreCase(lang)) return type;
+        return switch (type) {
+            case "ACCESS_REVIEW" -> "접근권한";
+            case "ACCESS_REVOKE" -> "권한회수";
+            case "ENCRYPTION" -> "암호화";
+            case "ACCESS_LOG_REVIEW" -> "접속기록";
+            case "PRINTOUT" -> "출력물";
+            case "EXPORT" -> "반출";
+            case "DORMANT_ACCOUNT" -> "휴면계정";
+            default -> type;
+        };
     }
 
     private String tRightsType(String lang, String type) {

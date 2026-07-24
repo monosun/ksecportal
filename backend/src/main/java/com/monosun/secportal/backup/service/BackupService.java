@@ -37,6 +37,8 @@ public class BackupService {
     private static final int PBKDF2_ITERATIONS = 100_000;
     private static final int KEY_BITS = 256;
     private static final Set<String> EXCLUDE_TABLES = Set.of("backup_history");
+    /** 테이블·컬럼 식별자 허용 문자 — 백업 파일에서 온 이름을 SQL 에 넣기 전 검증한다 (CWE-89) */
+    private static final java.util.regex.Pattern SQL_IDENTIFIER = java.util.regex.Pattern.compile("[A-Za-z0-9_]{1,64}");
     private static final DateTimeFormatter FILENAME_FMT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     private final JdbcTemplate jdbc;
@@ -148,15 +150,24 @@ public class BackupService {
 
                 if (columns == null || rows == null) continue;
 
-                jdbc.execute("DELETE FROM `" + tableName + "`");
+                // 테이블·컬럼 이름은 백업 파일에서 온 값이므로 식별자 형식을 검증한 뒤에만 SQL 에 넣는다.
+                String quotedTable = quoteIdent(tableName);
+                String deleteSql = "DELETE FROM " + quotedTable;
+                jdbc.execute(deleteSql);
 
                 if (rows.isEmpty()) continue;
 
-                String colList = columns.stream().map(c -> "`" + c + "`").collect(Collectors.joining(", "));
-                String placeholders = String.join(", ", Collections.nCopies(columns.size(), "?"));
-                String insertSql = "INSERT INTO `" + tableName + "` (" + colList + ") VALUES (" + placeholders + ")";
-
                 Map<String, String> types = colTypes.getOrDefault(tableName, Map.of());
+                for (String c : columns) {
+                    if (!types.isEmpty() && !types.containsKey(c.toLowerCase())) {
+                        throw new IllegalArgumentException(
+                                "백업 파일에 존재하지 않는 컬럼이 있습니다: " + tableName + "." + c);
+                    }
+                }
+
+                String colList = columns.stream().map(BackupService::quoteIdent).collect(Collectors.joining(", "));
+                String placeholders = String.join(", ", Collections.nCopies(columns.size(), "?"));
+                String insertSql = "INSERT INTO " + quotedTable + " (" + colList + ") VALUES (" + placeholders + ")";
                 List<Object[]> batchArgs = new ArrayList<>();
                 for (List<Object> row : rows) {
                     Object[] args = new Object[columns.size()];
@@ -267,8 +278,19 @@ public class BackupService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * SQL 식별자(테이블·컬럼)를 검증 후 백틱으로 감싼다.
+     * 값은 항상 바인딩 파라미터로 넘기므로, 문자열로 조립되는 것은 이 식별자뿐이다. (CWE-89)
+     */
+    private static String quoteIdent(String ident) {
+        if (ident == null || !SQL_IDENTIFIER.matcher(ident).matches()) {
+            throw new IllegalArgumentException("허용되지 않는 식별자입니다: " + ident);
+        }
+        return "`" + ident + "`";
+    }
+
     private Map<String, Object> exportTable(String tableName) {
-        List<Map<String, Object>> rawRows = jdbc.queryForList("SELECT * FROM `" + tableName + "`");
+        List<Map<String, Object>> rawRows = jdbc.queryForList("SELECT * FROM " + quoteIdent(tableName));
         if (rawRows.isEmpty()) {
             return Map.of("columns", List.of(), "rows", List.of());
         }

@@ -89,7 +89,8 @@
                 </div>
               </td>
               <td class="py-3 px-4">
-                <button v-if="doc.fileName" @click="download(doc)"
+                <button v-if="doc.fileName" @click="openPreview(doc)"
+                  :title="`${doc.fileName} 미리보기`"
                   class="flex items-center gap-1 text-primary-600 hover:text-primary-800 text-xs">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -246,6 +247,8 @@
               <div class="text-xs text-gray-400 mt-0.5">{{ v.uploaderName }} · {{ formatDate(v.createdAt) }}</div>
             </div>
             <div class="flex items-center gap-2">
+              <button v-if="v.fileName" @click="openPreview(v)"
+                class="text-xs text-gray-500 hover:text-primary-600">미리보기</button>
               <button v-if="v.fileName" @click="downloadById(v)"
                 class="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,6 +267,11 @@
         </div>
       </div>
     </div>
+
+    <!-- 파일 미리보기 -->
+    <FilePreviewModal :open="!!preview" :file-name="preview?.fileName" :title="preview?.title"
+      :loader="() => secDocApi.fetchBlob(preview.id)"
+      @close="preview = null" @download="previewDownload" />
   </div>
 </template>
 
@@ -272,6 +280,7 @@ import { ref, computed, onMounted } from 'vue'
 import { secDocApi, codeApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
+import FilePreviewModal from '@/components/FilePreviewModal.vue'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
@@ -285,6 +294,9 @@ const pageSize = ref(20)
 const totalPages = ref(0)
 const filters = ref({ category: '', keyword: '', field: 'ALL' })
 const orgCodes = ref([])
+
+// 파일 미리보기 팝업 대상 { id, fileName, title }
+const preview = ref(null)
 
 const showCreate = ref(false)
 const showAddVersion = ref(false)
@@ -437,6 +449,15 @@ async function download(doc) {
   } catch (e) {
     alert('다운로드에 실패했습니다.')
   }
+}
+
+// 파일명을 누르면 내려받지 않고 팝업으로 먼저 보여준다 (PDF·이미지·엑셀/CSV·텍스트)
+function openPreview(doc) {
+  preview.value = { id: doc.id, fileName: doc.fileName, title: doc.title || '' }
+}
+
+function previewDownload() {
+  if (preview.value) download(preview.value)
 }
 
 async function downloadById(v) {

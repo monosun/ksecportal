@@ -344,6 +344,7 @@ import { fetchLawFull } from '@/services/legalApiService.js'
 import { LAW_ARTICLES } from '@/data/legalArticles.js'
 import { appSettingApi } from '@/api/index.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { randomId } from '@/utils/secureRandom.js'
 
 const props = defineProps({ laws: { type: Array, default: () => [] } })
 defineEmits(['close'])
@@ -664,7 +665,7 @@ const MAX_HISTORY = 20
 const contentDiffs = ref({})   // lawName → { isFirst, prevDate, changedCount, changes, deletedNos }
 
 function newEntryId() {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  return randomId(String(Date.now()))
 }
 
 function nowStamp() {

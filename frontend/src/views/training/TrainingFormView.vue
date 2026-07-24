@@ -244,6 +244,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { trainingApi, quizBankApi } from '@/api'
+import { shuffle as secureShuffle } from '@/utils/secureRandom.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -408,11 +409,8 @@ async function fetchBankPool(difficulty) {
 }
 
 function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
+  // 문항 무작위 추출은 예측 가능하면 안 되므로 CSPRNG 기반 셔플을 쓴다 (CWE-330)
+  return secureShuffle(arr)
 }
 
 async function randomPick() {

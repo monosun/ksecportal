@@ -229,6 +229,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { trainingApi, quizBankApi } from '@/api'
+import { shuffle as secureShuffle } from '@/utils/secureRandom.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -375,11 +376,8 @@ async function fetchBankPool(difficulty) {
   return all
 }
 function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
+  // 문항 무작위 추출은 예측 가능하면 안 되므로 CSPRNG 기반 셔플을 쓴다 (CWE-330)
+  return secureShuffle(arr)
 }
 async function randomPick() {
   randomPicking.value = true

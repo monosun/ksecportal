@@ -211,6 +211,11 @@ const routes = [
         component: () => import('@/views/secdoc/SecDocListView.vue')
       },
       {
+        path: 'security-reviews',
+        name: 'SecurityReviews',
+        component: () => import('@/views/secreview/SecurityReviewView.vue')
+      },
+      {
         path: 'committee',
         name: 'Committee',
         component: () => import('@/views/committee/CommitteeView.vue')

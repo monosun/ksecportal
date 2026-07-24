@@ -235,6 +235,7 @@ const MENUS = [
   // 보안 교육 / 문서관리
   { key: 'training',          label: 'IT 및 정보보호 교육' },
   { key: 'sec_docs',          label: '보안문서' },
+  { key: 'security_reviews',  label: '보안성 심의' },
   // 개인정보보호
   { key: 'privacy_processing', label: '[개인정보] 처리현황' },
   { key: 'privacy_files',      label: '[개인정보] 파일관리' },

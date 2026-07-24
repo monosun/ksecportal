@@ -19,14 +19,32 @@
       </div>
     </div>
 
-    <div class="card mb-6">
-      <input v-model="keyword" type="text" :placeholder="$t('common.search')" class="input max-w-xs" @input="debouncedSearch" />
+    <!-- 검색 · 항목 필터 -->
+    <div class="card mb-6 flex flex-wrap items-center gap-3">
+      <input v-model="keyword" type="text" :placeholder="`${$t('common.search')} (제목 · 설명)`"
+        class="input flex-1 min-w-48" @input="debouncedSearch" />
+      <select v-model="filters.mandatory" class="input w-36" @change="loadCourses">
+        <option value="">이수구분: {{ $t('common.all') }}</option>
+        <option value="true">{{ $t('training.mandatory') }}</option>
+        <option value="false">{{ $t('training.optional') }}</option>
+      </select>
+      <select v-model="filters.contentType" class="input w-40" @change="loadCourses">
+        <option value="">교육유형: {{ $t('common.all') }}</option>
+        <option v-for="t in contentTypes" :key="t" :value="t">{{ $t(`training.contentType.${t}`) }}</option>
+      </select>
+      <select v-model="filters.completed" class="input w-36">
+        <option value="">이수여부: {{ $t('common.all') }}</option>
+        <option value="done">{{ $t('training.completed') }}</option>
+        <option value="todo">미이수</option>
+      </select>
+      <button v-if="hasFilter" @click="resetFilters" class="btn-secondary text-sm px-3">초기화</button>
+      <span class="text-sm text-gray-500">{{ filteredCourses.length }}개</span>
     </div>
 
     <div v-if="loading" class="text-center text-gray-400 py-16">{{ $t('common.loading') }}</div>
-    <div v-else-if="!courses.length" class="text-center text-gray-400 py-16">{{ $t('common.noData') }}</div>
+    <div v-else-if="!filteredCourses.length" class="text-center text-gray-400 py-16">{{ $t('common.noData') }}</div>
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="course in courses" :key="course.id"
+      <div v-for="course in filteredCourses" :key="course.id"
         class="card hover:shadow-md transition-shadow cursor-pointer"
         @click="openDetail(course)">
         <div class="flex items-start justify-between mb-3">
@@ -58,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { trainingApi, exportApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
@@ -82,11 +100,32 @@ const courses = ref([])
 const loading = ref(false)
 const keyword = ref('')
 
+const contentTypes = ['VIDEO', 'DOCUMENT', 'QUIZ_ONLY']
+// 이수구분·교육유형은 서버 조회 조건, 이수여부는 사용자별 값이라 조회 결과에서 거른다.
+const filters = ref({ mandatory: '', contentType: '', completed: '' })
+
+const hasFilter = computed(() =>
+  !!(keyword.value || filters.value.mandatory || filters.value.contentType || filters.value.completed))
+
+const filteredCourses = computed(() => {
+  if (filters.value.completed === 'done') return courses.value.filter(c => c.completedByMe)
+  if (filters.value.completed === 'todo') return courses.value.filter(c => !c.completedByMe)
+  return courses.value
+})
+
+function resetFilters() {
+  keyword.value = ''
+  filters.value = { mandatory: '', contentType: '', completed: '' }
+  loadCourses()
+}
+
 async function loadCourses() {
   loading.value = true
   try {
     const params = { size: 50 }
     if (keyword.value) params.keyword = keyword.value
+    if (filters.value.mandatory) params.mandatory = filters.value.mandatory
+    if (filters.value.contentType) params.contentType = filters.value.contentType
     const res = await trainingApi.list(params)
     courses.value = res.data?.content || []
   } finally {

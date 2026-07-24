@@ -16,6 +16,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class PolicyService {
@@ -75,6 +77,18 @@ public class PolicyService {
         Policy policy = findById(id);
         auditLogService.log("POLICY_DELETED", "POLICY", id, policy.getTitle());
         policyRepository.delete(policy);
+    }
+
+    /** 목록에서 선택한 정책 일괄 삭제 — 존재하지 않는 ID 는 건너뛰고 실제 삭제 건수를 돌려준다. */
+    @Transactional
+    public int deleteAll(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        List<Policy> policies = policyRepository.findAllById(ids);
+        for (Policy policy : policies) {
+            auditLogService.log("POLICY_DELETED", "POLICY", policy.getId(), policy.getTitle());
+        }
+        policyRepository.deleteAll(policies);
+        return policies.size();
     }
 
     @Transactional

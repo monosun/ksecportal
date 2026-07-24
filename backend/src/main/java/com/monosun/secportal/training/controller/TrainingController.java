@@ -3,6 +3,7 @@ package com.monosun.secportal.training.controller;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.training.dto.TrainingDto;
+import com.monosun.secportal.training.entity.TrainingCourse;
 import com.monosun.secportal.training.service.TrainingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +25,11 @@ public class TrainingController {
     @GetMapping("/courses")
     public ApiResponse<Page<TrainingDto.CourseSummary>> list(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean mandatory,
+            @RequestParam(required = false) TrainingCourse.ContentType contentType,
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal User user) {
-        return ApiResponse.ok(trainingService.list(keyword, user.getId(), pageable));
+        return ApiResponse.ok(trainingService.list(keyword, mandatory, contentType, user.getId(), pageable));
     }
 
     @GetMapping("/results")

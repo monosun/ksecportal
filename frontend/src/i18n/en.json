@@ -32,6 +32,7 @@
     "internalAudit": "Internal Audit",
     "secFindings": "Security Findings",
     "sourceScan": "Source Vulnerability Scan",
+    "securityReviews": "Security Design Review",
     "logout": "Logout",
     "profile": "Profile",
     "settings": "Settings",
@@ -76,7 +77,7 @@
       "logMgmt": "Log Management",
       "governance": "Governance",
       "education": "Training & Awareness",
-      "docMgmt": "Document Management",
+      "docMgmt": "Security Guides & Resources",
       "privacy": "Privacy Protection"
     }
   },

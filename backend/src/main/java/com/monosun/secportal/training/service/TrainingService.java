@@ -29,8 +29,10 @@ public class TrainingService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public Page<TrainingDto.CourseSummary> list(String keyword, Long userId, Pageable pageable) {
-        return courseRepository.search(keyword, pageable)
+    public Page<TrainingDto.CourseSummary> list(String keyword, Boolean mandatory,
+                                                TrainingCourse.ContentType contentType,
+                                                Long userId, Pageable pageable) {
+        return courseRepository.search(keyword, mandatory, contentType, pageable)
                 .map(course -> {
                     boolean completed = completionRepository.existsByCourseIdAndUserId(course.getId(), userId);
                     Integer score = completionRepository.findByCourseIdAndUserId(course.getId(), userId)

@@ -58,6 +58,7 @@ export const policyApi = {
   create: (data) => api.post('/policies', data),
   update: (id, data) => api.patch(`/policies/${id}`, data),
   delete: (id) => api.delete(`/policies/${id}`),
+  deleteBulk: (ids) => api.delete('/policies', { params: { ids: ids.join(',') } }),
   acknowledge: (id) => api.post(`/policies/${id}/acknowledge`)
 }
 
@@ -225,6 +226,32 @@ export const securityIntegrationApi = {
   deleteEvent: (eventId) => api.delete(`/security-integrations/events/${eventId}`)
 }
 
+export const securityReviewApi = {
+  list: (params) => api.get('/security-reviews', { params }),
+  summary: () => api.get('/security-reviews/summary'),
+  get: (id) => api.get(`/security-reviews/${id}`),
+  create: ({ file, ...data }) => {
+    const fd = new FormData()
+    Object.entries(data).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '') fd.append(k, v)
+    })
+    if (file) fd.append('file', file)
+    return api.post('/security-reviews', fd)
+  },
+  update: (id, data) => api.patch(`/security-reviews/${id}`, data),
+  decide: (id, data) => api.post(`/security-reviews/${id}/decision`, data),
+  delete: (id) => api.delete(`/security-reviews/${id}`),
+  uploadFile: (id, file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post(`/security-reviews/${id}/file`, fd)
+  },
+  downloadFile: (id, fileName) => downloadBlob(`/security-reviews/${id}/file`, fileName || 'attachment'),
+  addItem: (id, data) => api.post(`/security-reviews/${id}/items`, data),
+  updateItem: (itemId, data) => api.patch(`/security-reviews/items/${itemId}`, data),
+  deleteItem: (itemId) => api.delete(`/security-reviews/items/${itemId}`)
+}
+
 const downloadBlob = (url, filename, params) =>
   api.get(url, { responseType: 'blob', params }).then(blob => {
     const a = document.createElement('a')
@@ -251,6 +278,15 @@ export const exportApi = {
     const lang = getLang()
     const name = lang === 'ko' ? `보안정책-보고서-${today()}.pdf` : `security-policy-report-${today()}.pdf`
     return downloadBlob('/reports/policies/pdf', name, { lang })
+  },
+  // 소스 취약점 점검(SAST) 결과 보고서 — 점검 1건
+  sourceScanPdf: (scanId, repository) => {
+    const lang = getLang()
+    const repo = (repository || '').replace(/[\\/:*?"<>|]/g, '_')
+    const name = lang === 'ko'
+      ? `소스취약점점검-${repo || scanId}-${today()}.pdf`
+      : `source-scan-${repo || scanId}-${today()}.pdf`
+    return downloadBlob(`/reports/source-scan/${scanId}/pdf`, name, { lang })
   },
   // 개인정보 현황보고서
   privacyPdf: () => {
@@ -433,7 +469,9 @@ export const secDocApi = {
   update: (id, data) => api.patch(`/sec-docs/${id}`, data),
   delete: (id) => api.delete(`/sec-docs/${id}`),
   deleteVersion: (id) => api.delete(`/sec-docs/${id}/version`),
-  download: (id, fileName) => downloadBlob(`/sec-docs/${id}/download`, fileName)
+  download: (id, fileName) => downloadBlob(`/sec-docs/${id}/download`, fileName),
+  // 미리보기용 — 내려받지 않고 Blob 그대로 받는다
+  fetchBlob: (id) => api.get(`/sec-docs/${id}/download`, { responseType: 'blob' })
 }
 
 export const committeeApi = {

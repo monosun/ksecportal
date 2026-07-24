@@ -39,6 +39,9 @@ public class SastEngine {
     private static final int MAX_FINDINGS = 1000;
     private static final int MAX_LINE_LEN = 2000;   // 초장문(압축·번들) 라인 스킵
 
+    /** 검토 후 예외로 인정한 줄에 남기는 억제 주석 (`// sast:ignore 사유`, `# sast:ignore …`) */
+    private static final Pattern SUPPRESS_MARKER = Pattern.compile("sast\\s*:\\s*ignore", Pattern.CASE_INSENSITIVE);
+
     private static final List<Rule> RULES = buildRules();
 
     public List<Hit> scanArchive(byte[] tarGz) {
@@ -70,6 +73,9 @@ public class SastEngine {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             if (line.length() > MAX_LINE_LEN) continue;
+            // 오탐 억제 주석 — 검토 후 예외로 인정한 줄은 건너뛴다.
+            // 예: someCall(...);  // sast:ignore 사유
+            if (SUPPRESS_MARKER.matcher(line).find()) continue;
             for (Rule rule : RULES) {
                 Matcher m = rule.pattern().matcher(line);
                 if (m.find()) {
@@ -124,7 +130,7 @@ public class SastEngine {
                 "Cipher\\.getInstance\\(\\s*[\"'](DES|DESede|RC4|RC2|[^\"']*ECB[^\"']*)[\"']", F)));
         r.add(new Rule("SAST-TLS-DISABLED", "A02:2021-Cryptographic Failures", "CWE-295", Severity.HIGH,
                 "TLS 인증서 검증 비활성화", Pattern.compile(
-                "rejectUnauthorized\\s*:\\s*false|verify\\s*=\\s*False|CURLOPT_SSL_VERIFY(PEER|HOST)\\s*,\\s*(0|false)|TrustAllCerts|NoopHostnameVerifier|ALLOW_ALL_HOSTNAME", F)));
+                "rejectUnauthorized\\s*:\\s*false|verify\\s*=\\s*False|CURLOPT_SSL_VERIFY(PEER|HOST)\\s*,\\s*(0|false)|TrustAllCerts|NoopHostnameVerifier|ALLOW_ALL_HOSTNAME", F)));   // sast:ignore 탐지 규칙 정의일 뿐, 이 코드에는 TLS 설정이 없다
         r.add(new Rule("SAST-RANDOM-INSECURE", "A02:2021-Cryptographic Failures", "CWE-330", Severity.LOW,
                 "보안 용도에 부적합한 난수(Math.random/java.util.Random)", Pattern.compile(
                 "Math\\.random\\(\\)|new\\s+java\\.util\\.Random\\(|new\\s+Random\\(", F)));

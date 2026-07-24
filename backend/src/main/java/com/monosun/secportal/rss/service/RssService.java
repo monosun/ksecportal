@@ -110,9 +110,20 @@ public class RssService {
     private List<RssItemDto> parseRss(String xml, String category, LocalDate cutoff) {
         List<RssItemDto> items = new ArrayList<>();
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            // XXE 방어 (CWE-611) — DOCTYPE 자체를 막고, 외부 엔티티·스키마 접근 경로를 모두 차단한다.
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();   // sast:ignore 바로 아래에서 DOCTYPE·외부 엔티티를 모두 차단한다
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
             DocumentBuilder builder = factory.newDocumentBuilder();
+            // 파서가 외부 리소스를 절대 가져오지 않도록 EntityResolver 도 무력화한다.
+            builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
             Document doc = builder.parse(new InputSource(new StringReader(xml)));
 
             NodeList nodeList = doc.getElementsByTagName("item");
@@ -121,10 +132,17 @@ public class RssService {
                 String pubDate = text(item, "pubDate");
                 if (cutoff != null && !isWithinCutoff(pubDate, cutoff)) continue;
 
+                String title = stripHtml(text(item, "title"));
+                // 뉴스 피드의 요약에는 <a href=…> 같은 마크업이 그대로 들어있어 화면에 노출된다.
+                // 태그를 걷어내고 본문만 남긴 뒤 길이를 자른다.
+                String description = truncate(stripHtml(text(item, "description")), 200);
+                // 요약이 제목과 같은 피드(개인정보 유출 뉴스 등)는 화면에 같은 문장이 두 줄로 찍히므로 비운다.
+                if (sameAsTitle(title, description)) description = null;
+
                 items.add(RssItemDto.builder()
-                        .title(text(item, "title"))
+                        .title(title)
                         .link(text(item, "link"))
-                        .description(truncate(text(item, "description"), 200))
+                        .description(description)
                         .pubDate(pubDate)
                         .category(category)
                         .build());
@@ -156,5 +174,54 @@ public class RssService {
     private String truncate(String s, int max) {
         if (s == null || s.length() <= max) return s;
         return s.substring(0, max) + "…";
+    }
+
+    /**
+     * RSS 요약에 섞여 오는 HTML 을 걷어내고 사람이 읽는 문장만 남긴다.
+     * (뉴스 피드 description 은 대부분 &lt;a href&gt;·&lt;img&gt;·&lt;font&gt; 마크업을 그대로 담고 있다)
+     */
+    private String stripHtml(String s) {
+        if (s == null || s.isBlank()) return s;
+        // 이스케이프된 마크업(&lt;a href=…&gt;)도 걷어내려면 먼저 엔티티를 되돌린 뒤 태그를 제거한다.
+        String out = unescape(s)
+                .replaceAll("(?is)<(script|style)[^>]*>.*?</\\1>", " ")  // 스크립트·스타일은 내용까지 제거
+                .replaceAll("(?is)<br\\s*/?>|</p>|</div>|</li>", " ")     // 줄바꿈 태그는 공백으로
+                .replaceAll("(?s)<[^>]+>", "");                            // 나머지 태그 제거
+        return unescape(out).replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * 요약이 사실상 제목과 같은지 판단한다.
+     * 구글 뉴스 RSS 는 요약이 "제목 + 언론사"(제목의 ' - ' 구분자만 빠진 형태)라서
+     * 글자·숫자만 남긴 키로 비교해야 같은 문장임을 알아낼 수 있다.
+     * 제목 뒤에 실제 본문 요약이 더 붙은 경우는 정보가 있으므로 남긴다.
+     */
+    private boolean sameAsTitle(String title, String description) {
+        if (title == null || description == null || description.isBlank()) return false;
+        String t = compactKey(title);
+        String d = compactKey(description);
+        if (t.isEmpty() || d.isEmpty()) return false;
+        if (t.equals(d)) return true;
+        // 한쪽이 다른 쪽을 자른 형태(말줄임 등)도 같은 문장으로 본다
+        String shorter = t.length() <= d.length() ? t : d;
+        String longer = t.length() <= d.length() ? d : t;
+        return longer.startsWith(shorter) && longer.length() - shorter.length() <= 3;
+    }
+
+    /** 비교용 키 — 공백·문장부호를 모두 걷어내고 글자와 숫자만 남긴다 */
+    private String compactKey(String s) {
+        return s.replaceAll("[^\\p{L}\\p{N}]", "").toLowerCase();
+    }
+
+    /** 자주 쓰이는 HTML 엔티티만 되돌린다 */
+    private String unescape(String s) {
+        return s.replace("&nbsp;", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&#39;", "'")
+                .replace("&#34;", "\"")
+                .replace("&amp;", "&");
     }
 }

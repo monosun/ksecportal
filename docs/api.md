@@ -100,6 +100,15 @@
 
 ### DELETE /policies/:id *(ADMIN)*
 
+### DELETE /policies?ids=1,2,3 *(ADMIN)*
+
+목록에서 선택한 정책 일괄 삭제. 존재하지 않는 ID 는 건너뛰고 **실제 삭제 건수**를 반환합니다.
+정책에 연결된 열람 확인 기록도 함께 삭제됩니다(`cascade = ALL`).
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `ids` | List&lt;Long&gt; | 삭제할 정책 ID 목록 (콤마 구분) |
+
 ### POST /policies/:id/acknowledge
 
 정책 수신 확인. 중복 확인 시 409 반환.
@@ -658,9 +667,11 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 
 | 파라미터 | 타입 | 설명 |
 |----------|------|------|
-| `keyword` | String | 코스명 검색 |
+| `keyword` | String | 코스명 **또는 설명** 검색 |
+| `mandatory` | Boolean | 이수구분 — `true` 필수 / `false` 선택 |
+| `contentType` | String | 교육유형 — `VIDEO`, `DOCUMENT`, `QUIZ_ONLY` |
 
-응답에 현재 사용자의 `completed`, `score` 포함.
+응답에 현재 사용자의 `completed`, `score` 포함. (이수여부 필터는 사용자별 값이라 화면에서 처리)
 
 ### POST /training/courses *(MANAGER+)*
 
@@ -813,6 +824,7 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 | `GET /reports/assets/pdf` | `lang` | 자산 관리 리포트 (통계 + 전체 목록) |
 | `GET /reports/incidents/pdf` | `lang` | 보안 인시던트 리포트 (통계 + 전체 목록) |
 | `GET /reports/isms/pdf` | `year`, `lang` | ISMS-P 연도별 준수 현황 리포트 |
+| `GET /reports/source-scan/{scanId}/pdf` | `lang` | 소스 취약점 점검(SAST) 결과 보고서 — 점검 1건(요약·심각도/카테고리 분포·발견 목록, 가로 A4) |
 | `GET /reports/users/pdf` *(ADMIN)* | `lang` | 사용자 관리 리포트 (통계 + 전체 목록) |
 
 ### CSV 다운로드
@@ -1223,6 +1235,75 @@ GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenSt
 ### DELETE /source-scan/scans/:id *(MANAGER+)*
 
 점검 이력 삭제.
+
+---
+
+## 보안성 심의 (Security Design Review)
+
+신규 시스템 구축·변경 시 설계 단계의 보안 요구사항 충족 여부를 검토한다.
+심의 요청은 로그인 사용자 누구나 가능하고, **검토·결과 등록·삭제는 MANAGER+** 이다.
+
+### GET /security-reviews
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `status` | String | `REQUESTED`, `IN_REVIEW`, `REVISION`, `COMPLETED` |
+| `reviewType` | String | `NEW`, `CHANGE`, `INTEGRATION`, `DECOMMISSION` |
+| `keyword` | String | 제목 · 시스템명 · 요청부서 |
+| `page`, `size` | int | 페이지네이션 |
+
+응답 항목에 검토 진행 현황(`itemTotal`, `itemChecked`, `itemFailed`)이 포함된다(목록에서는 `items` 생략).
+
+### GET /security-reviews/summary
+
+상태별·결과별 건수: `requested`, `inReview`, `revision`, `completed`, `approved`, `conditional`, `rejected`.
+
+### GET /security-reviews/:id
+
+심의 상세 + 검토 체크리스트(`items`) 전체.
+
+### POST /security-reviews *(multipart/form-data)*
+
+심의 요청 등록. 등록 시 **기본 검토 체크리스트 20개 항목이 자동 생성**된다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `title` | String | 심의 제목 (필수) |
+| `systemName` | String | 대상 시스템·서비스 (필수) |
+| `reviewType` | String | 심의 구분 (기본 `NEW`) |
+| `department` | String | 요청 부서 |
+| `description` | String | 구축·변경 개요 |
+| `handlesPersonalData` | Boolean | 개인정보 처리 여부 |
+| `internetFacing` | Boolean | 인터넷 공개 여부 |
+| `targetDate` | Date | 오픈(적용) 예정일 |
+| `file` | File | 설계서 첨부 (선택) |
+
+### PATCH /security-reviews/:id *(MANAGER+)*
+
+요청 정보·진행 상태 수정. `status`를 `COMPLETED`로 직접 바꿀 수 없다(결과 등록 API 사용 — `400`).
+
+### POST /security-reviews/:id/decision *(MANAGER+)*
+
+심의 결과 확정. **미검토(PENDING) 항목이 남아 있으면 `400`** 으로 막는다.
+
+```json
+{ "decision": "APPROVED", "reviewComment": "운영 이관 전 취약점 점검 결과 제출 조건" }
+```
+
+`decision`: `APPROVED`(승인) · `CONDITIONAL`(조건부 승인) · `REJECTED`(반려)
+
+### 검토 항목 · 첨부
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/security-reviews/{id}/items` | 검토 항목 추가 (MANAGER+) |
+| `PATCH` | `/security-reviews/items/{itemId}` | 검토 결과(`PASS`/`FAIL`/`NA`)·의견 저장 (MANAGER+) |
+| `DELETE` | `/security-reviews/items/{itemId}` | 검토 항목 삭제 (MANAGER+) |
+| `POST` | `/security-reviews/{id}/file` | 설계서 첨부·교체 (multipart) |
+| `GET` | `/security-reviews/{id}/file` | 설계서 다운로드 |
+| `DELETE` | `/security-reviews/{id}` | 심의 삭제 (MANAGER+) |
+
+첫 검토 결과가 입력되면 상태가 `REQUESTED` → `IN_REVIEW` 로 자동 전환된다.
 
 ---
 

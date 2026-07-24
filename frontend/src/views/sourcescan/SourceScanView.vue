@@ -110,7 +110,16 @@
             </h2>
             <p v-if="detail.scan.message" class="text-xs text-amber-600 mt-1 whitespace-pre-wrap">{{ detail.scan.message }}</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-wrap items-center">
+            <button @click="downloadPdf" :disabled="pdfLoading"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              title="이 점검 결과를 PDF 보고서로 내려받습니다">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              {{ pdfLoading ? '생성 중...' : 'PDF 보고서' }}
+            </button>
             <button v-for="c in categoryFilters" :key="c.value" @click="categoryFilter = c.value"
               :class="['px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
                 categoryFilter === c.value ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50']">
@@ -131,6 +140,7 @@
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">카테고리</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">내용</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">대상 / 위치</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">CWE</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">CVE</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">링크</th>
             </tr>
@@ -145,6 +155,14 @@
                 <p v-if="f.location" class="text-gray-400">{{ f.location }}</p>
                 <span v-if="!f.identifier && !f.location">-</span>
               </td>
+              <td class="px-5 py-3">
+                <button v-if="cweOf(f)" @click.stop="openCwe(cweOf(f))"
+                  class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  :title="`${cweOf(f)} 상세 설명 보기`">
+                  {{ cweOf(f) }}
+                </button>
+                <span v-else class="text-gray-400 text-xs">-</span>
+              </td>
               <td class="px-5 py-3 font-mono text-xs">{{ f.cveId || '-' }}</td>
               <td class="px-5 py-3">
                 <a v-if="f.htmlUrl" :href="f.htmlUrl" target="_blank" rel="noopener"
@@ -156,13 +174,61 @@
         </table>
       </div>
     </div>
+
+    <!-- CWE 상세 팝업 -->
+    <div v-if="cweModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      @click.self="cweModal = null">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div class="flex items-start justify-between gap-4 p-5 border-b">
+          <div>
+            <p class="font-mono text-sm font-bold text-blue-700">{{ cweModal.id }}</p>
+            <h2 class="text-base font-semibold text-gray-900 mt-0.5">{{ cweModal.info?.name || '설명이 준비되지 않은 항목' }}</h2>
+          </div>
+          <button @click="cweModal = null" class="text-gray-400 hover:text-gray-600 shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-5 overflow-y-auto flex-1 space-y-4 text-sm">
+          <template v-if="cweModal.info">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 mb-1">무엇인가</p>
+              <p class="text-gray-700 leading-relaxed">{{ cweModal.info.summary }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 mb-1">위험</p>
+              <p class="text-gray-700 leading-relaxed">{{ cweModal.info.impact }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 mb-1">조치 방법</p>
+              <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                <li v-for="(f, i) in cweModal.info.fix" :key="i">{{ f }}</li>
+              </ul>
+            </div>
+          </template>
+          <p v-else class="text-gray-500">
+            이 CWE 에 대한 내부 설명이 아직 등록되지 않았습니다. 아래 MITRE 원문을 참고하세요.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
+          <a :href="cweUrl(cweModal.id)" target="_blank" rel="noopener"
+            class="text-sm text-blue-600 hover:underline">MITRE CWE 원문 보기 ↗</a>
+          <button @click="cweModal = null"
+            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100">닫기</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { sourceScanApi } from '@/api'
+import { sourceScanApi, exportApi } from '@/api'
+import { CWE_INFO, extractCwe, cweUrl } from '@/data/cweInfo.js'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -236,6 +302,30 @@ async function openDetail(id) {
   const res = await sourceScanApi.scan(id)
   detail.value = res.data
   categoryFilter.value = ''
+}
+
+// ── CWE 설명 ─────────────────────────────────────────────────────
+// SAST 발견은 식별자에 "A03:2021-Injection · CWE-89" 형태로 CWE 가 들어온다.
+const cweModal = ref(null)
+
+function cweOf(f) {
+  return extractCwe(f.identifier) || extractCwe(f.title)
+}
+
+function openCwe(id) {
+  cweModal.value = { id, info: CWE_INFO[id] || null }
+}
+
+// 점검 1건을 PDF 보고서로 내려받는다 (서버에서 화면과 같은 집계·목록으로 생성)
+const pdfLoading = ref(false)
+async function downloadPdf() {
+  if (!detail.value?.scan?.id) return
+  pdfLoading.value = true
+  try {
+    await exportApi.sourceScanPdf(detail.value.scan.id, detail.value.scan.repository)
+  } finally {
+    pdfLoading.value = false
+  }
 }
 
 const categoryFilters = [

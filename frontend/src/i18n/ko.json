@@ -32,6 +32,7 @@
     "internalAudit": "내부감사",
     "secFindings": "보안 결함사항",
     "sourceScan": "소스 취약점 점검",
+    "securityReviews": "보안성 심의",
     "logout": "로그아웃",
     "profile": "내 정보",
     "settings": "환경설정",
@@ -76,7 +77,7 @@
       "logMgmt": "로그 통합관리",
       "governance": "보안 거버넌스",
       "education": "교육 및 훈련",
-      "docMgmt": "문서관리",
+      "docMgmt": "보안 가이드 및 자료",
       "privacy": "개인정보보호"
     }
   },

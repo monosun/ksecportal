@@ -10,6 +10,12 @@ import org.springframework.data.repository.query.Param;
 public interface TrainingCourseRepository extends JpaRepository<TrainingCourse, Long> {
 
     @Query("SELECT c FROM TrainingCourse c WHERE c.active = true AND " +
-           "(:keyword IS NULL OR LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<TrainingCourse> search(@Param("keyword") String keyword, Pageable pageable);
+           "(:keyword IS NULL OR LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "   OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+           "(:mandatory IS NULL OR c.mandatory = :mandatory) AND " +
+           "(:contentType IS NULL OR c.contentType = :contentType)")
+    Page<TrainingCourse> search(@Param("keyword") String keyword,
+                                @Param("mandatory") Boolean mandatory,
+                                @Param("contentType") TrainingCourse.ContentType contentType,
+                                Pageable pageable);
 }
