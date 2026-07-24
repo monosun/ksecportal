@@ -117,7 +117,7 @@
           <!-- 연계 및 보안 관리 -->
           <section class="section">
             <h3 class="section-title">연계 및 보안 관리</h3>
-            <div class="grid grid-cols-3 gap-x-5 gap-y-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-3">
               <Field v-if="asset.linkedSystems" label="연계 시스템" class="col-span-3">{{ asset.linkedSystems }}</Field>
               <Field label="접근권한 관리"><span :class="asset.accessControlTarget ? 'badge-blue' : 'badge-gray'">{{ asset.accessControlTarget ? 'O' : 'X' }}</span></Field>
               <Field label="백업 대상"><span :class="asset.backupTarget ? 'badge-blue' : 'badge-gray'">{{ asset.backupTarget ? 'O' : 'X' }}</span></Field>

@@ -85,7 +85,7 @@
             <div>
               <label class="text-sm font-medium text-gray-700 block mb-2">메뉴별 권한</label>
               <div class="border border-gray-200 rounded-lg overflow-hidden">
-                <table class="w-full text-sm">
+                <div class="overflow-x-auto"><table class="w-full text-sm">
                   <thead class="bg-gray-50">
                     <tr>
                       <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-600">메뉴</th>
@@ -115,7 +115,7 @@
                       </td>
                     </tr>
                   </tbody>
-                </table>
+                </table></div>
               </div>
               <p class="text-xs text-gray-400 mt-1.5">쓰기/삭제 권한 선택 시 읽기 권한이 자동으로 포함됩니다.</p>
             </div>

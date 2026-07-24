@@ -125,7 +125,7 @@
 
           <!-- 법령 상세 테이블 (펼쳐진 상태) -->
           <div v-if="expanded.has(industry.id)" class="border-t border-gray-100">
-            <table class="w-full text-xs">
+            <div class="overflow-x-auto"><table class="w-full text-xs">
               <thead>
                 <tr class="bg-gray-50 text-left text-gray-500 font-semibold">
                   <th class="px-4 py-2 w-8">
@@ -169,7 +169,7 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 

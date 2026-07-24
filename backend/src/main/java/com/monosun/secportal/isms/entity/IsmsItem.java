@@ -46,6 +46,15 @@ public class IsmsItem {
     @Column(columnDefinition = "TEXT")
     private String guide;
 
+    /** 기본 증적제목 — 항목별 대표 증적의 제목. 일괄등록 템플릿·기본값으로 사용한다.
+     *  연도와 무관한 항목 속성이며 코드관리 화면에서 편집한다. */
+    @Column(columnDefinition = "TEXT")
+    private String defaultEvidenceTitle;
+
+    /** 기본 증적내용 — 항목별 대표 증적의 내용(증적예시). */
+    @Column(columnDefinition = "TEXT")
+    private String defaultEvidenceContent;
+
     @Column(nullable = false)
     private int sortOrder;
 

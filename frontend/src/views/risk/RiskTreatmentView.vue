@@ -86,7 +86,7 @@
         연도를 이동하여 <strong>완료된 차수</strong>를 선택하세요. 해당 차수의 '감소' 항목이 처리 계획 대상으로 표시됩니다.
       </div>
       <div v-else-if="loading" class="p-8 text-center text-gray-400 text-sm">로딩 중...</div>
-      <table v-else class="w-full text-sm">
+      <div v-else class="overflow-x-auto"><table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">
           <tr>
             <th class="text-left px-5 py-3 font-semibold text-gray-600">위험 항목 (자산 · 위협 · 취약점)</th>
@@ -141,7 +141,7 @@
             </td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
 
       <!-- 페이지네이션 -->
       <div v-if="selectedRound && !loading && filteredItems.length > 0"

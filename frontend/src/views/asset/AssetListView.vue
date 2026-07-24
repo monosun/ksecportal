@@ -165,23 +165,27 @@
     <!-- Filters -->
     <div class="card mb-4 flex flex-wrap gap-3">
       <input v-model="filters.keyword" @input="debouncedSearch" :placeholder="$t('common.search')" class="input flex-1 min-w-48" />
-      <select v-model="filters.type" @change="load" class="input w-44">
+      <select v-model="filters.assetCategory" @change="page = 0; load()" class="input w-44">
+        <option value="">자산유형: {{ $t('common.all') }}</option>
+        <option v-for="c in assetCategories" :key="c.value" :value="c.value">{{ c.label }}</option>
+      </select>
+      <select v-model="filters.type" @change="page = 0; load()" class="input w-44">
         <option value="">{{ $t('asset.type') }}: {{ $t('common.all') }}</option>
         <option v-for="t in assetTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
       </select>
-      <select v-model="filters.cloudProvider" @change="load" class="input w-40">
+      <select v-model="filters.cloudProvider" @change="page = 0; load()" class="input w-40">
         <option value="">{{ $t('asset.cloudProvider') }}: {{ $t('common.all') }}</option>
         <option v-for="p in cloudProviders" :key="p" :value="p">{{ $t(`asset.cloud_provider_label.${p}`) }}</option>
       </select>
-      <select v-model="filters.environment" @change="load" class="input w-36">
+      <select v-model="filters.environment" @change="page = 0; load()" class="input w-36">
         <option value="">{{ $t('asset.environment') }}: {{ $t('common.all') }}</option>
         <option v-for="e in environments" :key="e" :value="e">{{ $t(`asset.environment_label.${e}`) }}</option>
       </select>
-      <select v-model="filters.criticality" @change="load" class="input w-36">
+      <select v-model="filters.criticality" @change="page = 0; load()" class="input w-36">
         <option value="">{{ $t('asset.criticality') }}: {{ $t('common.all') }}</option>
         <option v-for="c in criticalities" :key="c" :value="c">{{ $t(`asset.criticality_label.${c}`) }}</option>
       </select>
-      <select v-model="filters.status" @change="load" class="input w-36">
+      <select v-model="filters.status" @change="page = 0; load()" class="input w-36">
         <option value="">상태: {{ $t('common.all') }}</option>
         <option value="OPERATIONAL">운영중</option>
         <option value="SUSPENDED">중지</option>
@@ -198,6 +202,7 @@
           <thead class="bg-gray-50 border-b">
             <tr>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.name') }}</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">자산유형</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.type') }}</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">위치 / 리소스</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">{{ $t('asset.owner') }}</th>
@@ -216,7 +221,11 @@
                 </span>
               </td>
               <td class="px-5 py-3">
-                <p class="text-gray-700">{{ $t(`asset.type_label.${a.type}`) }}</p>
+                <span v-if="a.assetCategory" :class="assetCategoryBadge(a.assetCategory)">{{ assetCategoryLabel(a.assetCategory) }}</span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td class="px-5 py-3">
+                <p class="text-gray-700">{{ typeLabel(a.type) }}</p>
                 <span v-if="a.cloudProvider && a.cloudProvider !== 'ON_PREMISE'" :class="cloudBadge(a.cloudProvider)" class="text-xs mt-0.5 inline-block">
                   {{ $t(`asset.cloud_provider_label.${a.cloudProvider}`) }}
                 </span>
@@ -268,6 +277,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { assetApi, exportApi, assetBulkApi, codeApi } from '@/api'
 import { useDebounceFn } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
@@ -275,6 +285,7 @@ import AssetFormModal from './AssetFormModal.vue'
 import AssetDetailModal from './AssetDetailModal.vue'
 import AssetSnapshotModal from './AssetSnapshotModal.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const isManager = auth.isManager
 const isAdmin = auth.isAdmin
@@ -325,7 +336,7 @@ async function onFormSaved() {
   showFormModal.value = false
   await Promise.all([load(), loadTypeStats()])
 }
-const filters = ref({ keyword: '', type: '', criticality: '', active: '', status: '', cloudProvider: '', environment: '' })
+const filters = ref({ keyword: '', type: '', assetCategory: '', criticality: '', active: '', status: '', cloudProvider: '', environment: '' })
 
 // CSV / PDF
 const csvLoading = ref(false)
@@ -386,6 +397,15 @@ async function uploadExcel() {
 }
 
 const assetTypes = ref([]) // { value, label } from code API
+// 자산유형(assetCategory) — 백엔드 Asset.AssetCategory enum, 등록 모달과 동일한 표기
+const assetCategories = [
+  { value: 'INFO',      label: '정보(INFO)' },
+  { value: 'SW',        label: '소프트웨어(SW)' },
+  { value: 'HW',        label: '하드웨어(HW)' },
+  { value: 'SERVICE',   label: '서비스(SERVICE)' },
+  { value: 'PERSONNEL', label: '인력(PERSONNEL)' },
+  { value: 'FACILITY',  label: '시설(FACILITY)' },
+]
 const criticalities = ['HIGH', 'MEDIUM', 'LOW']
 const cloudProviders = ['AWS', 'GCP', 'AZURE', 'ON_PREMISE', 'OTHER']
 const environments = ['PRODUCTION', 'STAGING', 'DEVELOPMENT', 'TEST']
@@ -396,6 +416,7 @@ async function load() {
     const params = { page: page.value, size: 20 }
     if (filters.value.keyword) params.keyword = filters.value.keyword
     if (filters.value.type) params.type = filters.value.type
+    if (filters.value.assetCategory) params.assetCategory = filters.value.assetCategory
     if (filters.value.criticality) params.criticality = filters.value.criticality
     if (filters.value.active !== '') params.active = filters.value.active
     if (filters.value.status) params.status = filters.value.status
@@ -424,7 +445,21 @@ async function loadTypeStats() {
 function typeLabel(value) {
   if (!value) return '미지정'
   const found = assetTypes.value.find(t => t.value === value)
-  return found?.label || value
+  if (found) return found.label
+  const key = `asset.type_label.${value}`
+  const translated = t(key)
+  return translated === key ? value : translated
+}
+
+function assetCategoryLabel(v) {
+  return assetCategories.find(c => c.value === v)?.label || v || '-'
+}
+
+function assetCategoryBadge(v) {
+  return {
+    INFO: 'badge-blue', SW: 'badge-green', HW: 'badge-orange',
+    SERVICE: 'badge-yellow', PERSONNEL: 'badge-red', FACILITY: 'badge-gray'
+  }[v] || 'badge-gray'
 }
 
 function filterByType(type) {

@@ -19,6 +19,7 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
            " OR LOWER(a.cloudResourceId) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            " OR LOWER(a.region) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:type IS NULL OR a.type = :type) AND " +
+           "(:assetCategory IS NULL OR a.assetCategory = :assetCategory) AND " +
            "(:criticality IS NULL OR a.criticality = :criticality) AND " +
            "(:cloudProvider IS NULL OR a.cloudProvider = :cloudProvider) AND " +
            "(:environment IS NULL OR a.environment = :environment) AND " +
@@ -27,6 +28,7 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     Page<Asset> search(
             @Param("keyword") String keyword,
             @Param("type") String type,
+            @Param("assetCategory") Asset.AssetCategory assetCategory,
             @Param("criticality") Asset.Criticality criticality,
             @Param("cloudProvider") Asset.CloudProvider cloudProvider,
             @Param("environment") Asset.Environment environment,

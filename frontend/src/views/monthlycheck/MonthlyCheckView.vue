@@ -49,7 +49,7 @@
     </div>
 
     <!-- Summary Cards -->
-    <div v-if="summary" class="grid grid-cols-4 gap-4 mb-6">
+    <div v-if="summary" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
       <div class="bg-white rounded-xl border p-4 text-center">
         <p class="text-2xl font-bold text-gray-900">{{ summary.total }}</p>
         <p class="text-xs text-gray-500 mt-1">{{ $t('monthlyCheck.total') }}</p>

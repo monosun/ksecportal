@@ -40,4 +40,8 @@ public class IsmsItemNote extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updater_id")
     private User updater;
+
+    /** 전년도 증적 가져오기로 생성된 경우 원본 연도. 직접 작성한 경우 null (가져오기 초기화 대상 식별용) */
+    @Column(name = "copied_from_year")
+    private Integer copiedFromYear;
 }

@@ -631,7 +631,7 @@
             <div class="space-y-2">
               <div v-for="(feed, idx) in rssFeeds" :key="idx"
                 class="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                <div class="flex-1 grid grid-cols-3 gap-2">
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label class="block text-[11px] text-gray-400 mb-0.5">피드 URL</label>
                     <input v-model="feed.url" type="url" placeholder="https://..."

@@ -92,7 +92,7 @@
         등록된 문제가 없습니다. "문제 추가" 또는 "Excel 일괄 등록"으로 문항을 등록하세요.
       </div>
       <template v-else>
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b">
               <th class="py-3 px-4 w-10">
@@ -167,7 +167,7 @@
               </tr>
             </template>
           </tbody>
-        </table>
+        </table></div>
       </template>
     </div>
 
@@ -185,7 +185,7 @@
       <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 class="text-lg font-bold mb-4">{{ form.id ? '문제 수정' : '문제 추가' }}</h2>
         <div class="space-y-3">
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label class="text-sm font-medium text-gray-700">분류</label>
               <input v-model="form.category" list="qb-categories" class="input w-full mt-1" placeholder="예: 개인정보보호" />

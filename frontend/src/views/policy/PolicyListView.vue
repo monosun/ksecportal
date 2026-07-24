@@ -62,7 +62,7 @@
     <div class="card p-0 overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-gray-400">{{ $t('common.loading') }}</div>
       <div v-else-if="!policies.length" class="p-8 text-center text-gray-400">{{ $t('common.noData') }}</div>
-      <table v-else class="w-full">
+      <div v-else class="overflow-x-auto"><table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-100">
           <tr>
             <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.title') }}</th>
@@ -83,7 +83,7 @@
             <td class="px-6 py-4 text-sm text-gray-500">{{ p.authorName }}</td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- Pagination -->

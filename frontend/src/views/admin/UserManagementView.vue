@@ -51,7 +51,7 @@
     <div class="card">
       <div v-if="loading" class="text-center py-10 text-gray-500">{{ $t('common.loading') }}</div>
       <div v-else-if="error" class="text-center py-10 text-red-500">{{ error }}</div>
-      <table v-else class="w-full text-sm">
+      <div v-else class="overflow-x-auto"><table class="w-full text-sm">
         <thead>
           <tr class="border-b">
             <th class="text-left py-3 px-4 font-semibold text-gray-600">{{ $t('auth.name') }}</th>
@@ -134,7 +134,7 @@
             </td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
     </div>
 
     <div v-if="totalPages > 1" class="flex justify-center gap-2 mt-4">

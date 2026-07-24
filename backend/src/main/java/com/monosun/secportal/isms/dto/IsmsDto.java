@@ -36,6 +36,8 @@ public class IsmsDto {
         private String sectionName;
         private String description;
         private String guide;
+        private String defaultEvidenceTitle;
+        private String defaultEvidenceContent;
         private int sortOrder;
         private long evidenceCount;
         private String latestStatus;
@@ -52,6 +54,8 @@ public class IsmsDto {
                     .sectionName(item.getSectionName())
                     .description(item.getDescription())
                     .guide(item.getGuide())
+                    .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
+                    .defaultEvidenceContent(item.getDefaultEvidenceContent())
                     .sortOrder(item.getSortOrder())
                     .mappedPolicies(List.of())
                     .build();
@@ -69,6 +73,8 @@ public class IsmsDto {
                     .sectionName(item.getSectionName())
                     .description(item.getDescription())
                     .guide(item.getGuide())
+                    .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
+                    .defaultEvidenceContent(item.getDefaultEvidenceContent())
                     .sortOrder(item.getSortOrder())
                     .evidenceCount(evidenceCount)
                     .latestStatus(latestStatus)
@@ -205,6 +211,16 @@ public class IsmsDto {
         private String guide;
     }
 
+    /** 코드관리 'ISMS-P 101항목' 탭 — 항목별 기본 증적제목·증적내용·이행가이드 편집 */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ItemDefaultsRequest {
+        private String defaultEvidenceTitle;
+        private String defaultEvidenceContent;
+        private String guide;
+    }
+
     @Getter
     @Setter
     @NoArgsConstructor
@@ -243,6 +259,48 @@ public class IsmsDto {
             private String itemCode;
             private String message;
         }
+    }
+
+    /** 전년도 증적 가져오기 버튼 상태 — 가져올 수 있는 연도와 되돌릴 수 있는 건수 */
+    @Getter
+    @Builder
+    public static class CopyPreviousStatus {
+        /** 대상 연도 이전에 증적이 있는 가장 최근 연도 (없으면 null → 가져오기 불가) */
+        private Integer previousYear;
+        /** 대상 연도에 남아 있는 가져오기 증적 건수 (0 이면 초기화 불가) */
+        private long copiedEvidences;
+        private long copiedNotes;
+        /** 대상 연도의 가져오기 증적이 어느 연도에서 왔는지 */
+        private Integer copiedFromYear;
+    }
+
+    /** 전년도 증적 가져오기 초기화(되돌리기) 결과 */
+    @Getter
+    @Builder
+    public static class RevertCopyResult {
+        private int targetYear;
+        private Integer copiedFromYear;
+        /** 삭제된 가져오기 증적 건수 */
+        private int removedEvidences;
+        /** 삭제된 가져오기 현재상태·의견 건수 */
+        private int removedNotes;
+        /** 가져온 증적을 참조하고 있어 함께 삭제된 증적 건수 */
+        private int removedReferences;
+    }
+
+    /** 전년도 증적 가져오기 결과 */
+    @Getter
+    @Builder
+    public static class CopyPreviousResult {
+        /** 실제로 가져온 원본 연도 */
+        private int sourceYear;
+        private int targetYear;
+        /** 복사된 증적 건수 */
+        private int copiedEvidences;
+        /** 복사된 현재상태·의견 건수 */
+        private int copiedNotes;
+        /** 대상 연도에 이미 증적이 있어 건너뛴 항목 수 */
+        private int skippedItems;
     }
 
     @Getter

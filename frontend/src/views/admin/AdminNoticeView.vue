@@ -17,7 +17,7 @@
         <div v-if="notices.length === 0" class="py-12 text-center text-sm text-gray-400">
           {{ $t('notice.empty') }}
         </div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-100">
               <th class="text-left pb-3 text-gray-500 font-medium pl-2">{{ $t('notice.formTitle') }}</th>
@@ -68,7 +68,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
 

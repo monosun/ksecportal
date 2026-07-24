@@ -25,10 +25,11 @@ public class AssetService {
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
-    public Page<AssetDto.Response> list(String keyword, String type, Asset.Criticality criticality,
+    public Page<AssetDto.Response> list(String keyword, String type, Asset.AssetCategory assetCategory,
+                                        Asset.Criticality criticality,
                                         Asset.CloudProvider cloudProvider, Asset.Environment environment,
                                         Boolean active, Asset.Status status, Pageable pageable) {
-        return assetRepository.search(keyword, type, criticality, cloudProvider, environment, active, status, pageable)
+        return assetRepository.search(keyword, type, assetCategory, criticality, cloudProvider, environment, active, status, pageable)
                 .map(AssetDto.Response::from);
     }
 

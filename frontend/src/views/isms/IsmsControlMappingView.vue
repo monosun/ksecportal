@@ -90,7 +90,7 @@
               </div>
             </div>
 
-            <table class="w-full text-sm">
+            <div class="overflow-x-auto"><table class="w-full text-sm">
               <thead class="border-b border-gray-100">
                 <tr>
                   <th class="text-left px-4 py-3 font-semibold text-gray-500 text-xs w-20">코드</th>
@@ -114,9 +114,10 @@
                     </td>
                     <td class="px-4 py-3">
                       <div v-if="item.mappedPolicies && item.mappedPolicies.length" class="flex flex-wrap gap-1">
-                        <span v-for="p in item.mappedPolicies.slice(0, 2)" :key="p.id"
-                          class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium truncate max-w-[120px]"
-                          :title="p.title">{{ p.title }}</span>
+                        <button v-for="p in item.mappedPolicies.slice(0, 2)" :key="p.id"
+                          class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium truncate max-w-[120px] hover:bg-indigo-200 transition-colors"
+                          :title="`${p.title} — 클릭하면 내용 미리보기`"
+                          @click.stop="openPreview(p)">{{ p.title }}</button>
                         <span v-if="item.mappedPolicies.length > 2"
                           class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
                           +{{ item.mappedPolicies.length - 2 }}
@@ -152,12 +153,21 @@
                           <div v-if="item.mappedPolicies && item.mappedPolicies.length" class="space-y-1.5">
                             <div v-for="p in item.mappedPolicies" :key="p.id"
                               class="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-blue-100 group">
-                              <div class="flex items-center gap-2 min-w-0">
+                              <button class="flex items-center gap-2 min-w-0 text-left group/preview"
+                                title="정책 내용 미리보기"
+                                @click.stop="openPreview(p)">
                                 <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
                                   :class="policyStatusBadge(p.status)">{{ policyStatusLabel(p.status) }}</span>
-                                <span class="text-xs text-gray-800 truncate" :title="p.title">{{ p.title }}</span>
+                                <span class="text-xs text-gray-800 truncate group-hover/preview:text-blue-700 group-hover/preview:underline">{{ p.title }}</span>
                                 <span class="text-[10px] text-gray-400 flex-shrink-0">[{{ categoryLabel(p.category) }}]</span>
-                              </div>
+                                <svg class="w-3.5 h-3.5 text-gray-300 flex-shrink-0 group-hover/preview:text-blue-600"
+                                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                              </button>
                               <button
                                 v-if="canEdit"
                                 class="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -222,11 +232,14 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 매핑 정책 내용 미리보기 -->
+    <PolicyDetailModal :open="showPreview" :item-id="previewPolicyId" readonly @close="showPreview = false" />
   </div>
 </template>
 
@@ -234,6 +247,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ismsApi, policyApi } from '@/api/index.js'
 import { useAuthStore } from '@/stores/auth'
+import PolicyDetailModal from '@/views/policy/PolicyDetailModal.vue'
 
 const authStore = useAuthStore()
 const canEdit = computed(() => ['ADMIN', 'MANAGER'].includes(authStore.user?.role))
@@ -341,6 +355,16 @@ function toggleExpand(id) {
     next.add(id)
   }
   expandedRows.value = next
+}
+
+// ── 정책 미리보기 ─────────────────────────────────────────────
+const showPreview = ref(false)
+const previewPolicyId = ref(null)
+
+function openPreview(policy) {
+  previewPolicyId.value = policy.id
+  showPreview.value = true
+  activePicker.value = null
 }
 
 // ── Policy picker ─────────────────────────────────────────────

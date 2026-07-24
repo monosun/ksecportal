@@ -68,7 +68,7 @@
       <div v-if="loading" class="text-center py-12 text-gray-400">{{ $t('common.loading') }}</div>
       <div v-else-if="findings.length === 0" class="text-center py-12 text-gray-400">{{ $t('secFinding.noFindings') }}</div>
       <template v-else>
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b">
               <th class="text-left py-3 px-3 font-semibold text-gray-600 w-16">연도</th>
@@ -121,7 +121,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
 
         <!-- Pagination -->
         <div v-if="totalPages > 1" class="flex justify-center gap-2 py-4">
@@ -184,7 +184,7 @@
           <h2 class="text-lg font-semibold">{{ editItem ? $t('secFinding.editFinding') : $t('secFinding.addFinding') }}</h2>
         </div>
         <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">연도</label>
               <input v-model.number="form.year" type="number" class="input w-full" />
@@ -228,7 +228,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('secFinding.correctiveAction') }}</label>
             <textarea v-model="form.correctiveAction" rows="3" class="input w-full resize-none" placeholder="시정조치 계획" />
           </div>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('secFinding.actionDeadline') }}</label>
               <input v-model="form.actionDeadline" type="date" class="input w-full" />

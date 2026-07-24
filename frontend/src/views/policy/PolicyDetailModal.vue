@@ -14,12 +14,14 @@
         </div>
         <div v-else class="text-lg font-semibold text-gray-900">{{ $t('policy.title') }}</div>
         <div class="flex items-center gap-2 shrink-0">
-          <button v-if="policy && !policy.acknowledgedByMe && policy.status === 'PUBLISHED'" @click="acknowledge" class="btn-primary text-sm">
-            {{ $t('policy.acknowledge') }}
-          </button>
-          <span v-if="policy && policy.acknowledgedByMe" class="badge-green text-xs px-2 py-1">✓ {{ $t('policy.acknowledged') }}</span>
-          <button v-if="policy && isManager" @click="$emit('edit', policy.id)" class="btn-secondary text-sm">{{ $t('common.edit') }}</button>
-          <button v-if="policy && isAdmin" @click="deletePolicy" class="btn-danger text-sm">{{ $t('common.delete') }}</button>
+          <template v-if="!readonly">
+            <button v-if="policy && !policy.acknowledgedByMe && policy.status === 'PUBLISHED'" @click="acknowledge" class="btn-primary text-sm">
+              {{ $t('policy.acknowledge') }}
+            </button>
+            <span v-if="policy && policy.acknowledgedByMe" class="badge-green text-xs px-2 py-1">✓ {{ $t('policy.acknowledged') }}</span>
+            <button v-if="policy && isManager" @click="$emit('edit', policy.id)" class="btn-secondary text-sm">{{ $t('common.edit') }}</button>
+            <button v-if="policy && isAdmin" @click="deletePolicy" class="btn-danger text-sm">{{ $t('common.delete') }}</button>
+          </template>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 p-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -30,6 +32,7 @@
 
       <div class="px-5 py-4 overflow-y-auto flex-1">
         <div v-if="loading" class="py-16 text-center text-gray-400">{{ $t('common.loading') }}</div>
+        <div v-else-if="loadError" class="py-16 text-center text-sm text-red-500">{{ loadError }}</div>
         <template v-else-if="policy">
           <div class="border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><p class="text-gray-500">{{ $t('policy.author') }}</p><p class="font-medium mt-1">{{ policy.authorName }}</p></div>
@@ -56,7 +59,9 @@ import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
-  itemId: { type: [Number, String], default: null }
+  itemId: { type: [Number, String], default: null },
+  // 내용 확인용 미리보기 — 수신확인/수정/삭제 액션을 감춘다
+  readonly: { type: Boolean, default: false }
 })
 const emit = defineEmits(['close', 'edit', 'changed'])
 
@@ -66,12 +71,15 @@ const isAdmin = auth.isAdmin
 
 const policy = ref(null)
 const loading = ref(false)
+const loadError = ref(null)
 
 watch(() => props.open, async (open) => {
   if (!open || !props.itemId) return
   loading.value = true
   policy.value = null
+  loadError.value = null
   try { policy.value = (await policyApi.get(props.itemId)).data }
+  catch (e) { loadError.value = typeof e === 'string' ? e : '정책을 불러오지 못했습니다.' }
   finally { loading.value = false }
 })
 

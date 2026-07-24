@@ -196,15 +196,29 @@
 
 ```json
 [
-  { "id": 1, "userId": 1, "userName": "System Admin", "content": "조치 시작함", "createdAt": "2025-05-10 14:00:00" }
+  { "id": 1, "userId": 1, "userName": "System Admin", "content": "조치 시작함", "createdAt": "2025-05-10 14:00:00", "updatedAt": null }
 ]
 ```
+
+`updatedAt` 은 수정된 적이 있는 댓글에만 값이 있다.
 
 ### POST /vulnerabilities/:id/comments
 
 ```json
 { "content": "취약점 패치 완료" }
 ```
+
+### PATCH /vulnerabilities/:id/comments/:commentId
+
+댓글 수정. **작성자 본인만** 가능하며, 타인의 댓글이면 400 (`본인이 작성한 댓글만 수정할 수 있습니다.`).
+
+```json
+{ "content": "수정한 댓글 내용" }
+```
+
+### DELETE /vulnerabilities/:id/comments/:commentId
+
+댓글 삭제. **작성자 본인만** 가능하다.
 
 ---
 
@@ -225,13 +239,26 @@ ISMS-P 인증 항목 목록 조회.
   "id": 1, "itemCode": "1.1.1", "itemName": "경영진의 참여",
   "domainCode": "1.1", "domainName": "관리체계 기반 마련",
   "sectionNum": 1, "sectionName": "관리체계 수립 및 운영",
+  "guide": "…이행가이드…",
+  "defaultEvidenceTitle": "경영진의 참여 증적",
+  "defaultEvidenceContent": "…증적예시…",
   "evidenceCount": 2, "latestStatus": "COMPLIANT"
 }
 ```
 
+`guide` / `defaultEvidenceTitle` / `defaultEvidenceContent` 는 항목별 기본값(연도 무관)으로, 일괄등록 템플릿의 기본값이자 관리 > 코드관리 `ISMS-P 101항목` 탭에서 편집한다.
+
 ### GET /isms/items/:id
 
 단일 항목 조회.
+
+### PATCH /isms/items/:id/defaults *(MANAGER+)*
+
+항목별 기본 증적제목·증적내용·이행가이드 수정 (관리 > 코드관리 `ISMS-P 101항목` 탭).
+
+```json
+{ "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "guide": "…" }
+```
 
 ### GET /isms/items/:id/evidences
 
@@ -315,6 +342,64 @@ ISMS-P 인증 항목 목록 조회.
 }
 ```
 
+### GET /isms/copy-previous/status
+
+가져오기 / 가져오기 초기화 버튼 상태.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 대상 연도 (생략 시 현재 연도) |
+
+```json
+{
+  "previousYear": 2025,      // 가져올 수 있는 이전 연도 (없으면 null)
+  "copiedEvidences": 87,     // 대상 연도에 남아 있는 '가져오기로 생성된' 증적 (0 이면 초기화 불가)
+  "copiedNotes": 12,
+  "copiedFromYear": 2025     // 그 증적들의 원본 연도
+}
+```
+
+### POST /isms/copy-previous *(MANAGER+)*
+
+전년도(= `GET /isms/previous-year` 결과) 증적을 대상 연도로 복사한다.
+증적제목·증적내용·준수상태·첨부파일(실물 복제)과 연도별 현재상태·의견을 함께 가져오며,
+대상 연도에 **이미 증적이 있는 항목은 건너뛴다**(중복 복사 방지). 참조 증적은 원본 참조를 그대로 이어받는다.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 복사 대상(붙여넣을) 연도 (생략 시 현재 연도) |
+
+```json
+// Response
+{
+  "sourceYear": 2025, "targetYear": 2026,
+  "copiedEvidences": 87, "copiedNotes": 12, "skippedItems": 3
+}
+```
+
+가져올 이전 연도 증적이 없으면 `400` (`가져올 이전 연도 증적이 없습니다.`).
+복사된 레코드에는 `copied_from_year` 에 원본 연도가 기록되어 초기화(되돌리기) 대상으로 식별된다.
+
+### DELETE /isms/copy-previous *(MANAGER+)*
+
+**가져오기 초기화** — 대상 연도에서 가져오기로 생성된(`copied_from_year IS NOT NULL`) 증적·현재상태·의견을 삭제해
+가져오기 전 상태로 되돌린다. 직접 등록·작성한 기록은 삭제되지 않으며, 원본 연도의 증적·첨부파일도 영향을 받지 않는다.
+가져온 증적을 참조하는 증적이 있으면 참조가 깨지므로 함께 삭제하고 `removedReferences` 로 보고한다.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 초기화할 연도 (생략 시 현재 연도) |
+
+```json
+// Response
+{
+  "targetYear": 2026, "copiedFromYear": 2025,
+  "removedEvidences": 87, "removedNotes": 12, "removedReferences": 0
+}
+```
+
+되돌릴 가져오기 내역이 없으면 `400` (`되돌릴 가져오기 내역이 없습니다.`).
+
 ### GET /isms/export/csv *(MANAGER+)*
 
 연도별 전체 증적 CSV 다운로드 (UTF-8 BOM, Excel 호환).
@@ -327,7 +412,8 @@ ISMS-P 인증 항목 목록 조회.
 
 ### GET /isms/import/template *(MANAGER+)*
 
-일괄 등록용 엑셀 템플릿 다운로드 (`.xlsx`, 3개 시트).
+일괄 등록용 엑셀 템플릿 다운로드 (`.xlsx`, 3개 시트: `증적입력` / `입력규칙` / `항목목록(참고)`).
+`증적입력` 시트 열: **항목코드 · 증적제목 · 증적내용 · 이행가이드 · 파일명/경로 · 준수상태**. 항목별로 한 행씩 미리 채워져 제공되며, `이행가이드` 열에는 해당 항목의 이행가이드(증적예시 포함)가 들어 있다(가이드 없는 항목은 빈 칸 — **이행가이드는 선택 입력**). 업로드 시 `이행가이드` 값이 있으면 해당 항목의 가이드를 갱신한다. 증적제목·증적내용·파일명·준수상태가 모두 빈 행(미작성 행)은 건너뛴다.
 
 ### POST /isms/import *(MANAGER+, multipart/form-data)*
 
@@ -406,6 +492,7 @@ ISMS-P 인증 항목 목록 조회.
 |----------|------|------|
 | `keyword` | String | 자산명 / IP / 담당자 검색 |
 | `type` | String | `SERVER`, `WORKSTATION`, `NETWORK`, `APPLICATION`, `DATABASE`, `CLOUD`, `OTHER` |
+| `assetCategory` | String | 자산유형 — `INFO`, `SW`, `HW`, `SERVICE`, `PERSONNEL`, `FACILITY` |
 | `criticality` | String | `HIGH`, `MEDIUM`, `LOW` |
 | `active` | Boolean | 운영 중 여부 |
 

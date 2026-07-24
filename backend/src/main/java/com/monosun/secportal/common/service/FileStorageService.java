@@ -54,6 +54,28 @@ public class FileStorageService {
         return rootDir.relativize(targetDir.resolve(storedName)).toString().replace('\\', '/');
     }
 
+    /**
+     * 이미 저장된 파일을 다른 하위 디렉터리로 복제하고 새 상대 경로를 돌려준다.
+     * 원본이 없으면 null 을 돌려준다(복사 대상 레코드는 파일 없이 유지).
+     */
+    public String copy(String relativePath, String subDir) throws IOException {
+        if (relativePath == null || relativePath.isBlank()) return null;
+        Path source = rootDir.resolve(relativePath).normalize();
+        if (!source.startsWith(rootDir)) throw new SecurityException("잘못된 파일 경로");
+        if (!Files.exists(source)) return null;
+
+        Path targetDir = rootDir.resolve(subDir).normalize();
+        if (!targetDir.startsWith(rootDir)) throw new SecurityException("잘못된 저장 경로");
+        Files.createDirectories(targetDir);
+
+        String name = source.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        String ext = dot > 0 ? name.substring(dot).toLowerCase() : "";
+        Path target = targetDir.resolve(UUID.randomUUID() + ext);
+        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        return rootDir.relativize(target).toString().replace('\\', '/');
+    }
+
     public Resource load(String relativePath) {
         try {
             Path file = rootDir.resolve(relativePath).normalize();

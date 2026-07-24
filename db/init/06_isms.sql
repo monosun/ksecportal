@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS isms_items (
     section_num TINYINT NOT NULL,
     section_name VARCHAR(100) NOT NULL,
     description TEXT,
+    guide TEXT COMMENT '이행 가이드 (연도 무관)',
+    default_evidence_title TEXT COMMENT '기본 증적제목',
+    default_evidence_content TEXT COMMENT '기본 증적내용(증적예시)',
     sort_order INT NOT NULL DEFAULT 0
 );
 
@@ -26,6 +29,7 @@ CREATE TABLE IF NOT EXISTS isms_evidences (
     status ENUM('COMPLIANT','PARTIAL','NON_COMPLIANT','NA') NOT NULL DEFAULT 'COMPLIANT',
     source_evidence_id BIGINT NULL COMMENT '참조 증적 ID (자기참조)',
     registrant_id BIGINT,
+    copied_from_year INT NULL COMMENT '전년도 증적 가져오기로 생성된 경우 원본 연도 (가져오기 초기화 대상 식별)',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES isms_items(id) ON DELETE CASCADE,

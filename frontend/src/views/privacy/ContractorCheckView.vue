@@ -92,7 +92,7 @@
               </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-3 gap-4">
+            <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <p class="text-xs text-gray-400">점검일</p>
                 <p class="text-sm font-medium text-gray-800">{{ selectedCheck.checkDate || '-' }}</p>

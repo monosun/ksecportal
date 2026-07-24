@@ -33,13 +33,14 @@ public class AssetController {
     public ApiResponse<Page<AssetDto.Response>> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
+            @RequestParam(required = false) Asset.AssetCategory assetCategory,
             @RequestParam(required = false) Asset.Criticality criticality,
             @RequestParam(required = false) Asset.CloudProvider cloudProvider,
             @RequestParam(required = false) Asset.Environment environment,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Asset.Status status,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(assetService.list(keyword, type, criticality, cloudProvider, environment, active, status, pageable));
+        return ApiResponse.ok(assetService.list(keyword, type, assetCategory, criticality, cloudProvider, environment, active, status, pageable));
     }
 
     @GetMapping("/types/stats")

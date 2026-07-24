@@ -2,6 +2,7 @@ package com.monosun.secportal.isms.service;
 
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.auth.repository.UserRepository;
+import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
 import com.monosun.secportal.common.service.FileStorageService;
 import com.monosun.secportal.isms.dto.IsmsDto;
@@ -144,6 +145,17 @@ public class IsmsService {
         return IsmsDto.ItemResponse.from(itemRepository.save(item));
     }
 
+    /** 코드관리 'ISMS-P 101항목' 탭 — 기본 증적제목·증적내용·이행가이드 일괄 수정 */
+    @Transactional
+    public IsmsDto.ItemResponse updateItemDefaults(Long itemId, IsmsDto.ItemDefaultsRequest req) {
+        IsmsItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
+        item.setDefaultEvidenceTitle(req.getDefaultEvidenceTitle());
+        item.setDefaultEvidenceContent(req.getDefaultEvidenceContent());
+        item.setGuide(req.getGuide());
+        return IsmsDto.ItemResponse.from(itemRepository.save(item));
+    }
+
     @Transactional(readOnly = true)
     public List<IsmsDto.EvidenceResponse> listEvidences(Long itemId, Integer year) {
         List<IsmsEvidence> evidences = year != null
@@ -262,6 +274,142 @@ public class IsmsService {
     public IsmsEvidence getEvidence(Long evidenceId) {
         return evidenceRepository.findById(evidenceId)
                 .orElseThrow(() -> new ResourceNotFoundException("IsmsEvidence", evidenceId));
+    }
+
+    // ── 전년도 증적 가져오기 ─────────────────────────────────────────────────────
+
+    /** 대상 연도 이전에 증적이 등록된 가장 최근 연도 (없으면 null) */
+    @Transactional(readOnly = true)
+    public Integer findPreviousYearWithEvidences(int year) {
+        List<Integer> years = evidenceRepository.findYearsBefore(year);
+        return years.isEmpty() ? null : years.get(0);
+    }
+
+    /** 가져오기 / 가져오기 초기화 버튼 상태 */
+    @Transactional(readOnly = true)
+    public IsmsDto.CopyPreviousStatus copyPreviousStatus(int year) {
+        return IsmsDto.CopyPreviousStatus.builder()
+                .previousYear(findPreviousYearWithEvidences(year))
+                .copiedEvidences(evidenceRepository.countByYearAndCopiedFromYearIsNotNull(year))
+                .copiedNotes(itemNoteRepository.countByYearAndCopiedFromYearIsNotNull(year))
+                .copiedFromYear(evidenceRepository.findCopiedFromYear(year))
+                .build();
+    }
+
+    /**
+     * 이전(가장 최근) 연도의 증적을 대상 연도로 복사한다.
+     * 증적제목·증적내용·준수상태·첨부파일과 연도별 현재상태·의견을 그대로 이어받으며,
+     * 대상 연도에 이미 증적이 있는 항목은 건드리지 않고 건너뛴다(중복 복사 방지).
+     */
+    @Transactional
+    public IsmsDto.CopyPreviousResult copyFromPreviousYear(int targetYear, User user) throws IOException {
+        Integer sourceYear = findPreviousYearWithEvidences(targetYear);
+        if (sourceYear == null) {
+            throw new BusinessException("가져올 이전 연도 증적이 없습니다.");
+        }
+
+        Set<Long> itemsWithEvidence = new HashSet<>(evidenceRepository.findItemIdsByYear(targetYear));
+        Set<Long> skippedItems = new HashSet<>();
+        int copiedEvidences = 0;
+
+        for (IsmsEvidence src : evidenceRepository.findByYearOrderByItemSortOrder(sourceYear)) {
+            Long itemId = src.getItem().getId();
+            if (itemsWithEvidence.contains(itemId)) {
+                skippedItems.add(itemId);
+                continue;
+            }
+            IsmsEvidence copy = evidenceRepository.save(IsmsEvidence.builder()
+                    .item(src.getItem())
+                    .year(targetYear)
+                    .title(src.getTitle())
+                    .content(src.getContent())
+                    .fileName(src.getFileName())
+                    .status(src.getStatus())
+                    // 참조 증적은 원본 참조를 그대로 이어받는다(파일은 원본에서 내려받는다)
+                    .sourceEvidence(src.getSourceEvidence())
+                    .registrant(user)
+                    .copiedFromYear(sourceYear)
+                    .build());
+            if (src.getFilePath() != null) {
+                // 첨부 파일은 실물을 복제한다 — 한쪽 연도의 증적을 지워도 다른 연도가 깨지지 않도록.
+                String path = fileStorageService.copy(src.getFilePath(), "isms/" + copy.getId());
+                copy.setFilePath(path);
+            }
+            copiedEvidences++;
+        }
+
+        // 연도별 현재상태·의견 — 대상 연도에 아직 없는 항목만 복사
+        Set<Long> itemsWithNote = itemNoteRepository.findByYear(targetYear).stream()
+                .map(n -> n.getItem().getId()).collect(Collectors.toSet());
+        int copiedNotes = 0;
+        for (IsmsItemNote src : itemNoteRepository.findByYear(sourceYear)) {
+            if (itemsWithNote.contains(src.getItem().getId())) continue;
+            if (!notBlank(src.getStatusNote()) && !notBlank(src.getOpinion())) continue;
+            itemNoteRepository.save(IsmsItemNote.builder()
+                    .item(src.getItem())
+                    .year(targetYear)
+                    .statusNote(src.getStatusNote())
+                    .opinion(src.getOpinion())
+                    .updater(user)
+                    .copiedFromYear(sourceYear)
+                    .build());
+            copiedNotes++;
+        }
+
+        return IsmsDto.CopyPreviousResult.builder()
+                .sourceYear(sourceYear)
+                .targetYear(targetYear)
+                .copiedEvidences(copiedEvidences)
+                .copiedNotes(copiedNotes)
+                .skippedItems(skippedItems.size())
+                .build();
+    }
+
+    /**
+     * 전년도 가져오기로 만들어진 증적·현재상태·의견을 모두 지워 가져오기 전 상태로 되돌린다.
+     * 직접 등록·작성한 기록(copiedFromYear = null)은 건드리지 않는다.
+     * 가져온 증적을 참조하는 증적이 있으면 참조가 깨지므로 함께 삭제한다.
+     */
+    @Transactional
+    public IsmsDto.RevertCopyResult revertCopyPrevious(int targetYear) throws IOException {
+        List<IsmsEvidence> copied = evidenceRepository.findByYearAndCopiedFromYearIsNotNull(targetYear);
+        List<IsmsItemNote> copiedNotes = itemNoteRepository.findByYearAndCopiedFromYearIsNotNull(targetYear);
+        if (copied.isEmpty() && copiedNotes.isEmpty()) {
+            throw new BusinessException("되돌릴 가져오기 내역이 없습니다.");
+        }
+
+        Integer copiedFromYear = evidenceRepository.findCopiedFromYear(targetYear);
+        Set<Long> copiedIds = copied.stream().map(IsmsEvidence::getId).collect(Collectors.toSet());
+
+        // 가져온 증적을 참조 중인 증적 먼저 정리 (참조 증적 자신은 파일을 갖지 않는다)
+        int removedReferences = 0;
+        if (!copiedIds.isEmpty()) {
+            List<IsmsEvidence> referrers = evidenceRepository.findBySourceEvidenceIdIn(copiedIds).stream()
+                    .filter(e -> !copiedIds.contains(e.getId()))
+                    .collect(Collectors.toList());
+            if (!referrers.isEmpty()) {
+                evidenceRepository.deleteAll(referrers);
+                evidenceRepository.flush();
+                removedReferences = referrers.size();
+            }
+        }
+
+        for (IsmsEvidence e : copied) {
+            // 복사 시 실물을 복제했으므로 원본 연도 파일에는 영향이 없다.
+            if (e.getFilePath() != null && e.getSourceEvidence() == null) {
+                fileStorageService.delete(e.getFilePath());
+            }
+        }
+        evidenceRepository.deleteAll(copied);
+        itemNoteRepository.deleteAll(copiedNotes);
+
+        return IsmsDto.RevertCopyResult.builder()
+                .targetYear(targetYear)
+                .copiedFromYear(copiedFromYear)
+                .removedEvidences(copied.size())
+                .removedNotes(copiedNotes.size())
+                .removedReferences(removedReferences)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -395,8 +543,8 @@ public class IsmsService {
             hf.setColor(IndexedColors.WHITE.getIndex());
             headerStyle.setFont(hf);
 
-            String[] headers = {"항목코드", "증적제목", "증적내용", "파일명/경로", "준수상태"};
-            int[] colWidths = {3000, 8000, 16000, 10000, 4000};
+            String[] headers = {"항목코드", "증적제목", "증적내용", "이행가이드", "파일명/경로", "준수상태"};
+            int[] colWidths = {3000, 8000, 16000, 20000, 10000, 4000};
             XSSFRow hRow = input.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 XSSFCell cell = hRow.createCell(i);
@@ -405,16 +553,27 @@ public class IsmsService {
                 input.setColumnWidth(i, colWidths[i]);
             }
 
-            // 샘플 행 2개
-            String[][] samples = {
-                    {"1.1.1", "정보보호 정책 승인 문서 v2026", "최고경영자 서명이 포함된 정보보호 정책서", "docs/policy/2026_security_policy.pdf", "COMPLIANT"},
-                    {"2.5.1", "접근권한 관리 절차서", "사용자 계정 생성·변경·삭제 절차 확인", "docs/access/2026_access_control.pdf", "PARTIAL"}
-            };
-            for (int r = 0; r < samples.length; r++) {
+            // 이행가이드 셀 — 긴 예시가 들어가므로 줄바꿈 유지 + 상단 정렬
+            XSSFCellStyle guideCellStyle = wb.createCellStyle();
+            guideCellStyle.setWrapText(true);
+            guideCellStyle.setVerticalAlignment(org.apache.poi.ss.usermodel.VerticalAlignment.TOP);
+
+            // 항목별로 한 행씩 미리 채운다. '이행가이드' 열에는 해당 항목의 이행가이드
+            // (증적예시 포함)를 넣으며, 가이드가 없는 항목은 비워 둔다(선택 입력 열).
+            List<IsmsItem> items = itemRepository.findAllByOrderBySortOrderAsc();
+            for (int r = 0; r < items.size(); r++) {
+                IsmsItem it = items.get(r);
                 XSSFRow row = input.createRow(r + 1);
-                for (int c = 0; c < samples[r].length; c++) {
-                    row.createCell(c).setCellValue(samples[r][c]);
-                }
+                row.createCell(0).setCellValue(it.getItemCode());
+                row.createCell(1).setCellValue(notBlank(it.getDefaultEvidenceTitle())
+                        ? it.getDefaultEvidenceTitle() : it.getItemName() + " 증적자료");
+                row.createCell(2).setCellValue(notBlank(it.getDefaultEvidenceContent())
+                        ? it.getDefaultEvidenceContent() : it.getItemName() + " 증적 내용을 기재하세요");
+                XSSFCell guideCell = row.createCell(3);
+                guideCell.setCellValue(it.getGuide() != null ? it.getGuide() : "");
+                guideCell.setCellStyle(guideCellStyle);
+                row.createCell(4).setCellValue("docs/isms/" + it.getItemCode() + "_증적.pdf");
+                row.createCell(5).setCellValue("COMPLIANT");
             }
 
             // ── 준수상태 안내 시트 ─────────────────────────────────────────────
@@ -439,7 +598,6 @@ public class IsmsService {
             refH.createCell(1).setCellValue("항목명");
             refH.createCell(2).setCellValue("도메인");
 
-            List<IsmsItem> items = itemRepository.findAllByOrderBySortOrderAsc();
             for (int i = 0; i < items.size(); i++) {
                 XSSFRow row = ref.createRow(i + 1);
                 row.createCell(0).setCellValue(items.get(i).getItemCode());
@@ -471,7 +629,15 @@ public class IsmsService {
                     if (row == null) continue;
                     String code = xlsxCell(row, 0);
                     if (code.isBlank()) continue; // 빈 행 건너뜀
-                    rows.add(new String[]{code, xlsxCell(row, 1), xlsxCell(row, 2), xlsxCell(row, 3), xlsxCell(row, 4)});
+                    String title = xlsxCell(row, 1);
+                    String content = xlsxCell(row, 2);
+                    String guideCol = xlsxCell(row, 3);
+                    String fileRef = xlsxCell(row, 4);
+                    String status = xlsxCell(row, 5);
+                    // 미작성 행 건너뜀: 증적제목·증적내용·파일명·준수상태가 모두 비어있으면
+                    // (이행가이드만 남은 행) 작성되지 않은 것으로 본다.
+                    if (title.isBlank() && content.isBlank() && fileRef.isBlank() && status.isBlank()) continue;
+                    rows.add(new String[]{code, title, content, guideCol, fileRef, status});
                 }
             }
         } else if (filename.endsWith(".csv")) {
@@ -483,7 +649,11 @@ public class IsmsService {
                     if (first) { first = false; continue; } // 헤더 건너뜀
                     if (line.isBlank()) continue;
                     String[] parsed = parseCsvLine(line);
-                    if (parsed.length > 0 && !parsed[0].trim().isBlank()) rows.add(parsed);
+                    if (parsed.length == 0 || parsed[0].trim().isBlank()) continue;
+                    // 미작성 행 건너뜀 (xlsx 와 동일 규칙)
+                    if (safeGet(parsed, 1).trim().isBlank() && safeGet(parsed, 2).trim().isBlank()
+                            && safeGet(parsed, 4).trim().isBlank() && safeGet(parsed, 5).trim().isBlank()) continue;
+                    rows.add(parsed);
                 }
             }
         } else {
@@ -517,13 +687,20 @@ public class IsmsService {
                 continue;
             }
 
-            IsmsEvidence.Status status = parseStatus(safeGet(row, 4).trim(), IsmsEvidence.Status.COMPLIANT);
+            IsmsItem item = itemOpt.get();
+            // 이행가이드(선택 입력) — 값이 있으면 항목의 가이드를 갱신, 비어있으면 유지
+            String guideCol = safeGet(row, 3).trim();
+            if (!guideCol.isBlank()) {
+                item.setGuide(guideCol);
+            }
+
+            IsmsEvidence.Status status = parseStatus(safeGet(row, 5).trim(), IsmsEvidence.Status.COMPLIANT);
             evidenceRepository.save(IsmsEvidence.builder()
-                    .item(itemOpt.get())
+                    .item(item)
                     .year(year)
                     .title(title)
                     .content(safeGet(row, 2))
-                    .fileName(safeGet(row, 3))
+                    .fileName(safeGet(row, 4))
                     .status(status)
                     .registrant(user)
                     .build());
@@ -539,6 +716,8 @@ public class IsmsService {
     }
 
     // ── 헬퍼 ─────────────────────────────────────────────────────────────────────
+
+    private static boolean notBlank(String s) { return s != null && !s.isBlank(); }
 
     private static String csvField(String s) {
         if (s == null || s.isEmpty()) return "";

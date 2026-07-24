@@ -72,6 +72,15 @@ public class IsmsController {
         return ApiResponse.ok(ismsService.updateItemGuide(id, req));
     }
 
+    /** 항목 기본값 저장 — 기본 증적제목·증적내용·이행가이드 (코드관리 'ISMS-P 101항목' 탭) */
+    @PatchMapping("/items/{id}/defaults")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.ItemResponse> updateItemDefaults(
+            @PathVariable Long id,
+            @RequestBody IsmsDto.ItemDefaultsRequest req) {
+        return ApiResponse.ok(ismsService.updateItemDefaults(id, req));
+    }
+
     @PostMapping("/items/{itemId}/policies/{policyId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> mapPolicy(@PathVariable Long itemId, @PathVariable Long policyId) {
@@ -155,6 +164,33 @@ public class IsmsController {
     @DeleteMapping("/evidences/{evidenceId}/file")
     public ApiResponse<IsmsDto.EvidenceResponse> removeFile(@PathVariable Long evidenceId) throws IOException {
         return ApiResponse.ok(ismsService.removeEvidenceFile(evidenceId));
+    }
+
+    /** 가져오기/초기화 버튼 상태 — 가져올 수 있는 이전 연도와 되돌릴 수 있는 건수 */
+    @GetMapping("/copy-previous/status")
+    public ApiResponse<IsmsDto.CopyPreviousStatus> copyPreviousStatus(
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.copyPreviousStatus(targetYear));
+    }
+
+    /** 전년도(증적이 있는 가장 최근 연도) 증적·현재상태·의견을 대상 연도로 복사 */
+    @PostMapping("/copy-previous")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.CopyPreviousResult> copyPrevious(
+            @RequestParam(required = false) Integer year,
+            @AuthenticationPrincipal User user) throws IOException {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.copyFromPreviousYear(targetYear, user));
+    }
+
+    /** 가져오기 초기화 — 가져오기로 생성된 증적·현재상태·의견을 지워 가져오기 전 상태로 되돌린다 */
+    @DeleteMapping("/copy-previous")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.RevertCopyResult> revertCopyPrevious(
+            @RequestParam(required = false) Integer year) throws IOException {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.revertCopyPrevious(targetYear));
     }
 
     @GetMapping("/summary")

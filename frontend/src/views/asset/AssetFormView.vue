@@ -214,7 +214,7 @@
           <input v-model="form.linkedSystems" class="input w-full" placeholder="HR 시스템, 결제 시스템 등" />
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="flex items-center gap-2">
             <input type="checkbox" id="accessControlTarget" v-model="form.accessControlTarget" class="w-4 h-4 text-blue-600" />
             <label for="accessControlTarget" class="text-sm font-medium text-gray-700">접근권한 관리 대상</label>

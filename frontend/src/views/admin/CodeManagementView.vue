@@ -4,7 +4,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">{{ $t('admin.codes') }}</h1>
-        <p class="text-sm text-gray-400 mt-0.5">코드, 점검 기본항목, 위협 기본항목, 개인정보 항목을 관리합니다</p>
+        <p class="text-sm text-gray-400 mt-0.5">코드, 점검 기본항목, 위협 기본항목, 개인정보 항목, ISMS-P 101항목을 관리합니다</p>
       </div>
     </div>
 
@@ -92,7 +92,7 @@
             <div v-else-if="values.length === 0" class="p-8 text-center text-gray-400 text-sm">
               등록된 코드값이 없습니다.
             </div>
-            <table v-else class="min-w-full divide-y divide-gray-200">
+            <div v-else class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">표시명</th>
@@ -123,7 +123,7 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       </div>
@@ -163,7 +163,7 @@
         <div v-else-if="filteredMonthlyDefaults.length === 0" class="p-8 text-center text-gray-400 text-sm">
           {{ monthlyDefaults.length === 0 ? '등록된 기본 항목이 없습니다.' : '검색 결과가 없습니다.' }}
         </div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">우선순위</th>
@@ -198,7 +198,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
         <div v-if="monthlyTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
           <span class="text-xs text-gray-400">{{ filteredMonthlyDefaults.length }}건 중 {{ monthlyPage * MONTHLY_PAGE_SIZE + 1 }}–{{ Math.min((monthlyPage + 1) * MONTHLY_PAGE_SIZE, filteredMonthlyDefaults.length) }}건</span>
           <div class="flex items-center gap-1">
@@ -249,7 +249,7 @@
         <div v-else-if="filteredThreatDefaults.length === 0" class="p-8 text-center text-gray-400 text-sm">
           {{ allThreatDefaults.length === 0 ? '등록된 위협 기본 항목이 없습니다.' : '검색 결과가 없습니다.' }}
         </div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk ID</th>
@@ -277,7 +277,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
         <div v-if="threatTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
           <span class="text-xs text-gray-400">{{ filteredThreatDefaults.length }}건 중 {{ threatPage * THREAT_PAGE_SIZE + 1 }}–{{ Math.min((threatPage + 1) * THREAT_PAGE_SIZE, filteredThreatDefaults.length) }}건</span>
           <div class="flex items-center gap-1">
@@ -352,7 +352,7 @@
             <div v-else-if="threatsBySelectedType.length === 0" class="p-8 text-center text-gray-400 text-sm">
               이 유형의 위협명이 없습니다.
             </div>
-            <table v-else class="w-full text-sm">
+            <div v-else class="overflow-x-auto"><table class="w-full text-sm">
               <thead class="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk ID</th>
@@ -386,7 +386,7 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
             <div v-if="threatByTypeTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
               <span class="text-xs text-gray-400">{{ threatsBySelectedType.length }}건 중 {{ threatByTypePage * THREAT_BY_TYPE_PAGE_SIZE + 1 }}–{{ Math.min((threatByTypePage + 1) * THREAT_BY_TYPE_PAGE_SIZE, threatsBySelectedType.length) }}건</span>
               <div class="flex items-center gap-1">
@@ -462,7 +462,7 @@
             <div v-else-if="values.length === 0" class="p-8 text-center text-gray-400 text-sm">
               등록된 항목이 없습니다.
             </div>
-            <table v-else class="w-full text-sm">
+            <div v-else class="overflow-x-auto"><table class="w-full text-sm">
               <thead class="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">순서</th>
@@ -491,7 +491,7 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       </div>
@@ -522,7 +522,7 @@
         <div v-else-if="filteredContractorDefaults.length === 0" class="p-8 text-center text-gray-400 text-sm">
           {{ contractorDefaults.length === 0 ? '등록된 기본 항목이 없습니다.' : '검색 결과가 없습니다.' }}
         </div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">점검 분야</th>
@@ -552,7 +552,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
         <div v-if="contractorDefaultTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
           <span class="text-xs text-gray-400">{{ filteredContractorDefaults.length }}건 중 {{ contractorDefaultPage * CONTRACTOR_DEFAULT_PAGE_SIZE + 1 }}–{{ Math.min((contractorDefaultPage + 1) * CONTRACTOR_DEFAULT_PAGE_SIZE, filteredContractorDefaults.length) }}건</span>
           <div class="flex items-center gap-1">
@@ -567,6 +567,104 @@
             <button @click="contractorDefaultPage++" :disabled="contractorDefaultPage >= contractorDefaultTotalPages - 1"
               class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">→</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 탭 7: ISMS-P 101항목 (기본 증적·이행가이드) ─── -->
+    <div v-else-if="activeTab === 'ismsItems'">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">ISMS-P 항목별 기본 증적·이행가이드 관리</h2>
+          <p class="text-xs text-gray-400 mt-0.5">항목별 기본 증적제목·증적내용·이행가이드는 증적관리 일괄등록 템플릿의 기본값으로 사용됩니다.</p>
+        </div>
+      </div>
+
+      <div class="mb-4 flex flex-wrap gap-3">
+        <input v-model="searchIsmsKeyword" type="text" placeholder="항목코드, 항목명, 증적제목 검색..."
+          class="input flex-1 min-w-48 text-sm"/>
+        <button v-if="searchIsmsKeyword" @click="searchIsmsKeyword = ''" class="btn-secondary text-sm px-3">초기화</button>
+        <span class="flex items-center text-sm text-gray-500">{{ filteredIsmsItems.length }}건</span>
+      </div>
+
+      <div class="card p-0 overflow-hidden">
+        <div v-if="loadingIsmsItems" class="p-8 text-center text-gray-400 text-sm">로딩 중...</div>
+        <div v-else-if="filteredIsmsItems.length === 0" class="p-8 text-center text-gray-400 text-sm">
+          {{ ismsItems.length === 0 ? '등록된 ISMS-P 항목이 없습니다.' : '검색 결과가 없습니다.' }}
+        </div>
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">항목코드</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-44">항목명</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">기본 증적제목</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">기본 증적내용</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이행가이드</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-16">관리</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr v-for="it in pagedIsmsItems" :key="it.id" class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-mono text-xs font-bold text-blue-700 whitespace-nowrap">{{ it.itemCode }}</td>
+              <td class="px-4 py-3 font-medium text-gray-900 text-xs">{{ it.itemName }}</td>
+              <td class="px-4 py-3 text-gray-700 text-xs max-w-xs truncate" :title="it.defaultEvidenceTitle">{{ it.defaultEvidenceTitle || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" :title="it.defaultEvidenceContent">{{ it.defaultEvidenceContent || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" :title="it.guide">{{ it.guide || '-' }}</td>
+              <td class="px-4 py-3 text-right">
+                <button @click="openIsmsItemModal(it)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">수정</button>
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div v-if="ismsTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+          <span class="text-xs text-gray-400">{{ filteredIsmsItems.length }}건 중 {{ ismsPage * ISMS_PAGE_SIZE + 1 }}–{{ Math.min((ismsPage + 1) * ISMS_PAGE_SIZE, filteredIsmsItems.length) }}건</span>
+          <div class="flex items-center gap-1">
+            <button @click="ismsPage--" :disabled="ismsPage === 0"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">←</button>
+            <template v-if="ismsTotalPages <= 10">
+              <button v-for="n in ismsTotalPages" :key="n" @click="ismsPage = n - 1"
+                class="px-2.5 py-1 text-sm rounded-lg"
+                :class="ismsPage === n - 1 ? 'bg-primary-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'">{{ n }}</button>
+            </template>
+            <span v-else class="text-sm text-gray-600 px-2">{{ ismsPage + 1 }} / {{ ismsTotalPages }}</span>
+            <button @click="ismsPage++" :disabled="ismsPage >= ismsTotalPages - 1"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ISMS-P 항목 기본값 모달 ─── -->
+    <div v-if="ismsItemModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/40" @click="ismsItemModal.show = false"/>
+      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[92vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">기본 증적·이행가이드 수정</h3>
+        <p class="text-sm text-gray-500 mb-5">
+          <span class="font-mono font-bold text-blue-700">{{ ismsItemModal.itemCode }}</span>
+          <span class="ml-2">{{ ismsItemModal.itemName }}</span>
+        </p>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">기본 증적제목</label>
+            <input v-model="ismsItemModal.form.defaultEvidenceTitle" class="input w-full" placeholder="예: 경영진의 참여 증적"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">기본 증적내용</label>
+            <textarea v-model="ismsItemModal.form.defaultEvidenceContent" class="input w-full" rows="4"
+              placeholder="증적예시 — 어떤 증적을 제출해야 하는지 기재"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">이행가이드</label>
+            <textarea v-model="ismsItemModal.form.guide" class="input w-full" rows="4"
+              placeholder="이 인증기준을 충족하기 위해 무엇을 준비해야 하는지 기재"></textarea>
+          </div>
+        </div>
+        <p v-if="ismsItemModal.error" class="mt-3 text-sm text-red-600">{{ ismsItemModal.error }}</p>
+        <div class="flex justify-end gap-3 mt-6">
+          <button @click="ismsItemModal.show = false" class="btn-secondary">취소</button>
+          <button @click="saveIsmsItem" :disabled="ismsItemModal.saving" class="btn-primary">
+            {{ ismsItemModal.saving ? '저장 중...' : '저장' }}
+          </button>
         </div>
       </div>
     </div>
@@ -832,7 +930,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi } from '@/api'
+import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi } from '@/api'
 
 const tabs = [
   { key: 'code', label: '코드 관리' },
@@ -841,6 +939,7 @@ const tabs = [
   { key: 'threatByType', label: '위협 유형별 관리' },
   { key: 'piByType', label: '개인정보 유형별 관리' },
   { key: 'contractorDefault', label: '수탁사 기본점검항목' },
+  { key: 'ismsItems', label: 'ISMS-P 101항목' },
 ]
 const activeTab = ref('code')
 
@@ -1391,6 +1490,79 @@ function contractorCategoryClass(cat) {
   return contractorCategoryColorMap[cat]
 }
 
+// ─── ISMS-P 101항목 (기본 증적·이행가이드) ───
+const ismsItems = ref([])
+const loadingIsmsItems = ref(false)
+const searchIsmsKeyword = ref('')
+const ismsPage = ref(0)
+const ISMS_PAGE_SIZE = 20
+
+const ismsItemModal = reactive({
+  show: false, saving: false, error: '',
+  editId: null, itemCode: '', itemName: '',
+  form: { defaultEvidenceTitle: '', defaultEvidenceContent: '', guide: '' }
+})
+
+const filteredIsmsItems = computed(() => {
+  const kw = searchIsmsKeyword.value.trim().toLowerCase()
+  if (!kw) return ismsItems.value
+  return ismsItems.value.filter(it =>
+    (it.itemCode || '').toLowerCase().includes(kw) ||
+    (it.itemName || '').toLowerCase().includes(kw) ||
+    (it.defaultEvidenceTitle || '').toLowerCase().includes(kw)
+  )
+})
+const ismsTotalPages = computed(() => Math.ceil(filteredIsmsItems.value.length / ISMS_PAGE_SIZE))
+const pagedIsmsItems = computed(() => {
+  const start = ismsPage.value * ISMS_PAGE_SIZE
+  return filteredIsmsItems.value.slice(start, start + ISMS_PAGE_SIZE)
+})
+watch(searchIsmsKeyword, () => { ismsPage.value = 0 })
+
+async function loadIsmsItems() {
+  loadingIsmsItems.value = true
+  try {
+    const res = await ismsApi.listItems()
+    // 항목코드 순 정렬 (sortOrder 없을 때 대비)
+    ismsItems.value = (res.data || []).slice().sort((a, b) =>
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.itemCode.localeCompare(b.itemCode))
+  } catch {
+    ismsItems.value = []
+  } finally {
+    loadingIsmsItems.value = false
+  }
+}
+
+function openIsmsItemModal(it) {
+  ismsItemModal.editId = it.id
+  ismsItemModal.itemCode = it.itemCode
+  ismsItemModal.itemName = it.itemName
+  ismsItemModal.error = ''
+  ismsItemModal.saving = false
+  ismsItemModal.form = {
+    defaultEvidenceTitle: it.defaultEvidenceTitle || '',
+    defaultEvidenceContent: it.defaultEvidenceContent || '',
+    guide: it.guide || ''
+  }
+  ismsItemModal.show = true
+}
+
+async function saveIsmsItem() {
+  ismsItemModal.saving = true
+  ismsItemModal.error = ''
+  try {
+    const res = await ismsApi.updateItemDefaults(ismsItemModal.editId, { ...ismsItemModal.form })
+    const updated = res.data
+    const idx = ismsItems.value.findIndex(x => x.id === ismsItemModal.editId)
+    if (idx !== -1 && updated) ismsItems.value[idx] = { ...ismsItems.value[idx], ...updated }
+    ismsItemModal.show = false
+  } catch (e) {
+    ismsItemModal.error = e || '저장에 실패했습니다'
+  } finally {
+    ismsItemModal.saving = false
+  }
+}
+
 // 탭 변경 시 데이터 로드
 watch(activeTab, (tab) => {
   if (tab === 'monthly' && monthlyDefaults.value.length === 0) loadMonthlyDefaults()
@@ -1398,6 +1570,7 @@ watch(activeTab, (tab) => {
   if (tab === 'threatByType' && allThreatDefaults.value.length === 0) loadAllThreatDefaults()
   if (tab === 'piByType' && groups.value.length === 0) loadGroups()
   if (tab === 'contractorDefault' && contractorDefaults.value.length === 0) loadContractorDefaults()
+  if (tab === 'ismsItems' && ismsItems.value.length === 0) loadIsmsItems()
 })
 
 onMounted(loadGroups)

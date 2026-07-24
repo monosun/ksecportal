@@ -90,7 +90,7 @@
       <div v-if="loading" class="text-center py-10 text-gray-500">{{ $t('common.loading') }}</div>
       <div v-else-if="logs.length === 0" class="text-center py-10 text-gray-400">{{ $t('common.noData') }}</div>
       <template v-else>
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b">
               <th class="text-left py-3 px-4 font-semibold text-gray-600">{{ $t('admin.timestamp') }}</th>
@@ -114,7 +114,7 @@
               <td class="py-3 px-4 text-gray-400">{{ log.ipAddress || '-' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
 
       </template>
     </div>

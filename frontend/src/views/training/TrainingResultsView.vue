@@ -91,7 +91,7 @@
           </select>
         </div>
         <div v-if="filteredCompletions.length === 0" class="text-center py-8 text-gray-400 text-sm">이수 이력이 없습니다.</div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b text-left text-gray-500">
               <th class="py-2.5 px-3 font-semibold">사용자</th>
@@ -117,7 +117,7 @@
               <td class="py-2.5 px-3 text-gray-400 text-xs">{{ formatDt(r.completedAt) }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </template>
 
@@ -187,7 +187,7 @@
       <div class="card">
         <h2 class="text-sm font-bold text-gray-800 mb-4">캠페인 목록</h2>
         <div v-if="campaigns.length === 0" class="text-center py-8 text-gray-400 text-sm">캠페인이 없습니다.</div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead>
             <tr class="border-b text-left text-gray-500">
               <th class="py-2.5 px-3 font-semibold">캠페인</th>
@@ -218,7 +218,7 @@
               <td class="py-2.5 px-3 text-gray-400 text-xs">{{ formatDt(c.createdAt) }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </template>
 

@@ -73,14 +73,14 @@
   .badge-blue   { @apply badge bg-primary-50 text-primary-600; }
   .badge-gray   { @apply badge bg-gray-100 text-gray-500; }
 
-  /* Page header */
+  /* Page header — 모바일에서 줄바꿈 + 여백 축소 */
   .page-header {
-    @apply flex items-center justify-between px-8 py-6 bg-white border-b border-gray-100;
+    @apply flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-4 sm:py-6 bg-white border-b border-gray-100;
   }
   .page-title {
     @apply text-xl font-bold text-gray-900 tracking-tight;
   }
   .page-body {
-    @apply p-8 space-y-6;
+    @apply p-4 sm:p-8 space-y-6;
   }
 }

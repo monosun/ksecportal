@@ -1,9 +1,15 @@
 <template>
   <div class="h-screen flex overflow-hidden">
 
+    <!-- 모바일 사이드바 오버레이 -->
+    <div v-if="mobileNavOpen" class="fixed inset-0 z-40 bg-black/40 md:hidden"
+      @click="mobileNavOpen = false"></div>
+
     <!-- Sidebar -->
-    <aside class="w-[220px] flex-shrink-0 flex flex-col border-r transition-colors duration-200"
-      :class="isDark ? 'bg-gray-900 border-gray-700/50' : 'bg-white border-gray-100'">
+    <aside class="fixed md:static inset-y-0 left-0 z-50 w-[220px] flex-shrink-0 flex flex-col border-r
+      transform transition-transform duration-200 md:translate-x-0"
+      :class="[isDark ? 'bg-gray-900 border-gray-700/50' : 'bg-white border-gray-100',
+        mobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full']">
 
       <!-- Logo -->
       <div class="h-[60px] px-5 flex items-center border-b flex-shrink-0"
@@ -230,6 +236,23 @@
 
     <!-- Main -->
     <main class="flex-1 overflow-auto bg-gray-50 min-w-0">
+      <!-- 모바일 상단바 (햄버거) -->
+      <div class="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 border-b"
+        :class="isDark ? 'bg-gray-900 border-gray-700/50' : 'bg-white border-gray-100'">
+        <button @click="mobileNavOpen = true"
+          class="p-1.5 -ml-1.5 rounded-lg"
+          :class="isDark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'"
+          aria-label="메뉴 열기">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <div class="flex items-center gap-2 min-w-0">
+          <img v-if="ui.effectiveLogoUrl()" :src="ui.effectiveLogoUrl()" alt="SecPortal" :style="{ height: '20px', width: 'auto' }"/>
+          <span class="text-[15px] font-bold tracking-tight truncate"
+            :class="isDark ? 'text-white' : 'text-gray-900'">{{ ui.effectiveLogoText() }}</span>
+        </div>
+      </div>
       <RouterView />
     </main>
   </div>
@@ -295,6 +318,10 @@ onUnmounted(() => {
 })
 
 const isDark = computed(() => ui.sidebarStyle === 'dark')
+
+// 모바일 사이드바(오프캔버스) 열림 상태 — 라우트 이동 시 자동으로 닫는다
+const mobileNavOpen = ref(false)
+watch(() => route.path, () => { mobileNavOpen.value = false })
 
 // ── 메뉴 그룹 정의 (config/navMenu.js 공유) + 저장된 커스터마이즈 적용 ─────
 const orderedGroups = computed(() => resolveMenu(navGroups, ui.menuOrder))

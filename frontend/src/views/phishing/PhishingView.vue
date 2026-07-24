@@ -458,7 +458,7 @@
           </div>
           <div class="p-6">
             <!-- Summary -->
-            <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               <div v-for="stat in resultStats" :key="stat.label"
                 class="bg-gray-50 rounded-xl p-4 text-center">
                 <p class="text-2xl font-bold" :class="stat.color">{{ stat.value }}</p>

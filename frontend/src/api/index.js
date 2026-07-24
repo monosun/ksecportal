@@ -103,7 +103,9 @@ export const quizBankApi = {
 
 export const vulnCommentApi = {
   list: (vulnId) => api.get(`/vulnerabilities/${vulnId}/comments`),
-  add: (vulnId, data) => api.post(`/vulnerabilities/${vulnId}/comments`, data)
+  add: (vulnId, data) => api.post(`/vulnerabilities/${vulnId}/comments`, data),
+  update: (vulnId, commentId, data) => api.patch(`/vulnerabilities/${vulnId}/comments/${commentId}`, data),
+  delete: (vulnId, commentId) => api.delete(`/vulnerabilities/${vulnId}/comments/${commentId}`)
 }
 
 export const adminApi = {
@@ -324,6 +326,7 @@ export const ismsApi = {
   getItemNote: (id, year) => api.get(`/isms/items/${id}/note`, { params: { year } }),
   saveItemNote: (id, year, data) => api.put(`/isms/items/${id}/note`, data, { params: { year } }),
   updateGuide: (id, guide) => api.patch(`/isms/items/${id}/guide`, { guide }),
+  updateItemDefaults: (id, data) => api.patch(`/isms/items/${id}/defaults`, data),
   mapPolicy: (itemId, policyId) => api.post(`/isms/items/${itemId}/policies/${policyId}`),
   unmapPolicy: (itemId, policyId) => api.delete(`/isms/items/${itemId}/policies/${policyId}`),
   listEvidences: (itemId, year) => api.get(`/isms/items/${itemId}/evidences`, { params: { year } }),
@@ -350,6 +353,9 @@ export const ismsApi = {
   searchEvidences: (params) => api.get('/isms/evidences/search', { params }),
   createEvidenceRef: (itemId, data) => api.post(`/isms/items/${itemId}/evidence-refs`, data),
   summary: (year) => api.get('/isms/summary', { params: { year } }),
+  copyPreviousStatus: (year) => api.get('/isms/copy-previous/status', { params: { year } }),
+  copyPrevious: (year) => api.post('/isms/copy-previous', null, { params: { year } }),
+  revertCopyPrevious: (year) => api.delete('/isms/copy-previous', { params: { year } }),
   exportCsv: (year) => {
     const lang = getLang()
     const name = lang === 'ko' ? `ISMS-P-증적-${year}.csv` : `isms-evidences-${year}.csv`

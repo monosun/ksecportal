@@ -550,7 +550,7 @@
             <div v-else-if="importModal.rows.length === 0" class="text-center py-16 text-gray-400 text-sm">
               추출된 수탁사가 없습니다.
             </div>
-            <table v-else class="w-full text-sm">
+            <div v-else class="overflow-x-auto"><table class="w-full text-sm">
               <thead>
                 <tr class="text-left text-xs text-gray-500 border-b border-gray-200">
                   <th class="py-2 pr-2 w-10">
@@ -595,7 +595,7 @@
                   </td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <!-- Footer -->
