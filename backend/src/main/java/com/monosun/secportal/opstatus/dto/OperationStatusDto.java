@@ -80,6 +80,60 @@ public class OperationStatusDto {
         private Boolean value;
     }
 
+    // ── 기본 항목 마스터 (코드 관리) ────────────────────────────────────────
+
+    @Getter @Builder
+    public static class DefaultResponse {
+        private Long id;
+        private String type;
+        private String category;
+        private String name;
+        private String cycle;
+        private String deliverable;
+        private String owner;
+        private String manager;
+        private String note;
+        private Integer sortOrder;
+        private boolean active;
+        private List<Boolean> plan;
+        private int planCount;
+
+        public static DefaultResponse from(com.monosun.secportal.opstatus.entity.OperationStatusDefault d) {
+            return DefaultResponse.builder()
+                    .id(d.getId())
+                    .type(d.getType().name())
+                    .category(d.getCategory())
+                    .name(d.getName())
+                    .cycle(d.getCycle())
+                    .deliverable(d.getDeliverable())
+                    .owner(d.getOwner())
+                    .manager(d.getManager())
+                    .note(d.getNote())
+                    .sortOrder(d.getSortOrder())
+                    .active(d.isActive())
+                    .plan(java.util.stream.IntStream.rangeClosed(1, 12)
+                            .mapToObj(m -> OperationStatusItem.has(d.getPlanMonths(), m))
+                            .toList())
+                    .planCount(OperationStatusItem.count(d.getPlanMonths()))
+                    .build();
+        }
+    }
+
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    public static class DefaultRequest {
+        private String type;
+        private String category;
+        private String name;
+        private String cycle;
+        private String deliverable;
+        private String owner;
+        private String manager;
+        private String note;
+        private Integer sortOrder;
+        private Boolean active;
+        private List<Boolean> plan;
+    }
+
     /** 유형별 이행 집계 */
     @Getter @Builder
     public static class TypeSummary {

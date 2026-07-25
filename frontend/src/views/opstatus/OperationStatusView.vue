@@ -209,9 +209,37 @@
             </div>
           </div>
 
+          <!-- 점검 기준 — 코드 관리의 기본항목에서 선택하거나 직접 입력 -->
           <div>
-            <label class="text-sm font-medium text-gray-700">{{ type === 'ISMS' ? '점검 기준' : '점검항목' }} *</label>
-            <input v-model="form.name" class="input w-full mt-1" placeholder="점검 항목명" />
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-sm font-medium text-gray-700">{{ type === 'ISMS' ? '점검 기준' : '점검항목' }} *</label>
+              <span class="text-[11px] text-gray-400">
+                기본항목 {{ defaultOptions.length }}건 · 관리 &gt; 코드 관리 &gt; 운영현황 기본항목
+              </span>
+            </div>
+
+            <select v-if="!manualName" v-model="selectedDefaultId" class="input w-full" @change="applyDefault">
+              <option :value="''" disabled>기본항목에서 선택하세요</option>
+              <optgroup v-for="g in groupedDefaults" :key="g.label || '기타'" :label="g.label || '구분 없음'">
+                <option v-for="d in g.items" :key="d.id" :value="d.id">{{ d.name }}</option>
+              </optgroup>
+              <option value="__manual__">＋ 목록에 없음 — 직접 입력</option>
+            </select>
+
+            <div v-else class="flex gap-2">
+              <input v-model="form.name" class="input flex-1" placeholder="점검 항목명 직접 입력" />
+              <button v-if="defaultOptions.length" type="button" @click="backToSelect"
+                class="text-xs px-2.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50 whitespace-nowrap">
+                목록에서 선택
+              </button>
+            </div>
+
+            <p v-if="!manualName && defaultOptions.length === 0" class="text-xs text-amber-600 mt-1">
+              등록된 기본항목이 없습니다. 직접 입력으로 전환해 등록하세요.
+            </p>
+            <p v-else-if="!manualName" class="text-xs text-gray-400 mt-1">
+              선택하면 주기·산출물·담당자·월별 계획이 함께 채워집니다. 이후 자유롭게 수정할 수 있습니다.
+            </p>
           </div>
 
           <div>
@@ -298,6 +326,26 @@ const saving = ref(false)
 const showForm = ref(false)
 const editing = ref(null)
 const form = ref(emptyForm())
+
+// 기본항목(코드 관리) — 항목 추가 시 선택 목록으로 쓴다
+const defaults = ref([])
+const selectedDefaultId = ref('')
+const manualName = ref(false)
+
+/** 현재 구분의 사용 중인 기본항목 */
+const defaultOptions = computed(() =>
+  defaults.value.filter(d => d.type === type.value && d.active))
+
+/** 구분(category)별로 묶어 optgroup 으로 보여준다 */
+const groupedDefaults = computed(() => {
+  const map = new Map()
+  for (const d of defaultOptions.value) {
+    const key = d.category || ''
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(d)
+  }
+  return [...map.entries()].map(([label, items]) => ({ label, items }))
+})
 
 const typeLabel = computed(() => TYPES.find(t => t.key === type.value)?.label || type.value)
 const typeSummary = computed(() => summary.value?.byType?.find(t => t.type === type.value) || null)
@@ -461,6 +509,9 @@ async function clearYear() {
 
 function openForm(item) {
   editing.value = item
+  selectedDefaultId.value = ''
+  // 수정은 이미 이름이 정해져 있으므로 항상 직접 입력, 신규는 기본항목이 있으면 선택부터
+  manualName.value = !!item || defaultOptions.value.length === 0
   form.value = item
     ? {
         category: item.category || '', name: item.name || '', cycle: item.cycle || '',
@@ -470,6 +521,43 @@ function openForm(item) {
       }
     : emptyForm()
   showForm.value = true
+}
+
+/** 기본항목을 고르면 나머지 칸도 함께 채운다(이후 자유롭게 수정 가능) */
+function applyDefault() {
+  if (selectedDefaultId.value === '__manual__') {
+    manualName.value = true
+    selectedDefaultId.value = ''
+    form.value.name = ''
+    return
+  }
+  const d = defaultOptions.value.find(x => x.id === selectedDefaultId.value)
+  if (!d) return
+  form.value = {
+    category: d.category || '',
+    name: d.name || '',
+    cycle: d.cycle || '',
+    deliverable: (d.deliverable || '').split(' / ').join('\n'),
+    owner: d.owner || '',
+    manager: d.manager || '',
+    note: d.note || '',
+    plan: [...(d.plan || Array(12).fill(false))],
+  }
+}
+
+function backToSelect() {
+  manualName.value = false
+  selectedDefaultId.value = ''
+  form.value.name = ''
+}
+
+async function loadDefaultOptions() {
+  try {
+    const res = await operationStatusApi.listDefaultItems()
+    defaults.value = res.data || res || []
+  } catch (e) {
+    defaults.value = []   // 조회 실패 시에는 직접 입력으로만 등록한다
+  }
 }
 
 function setPlanAll(on) {
@@ -520,5 +608,5 @@ async function removeItem(item) {
   }
 }
 
-onMounted(load)
+onMounted(() => { load(); if (canWrite.value) loadDefaultOptions() })
 </script>

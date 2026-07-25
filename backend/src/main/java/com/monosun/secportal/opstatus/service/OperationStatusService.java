@@ -3,9 +3,10 @@ package com.monosun.secportal.opstatus.service;
 import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
-import com.monosun.secportal.opstatus.OperationStatusDefaults;
 import com.monosun.secportal.opstatus.dto.OperationStatusDto;
+import com.monosun.secportal.opstatus.entity.OperationStatusDefault;
 import com.monosun.secportal.opstatus.entity.OperationStatusItem;
+import com.monosun.secportal.opstatus.repository.OperationStatusDefaultRepository;
 import com.monosun.secportal.opstatus.repository.OperationStatusItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.List;
 public class OperationStatusService {
 
     private final OperationStatusItemRepository repository;
+    private final OperationStatusDefaultRepository defaultRepository;
     private final AuditLogService auditLogService;
 
     // ── 조회 ────────────────────────────────────────────────────────────────
@@ -170,7 +172,8 @@ public class OperationStatusService {
     // ── 연도 구성 ───────────────────────────────────────────────────────────
 
     /**
-     * 기본 항목 불러오기. 이미 해당 연도·유형에 항목이 있으면 중복 생성하지 않는다
+     * 기본 항목 불러오기 — 코드 관리에서 관리하는 기본 항목 마스터(사용 중인 것만)를 해당 연도로 복제한다.
+     * 이미 해당 연도·유형에 항목이 있으면 중복 생성하지 않는다
      * (초기화가 필요하면 화면에서 유형 단위로 비운 뒤 다시 불러온다).
      */
     @Transactional
@@ -179,19 +182,22 @@ public class OperationStatusService {
         if (repository.existsByYearAndType(year, t))
             throw new BusinessException(year + "년 " + typeLabel(t) + " 항목이 이미 있습니다. 기존 항목을 삭제한 뒤 다시 불러오세요.");
 
-        List<OperationStatusDefaults.Row> rows = OperationStatusDefaults.of(t);
+        List<OperationStatusDefault> rows = defaultRepository.findByTypeAndActiveTrueOrderBySortOrderAscIdAsc(t);
+        if (rows.isEmpty())
+            throw new BusinessException(typeLabel(t) + " 기본 항목이 없습니다. 관리 > 코드 관리 > 운영현황 기본항목에서 먼저 등록하세요.");
+
         int order = 1;
-        for (OperationStatusDefaults.Row r : rows) {
+        for (OperationStatusDefault r : rows) {
             repository.save(OperationStatusItem.builder()
                     .year(year).type(t)
-                    .category(blankToNull(r.category()))
-                    .name(r.name())
-                    .cycle(blankToNull(r.cycle()))
-                    .deliverable(blankToNull(r.deliverable()))
-                    .owner(blankToNull(r.owner()))
-                    .manager(blankToNull(r.manager()))
-                    .note(blankToNull(r.note()))
-                    .planMonths(r.planMonths())
+                    .category(r.getCategory())
+                    .name(r.getName())
+                    .cycle(r.getCycle())
+                    .deliverable(r.getDeliverable())
+                    .owner(r.getOwner())
+                    .manager(r.getManager())
+                    .note(r.getNote())
+                    .planMonths(r.getPlanMonths())
                     .doneMonths(0)
                     .sortOrder(order++)
                     .build());

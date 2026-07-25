@@ -463,7 +463,12 @@ export const operationStatusApi = {
   remove: (id) => api.delete(`/operation-status/${id}`),
   loadDefaults: (year, type) => api.post('/operation-status/defaults', null, { params: { year, type } }),
   copy: (fromYear, toYear, type) => api.post('/operation-status/copy', null, { params: { fromYear, toYear, type } }),
-  clear: (year, type) => api.delete('/operation-status', { params: { year, type } })
+  clear: (year, type) => api.delete('/operation-status', { params: { year, type } }),
+  // 기본 항목 마스터 (관리 > 코드 관리에서 관리)
+  listDefaultItems: (type, activeOnly) => api.get('/operation-status/default-items', { params: { type, activeOnly } }),
+  createDefaultItem: (data) => api.post('/operation-status/default-items', data),
+  updateDefaultItem: (id, data) => api.patch(`/operation-status/default-items/${id}`, data),
+  deleteDefaultItem: (id) => api.delete(`/operation-status/default-items/${id}`)
 }
 
 export const secDocApi = {

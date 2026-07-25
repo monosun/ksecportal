@@ -634,6 +634,197 @@
       </div>
     </div>
 
+    <!-- ─── 탭: 운영현황 기본항목 ─── -->
+    <div v-else-if="activeTab === 'opsDefault'">
+      <div class="mb-4 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">운영현황 기본항목 관리</h2>
+          <p class="text-xs text-gray-400 mt-0.5">
+            보안 운영 &gt; 운영현황관리의 <strong>기본 항목 불러오기</strong>와 <strong>항목 추가</strong> 선택 목록의 원본입니다.
+            쓰지 않는 항목은 삭제 대신 <strong>미사용</strong>으로 두면 목록에서 제외됩니다.
+          </p>
+        </div>
+        <button @click="openOpsDefaultModal(null)" class="btn-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          기본 항목 추가
+        </button>
+      </div>
+
+      <!-- 관리체계 구분 전환 -->
+      <div class="flex border-b border-gray-100 mb-4">
+        <button v-for="t in OPS_TYPES" :key="t.key"
+          class="px-4 py-2.5 text-sm font-medium transition-colors"
+          :class="opsDefaultType === t.key
+            ? 'border-b-2 border-primary-600 text-primary-700'
+            : 'text-gray-500 hover:text-gray-700'"
+          @click="selectOpsDefaultType(t.key)">
+          {{ t.label }}
+          <span class="ml-1 text-xs text-gray-400">{{ opsDefaults.filter(d => d.type === t.key).length }}</span>
+        </button>
+      </div>
+
+      <div class="mb-4 flex flex-wrap gap-3">
+        <input v-model="searchOpsKeyword" type="text" placeholder="구분, 점검항목, 주기, 산출물 검색..."
+          class="input flex-1 min-w-48 text-sm"/>
+        <button v-if="searchOpsKeyword" @click="searchOpsKeyword = ''" class="btn-secondary text-sm px-3">초기화</button>
+        <span class="flex items-center text-sm text-gray-500">{{ filteredOpsDefaults.length }}건</span>
+      </div>
+
+      <div class="card p-0 overflow-hidden">
+        <div v-if="loadingOpsDefaults" class="p-8 text-center text-gray-400 text-sm">로딩 중...</div>
+        <div v-else-if="filteredOpsDefaults.length === 0" class="p-8 text-center text-gray-400 text-sm">
+          {{ opsDefaults.length === 0 ? '등록된 기본 항목이 없습니다.' : '검색 결과가 없습니다.' }}
+        </div>
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th v-if="opsDefaultType === 'ISMS'" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">구분</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ opsDefaultType === 'ISMS' ? '점검 기준' : '점검항목' }}</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">주기</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ opsDefaultType === 'ISMS' ? '보안적용 실적' : '상세 내용' }}</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-28">기본 계획</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">정렬</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">사용</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-24">관리</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr v-for="d in pagedOpsDefaults" :key="d.id" class="hover:bg-gray-50">
+              <td v-if="opsDefaultType === 'ISMS'" class="px-4 py-3 text-gray-700 text-xs">{{ d.category || '-' }}</td>
+              <td class="px-4 py-3 font-medium text-gray-900 text-xs">{{ d.name }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{{ d.cycle || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs max-w-md truncate" :title="d.deliverable">{{ d.deliverable || '-' }}</td>
+              <td class="px-4 py-3 text-center text-xs text-gray-500 whitespace-nowrap">
+                <span v-if="d.planCount === 0" class="text-gray-300">-</span>
+                <span v-else :title="planMonthsLabel(d.plan)">{{ planMonthsLabel(d.plan) }}</span>
+              </td>
+              <td class="px-4 py-3 text-center text-gray-400 text-sm">{{ d.sortOrder }}</td>
+              <td class="px-4 py-3 text-center">
+                <span :class="d.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                  class="text-xs px-2 py-0.5 rounded-full font-medium">
+                  {{ d.active ? '사용' : '미사용' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button @click="openOpsDefaultModal(d)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">수정</button>
+                  <button @click="confirmDeleteOpsDefault(d)" class="text-xs text-red-500 hover:text-red-700 font-medium">삭제</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div v-if="opsTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+          <span class="text-xs text-gray-400">
+            {{ filteredOpsDefaults.length }}건 중 {{ opsDefaultPage * OPS_PAGE_SIZE + 1 }}–{{ Math.min((opsDefaultPage + 1) * OPS_PAGE_SIZE, filteredOpsDefaults.length) }}건
+          </span>
+          <div class="flex items-center gap-1">
+            <button @click="opsDefaultPage--" :disabled="opsDefaultPage === 0"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">←</button>
+            <span class="text-sm text-gray-600 px-2">{{ opsDefaultPage + 1 }} / {{ opsTotalPages }}</span>
+            <button @click="opsDefaultPage++" :disabled="opsDefaultPage >= opsTotalPages - 1"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 운영현황 기본항목 모달 ─── -->
+    <div v-if="opsDefaultModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/40" @click="opsDefaultModal.show = false"></div>
+      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[92vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-900 mb-5">
+          운영현황 기본항목 {{ opsDefaultModal.id ? '수정' : '추가' }}
+        </h3>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">관리체계 *</label>
+              <select v-model="opsDefaultModal.form.type" class="input w-full">
+                <option v-for="t in OPS_TYPES" :key="t.key" :value="t.key">{{ t.label }}</option>
+              </select>
+            </div>
+            <div v-if="opsDefaultModal.form.type === 'ISMS'">
+              <label class="block text-sm font-medium text-gray-700 mb-1">구분</label>
+              <input v-model="opsDefaultModal.form.category" list="ops-default-categories" class="input w-full" placeholder="예: 접근통제"/>
+              <datalist id="ops-default-categories">
+                <option v-for="c in opsDefaultCategories" :key="c" :value="c"/>
+              </datalist>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              {{ opsDefaultModal.form.type === 'ISMS' ? '점검 기준' : '점검항목' }} *
+            </label>
+            <input v-model="opsDefaultModal.form.name" class="input w-full" placeholder="점검 항목명"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">주기 및 시점</label>
+            <input v-model="opsDefaultModal.form.cycle" class="input w-full" placeholder="예: 연1회, 반기1회, 매월, 수시, 상시"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              {{ opsDefaultModal.form.type === 'ISMS' ? '보안적용 실적 (산출물)' : '상세 내용' }}
+            </label>
+            <textarea v-model="opsDefaultModal.form.deliverable" class="input w-full" rows="3"
+              placeholder="산출물·근거를 한 줄에 하나씩 입력합니다"></textarea>
+          </div>
+          <div v-if="opsDefaultModal.form.type === 'ISMS'" class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">책임자</label>
+              <input v-model="opsDefaultModal.form.owner" class="input w-full" placeholder="예: CISO"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">실무자</label>
+              <input v-model="opsDefaultModal.form.manager" class="input w-full" placeholder="예: 정보보호매니저"/>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">월별 기본 계획</label>
+              <div class="flex gap-1.5">
+                <button type="button" @click="opsDefaultModal.form.plan = Array(12).fill(true)"
+                  class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">매월</button>
+                <button type="button" @click="opsDefaultModal.form.plan = Array(12).fill(false)"
+                  class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">전체 해제</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-6 sm:grid-cols-12 gap-1">
+              <button v-for="m in 12" :key="m" type="button"
+                class="py-2 rounded text-xs font-medium border transition-colors"
+                :class="opsDefaultModal.form.plan[m - 1]
+                  ? 'bg-primary-50 border-primary-300 text-primary-700'
+                  : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50'"
+                @click="opsDefaultModal.form.plan[m - 1] = !opsDefaultModal.form.plan[m - 1]">{{ m }}월</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-1.5">
+              연도별 운영현황에 불러올 때의 기본 계획입니다. 상시·수시 항목은 모두 해제해 두세요.
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
+              <input v-model.number="opsDefaultModal.form.sortOrder" type="number" class="input w-full"/>
+            </div>
+            <div class="flex items-end pb-2">
+              <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" v-model="opsDefaultModal.form.active" class="w-4 h-4 rounded"/>
+                사용
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button @click="opsDefaultModal.show = false" class="btn-secondary">취소</button>
+          <button @click="saveOpsDefault" :disabled="savingOpsDefault" class="btn-primary">
+            {{ savingOpsDefault ? '저장 중...' : '저장' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── ISMS-P 항목 기본값 모달 ─── -->
     <div v-if="ismsItemModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/40" @click="ismsItemModal.show = false"/>
@@ -930,7 +1121,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi } from '@/api'
+import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi, operationStatusApi } from '@/api'
 
 const tabs = [
   { key: 'code', label: '코드 관리' },
@@ -940,6 +1131,7 @@ const tabs = [
   { key: 'piByType', label: '개인정보 유형별 관리' },
   { key: 'contractorDefault', label: '수탁사 기본점검항목' },
   { key: 'ismsItems', label: 'ISMS-P 101항목' },
+  { key: 'opsDefault', label: '운영현황 기본항목' },
 ]
 const activeTab = ref('code')
 
@@ -1564,6 +1756,123 @@ async function saveIsmsItem() {
 }
 
 // 탭 변경 시 데이터 로드
+
+// ─── 운영현황 기본항목 (보안 운영 > 운영현황관리의 원본) ───
+const OPS_TYPES = [
+  { key: 'ISMS', label: '정보보호 관리체계' },
+  { key: 'PRIVACY', label: '개인정보보호 관리체계' },
+]
+const OPS_PAGE_SIZE = 20
+
+const opsDefaults = ref([])
+const opsDefaultType = ref('ISMS')
+const loadingOpsDefaults = ref(false)
+const savingOpsDefault = ref(false)
+const searchOpsKeyword = ref('')
+const opsDefaultPage = ref(0)
+const opsDefaultModal = ref({ show: false, id: null, form: emptyOpsDefaultForm() })
+
+function emptyOpsDefaultForm() {
+  return {
+    type: 'ISMS', category: '', name: '', cycle: '', deliverable: '',
+    owner: '', manager: '', note: '', sortOrder: 0, active: true,
+    plan: Array(12).fill(false),
+  }
+}
+
+const filteredOpsDefaults = computed(() => {
+  const kw = searchOpsKeyword.value.trim().toLowerCase()
+  return opsDefaults.value
+    .filter(d => d.type === opsDefaultType.value)
+    .filter(d => !kw || [d.category, d.name, d.cycle, d.deliverable, d.owner, d.manager]
+      .some(v => (v || '').toLowerCase().includes(kw)))
+})
+
+const opsTotalPages = computed(() => Math.ceil(filteredOpsDefaults.value.length / OPS_PAGE_SIZE) || 1)
+const pagedOpsDefaults = computed(() =>
+  filteredOpsDefaults.value.slice(opsDefaultPage.value * OPS_PAGE_SIZE, (opsDefaultPage.value + 1) * OPS_PAGE_SIZE))
+
+const opsDefaultCategories = computed(() =>
+  [...new Set(opsDefaults.value.filter(d => d.type === 'ISMS').map(d => d.category).filter(Boolean))])
+
+/** 계획 월을 "1·4·7·10월" 또는 "매월" 로 짧게 표기한다 */
+function planMonthsLabel(plan) {
+  if (!plan) return '-'
+  const months = plan.map((on, i) => (on ? i + 1 : 0)).filter(Boolean)
+  if (months.length === 0) return '-'
+  if (months.length === 12) return '매월'
+  return months.join('·') + '월'
+}
+
+function selectOpsDefaultType(key) {
+  opsDefaultType.value = key
+  opsDefaultPage.value = 0
+}
+
+async function loadOpsDefaults() {
+  loadingOpsDefaults.value = true
+  try {
+    const res = await operationStatusApi.listDefaultItems()
+    opsDefaults.value = res.data || res || []
+  } catch (e) {
+    opsDefaults.value = []
+  } finally {
+    loadingOpsDefaults.value = false
+  }
+}
+
+function openOpsDefaultModal(d) {
+  if (d) {
+    opsDefaultModal.value = {
+      show: true,
+      id: d.id,
+      form: {
+        type: d.type, category: d.category || '', name: d.name || '', cycle: d.cycle || '',
+        deliverable: d.deliverable || '', owner: d.owner || '', manager: d.manager || '',
+        note: d.note || '', sortOrder: d.sortOrder ?? 0, active: d.active,
+        plan: [...(d.plan || Array(12).fill(false))],
+      },
+    }
+  } else {
+    const form = emptyOpsDefaultForm()
+    form.type = opsDefaultType.value
+    opsDefaultModal.value = { show: true, id: null, form }
+  }
+}
+
+async function saveOpsDefault() {
+  const f = opsDefaultModal.value.form
+  if (!f.name.trim()) {
+    alert('점검 항목명을 입력해주세요.')
+    return
+  }
+  savingOpsDefault.value = true
+  try {
+    const payload = { ...f, name: f.name.trim() }
+    if (opsDefaultModal.value.id) {
+      await operationStatusApi.updateDefaultItem(opsDefaultModal.value.id, payload)
+    } else {
+      await operationStatusApi.createDefaultItem(payload)
+    }
+    opsDefaultModal.value.show = false
+    await loadOpsDefaults()
+  } catch (e) {
+    alert(e || '저장에 실패했습니다.')
+  } finally {
+    savingOpsDefault.value = false
+  }
+}
+
+async function confirmDeleteOpsDefault(d) {
+  if (!confirm(`"${d.name}" 기본 항목을 삭제하시겠습니까?\n\n※ 모두 삭제하면 다음 기동 시 표준 항목이 다시 생성됩니다.\n   쓰지 않는 항목은 "미사용"으로 두는 것을 권장합니다.`)) return
+  try {
+    await operationStatusApi.deleteDefaultItem(d.id)
+    await loadOpsDefaults()
+  } catch (e) {
+    alert(e || '삭제에 실패했습니다.')
+  }
+}
+
 watch(activeTab, (tab) => {
   if (tab === 'monthly' && monthlyDefaults.value.length === 0) loadMonthlyDefaults()
   if (tab === 'threat' && allThreatDefaults.value.length === 0) loadAllThreatDefaults()
@@ -1571,6 +1880,7 @@ watch(activeTab, (tab) => {
   if (tab === 'piByType' && groups.value.length === 0) loadGroups()
   if (tab === 'contractorDefault' && contractorDefaults.value.length === 0) loadContractorDefaults()
   if (tab === 'ismsItems' && ismsItems.value.length === 0) loadIsmsItems()
+  if (tab === 'opsDefault' && opsDefaults.value.length === 0) loadOpsDefaults()
 })
 
 onMounted(loadGroups)
