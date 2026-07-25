@@ -70,42 +70,67 @@
       <div v-if="sections.length === 0" class="card !p-4 text-center py-10 text-sm text-gray-400">
         도메인 데이터가 없습니다
       </div>
-      <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
-        <section v-for="sec in sections" :key="sec.num" class="card !p-4">
-          <div class="flex items-baseline justify-between gap-2 mb-2.5">
-            <h2 class="text-xs font-bold text-gray-700 truncate">{{ sec.num }}. {{ sec.name }}</h2>
-            <span class="text-xs font-bold tabular-nums shrink-0" :style="{ color: rateColor(sec.rate, sec.effective) }">
-              {{ sec.effective > 0 ? `${sec.rate}%` : '—' }}
-            </span>
-          </div>
+      <template v-else>
+        <!-- 도메인 막대에 쓰는 상태색 범례 — 3열 위에 한 번만 둔다 -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 px-0.5">
+          <span class="text-[11px] font-bold text-gray-700">도메인별 이행 현황</span>
+          <span v-for="s in statusSegments" :key="s.label"
+            class="inline-flex items-center gap-1 text-[11px] text-gray-500">
+            <span class="w-2 h-2 rounded-sm shrink-0" :style="{ background: s.color }"></span>{{ s.label }}
+          </span>
+        </div>
 
-          <div class="space-y-2">
-            <button v-for="d in sec.domains" :key="d.code" type="button"
-              class="w-full text-left group focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md"
-              :title="`${d.code} ${d.name} — 준수 ${d.compliant}/${d.effective}건${d.na ? ` (NA ${d.na}건 제외)` : ''}`"
-              @click="goToDomain(d.code)">
-              <div class="flex items-baseline gap-1.5">
-                <span class="text-[11px] font-semibold text-gray-400 tabular-nums shrink-0 w-8">{{ d.code }}</span>
-                <span class="text-[11px] text-gray-700 truncate group-hover:text-primary-600">{{ d.name }}</span>
-                <span class="text-[11px] text-gray-400 tabular-nums ml-auto shrink-0">
-                  {{ d.compliant }}/{{ d.effective }}
-                </span>
-                <span class="text-[11px] font-bold tabular-nums shrink-0 w-8 text-right"
-                  :style="{ color: rateColor(d.rate, d.effective) }">
-                  {{ d.effective > 0 ? `${d.rate}%` : '—' }}
-                </span>
-              </div>
-              <div class="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                <div class="h-full rounded-full transition-[width] duration-500"
-                  :style="{ width: `${d.rate}%`, background: rateColor(d.rate, d.effective) }"></div>
-              </div>
-            </button>
-          </div>
-        </section>
-      </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+          <section v-for="sec in sections" :key="sec.num" class="card !p-4">
+            <div class="flex items-baseline justify-between gap-2 mb-2.5">
+              <h2 class="text-xs font-bold text-gray-700 truncate">{{ sec.num }}. {{ sec.name }}</h2>
+              <span class="text-xs font-bold tabular-nums shrink-0" :style="{ color: rateColor(sec.rate, sec.effective) }">
+                {{ sec.effective > 0 ? `${sec.rate}%` : '—' }}
+              </span>
+            </div>
+
+            <div class="space-y-2">
+              <button v-for="d in sec.domains" :key="d.code" type="button"
+                class="w-full text-left group focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md"
+                :title="domainTitle(d)"
+                @click="goToDomain(d.code)">
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-[11px] font-semibold text-gray-400 tabular-nums shrink-0 w-8">{{ d.code }}</span>
+                  <span class="text-[11px] text-gray-700 truncate group-hover:text-primary-600">{{ d.name }}</span>
+                  <span class="text-[11px] text-gray-400 tabular-nums ml-auto shrink-0">
+                    {{ d.compliant }}/{{ d.effective }}
+                  </span>
+                  <span class="text-[11px] font-bold tabular-nums shrink-0 w-8 text-right"
+                    :style="{ color: rateColor(d.rate, d.effective) }">
+                    {{ d.effective > 0 ? `${d.rate}%` : '—' }}
+                  </span>
+                </div>
+
+                <!-- 상태 구성 막대 — 준수뿐 아니라 부분준수·미준수·증적미제출·해당없음까지 색으로 함께 표시 -->
+                <div class="mt-0.5 flex gap-px h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <div v-for="s in d.segments" :key="s.label"
+                    class="h-full first:rounded-l-full last:rounded-r-full"
+                    :style="{ width: `${s.value / d.total * 100}%`, background: s.color }"
+                    :title="`${s.label} ${s.value}건`"></div>
+                </div>
+
+                <!-- 항목별 건수 — 0건 상태는 생략해 줄이 늘어나지 않게 한다 -->
+                <div class="flex flex-wrap gap-x-2 mt-0.5 leading-none">
+                  <span v-for="s in d.segments" :key="s.label"
+                    class="inline-flex items-center gap-1 text-[10px] text-gray-500 tabular-nums">
+                    <span class="w-1.5 h-1.5 rounded-sm shrink-0" :style="{ background: s.color }"></span>
+                    {{ s.label }} {{ s.value }}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </section>
+        </div>
+      </template>
 
       <p class="text-[11px] text-gray-400 mt-2">
-        이행률 = 준수 ÷ (전체 − 해당없음). 도메인을 클릭하면 증적관리에서 해당 도메인이 선택됩니다.
+        이행률 = 준수 ÷ (전체 − 해당없음). 막대는 도메인의 전체 항목을 상태별로 나눈 구성이며, 0건인 상태는 표기하지 않습니다.
+        도메인을 클릭하면 증적관리에서 해당 도메인이 선택됩니다.
       </p>
     </template>
   </div>
@@ -153,18 +178,24 @@ const overallRate = computed(() =>
 
 const overallColor = computed(() => rateColor(overallRate.value, effectiveTotal.value))
 
+/**
+ * 상태 5종의 라벨·색 정의. 요약 막대·범례·도메인별 막대가 모두 이 순서와 색을 공유한다.
+ * (백엔드 SummaryResponse 와 DomainSummary 가 같은 필드명을 쓰므로 한 함수로 처리한다)
+ */
+const STATUS_DEFS = [
+  { label: '준수',        field: 'compliant',    color: C.good },
+  { label: '부분 준수',   field: 'partial',      color: C.warning },
+  { label: '미준수',      field: 'nonCompliant', color: C.critical },
+  { label: '증적 미제출', field: 'noEvidence',   color: C.noEvidence },
+  { label: '해당없음',    field: 'na',           color: C.neutral },
+]
+
+function toSegments(src) {
+  return STATUS_DEFS.map(d => ({ label: d.label, color: d.color, value: src?.[d.field] || 0 }))
+}
+
 /** 전체 항목의 상태 구성 — 요약 막대와 범례가 같은 데이터를 쓴다 */
-const statusSegments = computed(() => {
-  const s = summary.value
-  if (!s) return []
-  return [
-    { label: '준수',        value: s.compliant || 0,    color: C.good },
-    { label: '부분 준수',   value: s.partial || 0,      color: C.warning },
-    { label: '미준수',      value: s.nonCompliant || 0, color: C.critical },
-    { label: '증적 미제출', value: s.noEvidence || 0,   color: C.noEvidence },
-    { label: '해당없음',    value: s.na || 0,           color: C.neutral },
-  ]
-})
+const statusSegments = computed(() => (summary.value ? toSegments(summary.value) : []))
 
 /** 요약 막대에는 0건 상태를 그리지 않는다(0폭 조각이 모서리 라운딩을 먹는 것 방지) */
 const visibleSegments = computed(() => statusSegments.value.filter(s => s.value > 0))
@@ -187,6 +218,8 @@ const sections = computed(() => {
       effective: (d.total || 0) - (d.na || 0),
       total: d.total || 0,
       na: d.na || 0,
+      // 막대·건수 모두 0건 상태는 빼서 줄 수가 도메인마다 들쭉날쭉해지지 않게 한다
+      segments: toSegments(d).filter(s => s.value > 0),
     })
   }
 
@@ -204,6 +237,15 @@ const sections = computed(() => {
       }
     })
 })
+
+/** 마우스오버 툴팁 — 상태별 건수를 0건 포함해 모두 보여준다(막대에서 생략된 상태 확인용) */
+function domainTitle(d) {
+  const detail = STATUS_DEFS
+    .map(s => `${s.label} ${d.segments.find(x => x.label === s.label)?.value || 0}`)
+    .join(' · ')
+  const rate = d.effective > 0 ? `${d.rate}%` : '평가대상 없음'
+  return `${d.code} ${d.name}\n전체 ${d.total}건 — ${detail}\n이행률 ${rate} (준수 ${d.compliant}/${d.effective})`
+}
 
 function goToDomain(code) {
   router.push({ path: '/isms', query: { domain: code } })
