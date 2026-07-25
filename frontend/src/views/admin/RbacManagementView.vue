@@ -305,6 +305,7 @@ const MENUS = [
   { key: 'monthly_checks',    label: '월간 보안점검' },
   { key: 'source_scan',       label: '소스 취약점 점검 (SAST)' },
   { key: 'security_reviews',  label: '보안성 심의' },
+  { key: 'operation_status',  label: '운영현황관리' },
   // 로그 통합관리
   { key: 'log_personal_info', label: '개인정보처리시스템 로그' },
   { key: 'log_ad',            label: 'AD 로그' },

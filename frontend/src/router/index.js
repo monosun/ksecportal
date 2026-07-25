@@ -216,6 +216,11 @@ const routes = [
         component: () => import('@/views/secreview/SecurityReviewView.vue')
       },
       {
+        path: 'operation-status',
+        name: 'OperationStatus',
+        component: () => import('@/views/opstatus/OperationStatusView.vue')
+      },
+      {
         path: 'committee',
         name: 'Committee',
         component: () => import('@/views/committee/CommitteeView.vue')

@@ -44,6 +44,7 @@ export const navGroups = [
       { to: '/monthly-checks',     label: 'nav.monthlyChecks',   icon: ClipboardCheckIcon,    menuKey: 'monthly_checks' },
       { to: '/source-scan',        label: 'nav.sourceScan',      icon: ShieldExclamationIcon, menuKey: 'source_scan' },
       { to: '/security-reviews',   label: 'nav.securityReviews', icon: ClipboardCheckIcon,    menuKey: 'security_reviews' },
+      { to: '/operation-status',   label: 'nav.operationStatus', icon: ClipboardCheckIcon,    menuKey: 'operation_status' },
     ]
   },
   {

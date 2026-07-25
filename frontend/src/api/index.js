@@ -453,6 +453,19 @@ export const rbacApi = {
   removeUser: (roleId, userId) => api.delete(`/admin/roles/${roleId}/users/${userId}`)
 }
 
+export const operationStatusApi = {
+  years: () => api.get('/operation-status/years'),
+  list: (params) => api.get('/operation-status', { params }),
+  summary: (year) => api.get('/operation-status/summary', { params: { year } }),
+  create: (data) => api.post('/operation-status', data),
+  update: (id, data) => api.patch(`/operation-status/${id}`, data),
+  toggleMonth: (id, data) => api.patch(`/operation-status/${id}/month`, data),
+  remove: (id) => api.delete(`/operation-status/${id}`),
+  loadDefaults: (year, type) => api.post('/operation-status/defaults', null, { params: { year, type } }),
+  copy: (fromYear, toYear, type) => api.post('/operation-status/copy', null, { params: { fromYear, toYear, type } }),
+  clear: (year, type) => api.delete('/operation-status', { params: { year, type } })
+}
+
 export const secDocApi = {
   list: (params) => api.get('/sec-docs', { params }),
   get: (id) => api.get(`/sec-docs/${id}`),

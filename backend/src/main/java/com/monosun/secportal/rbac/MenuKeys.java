@@ -21,7 +21,7 @@ public final class MenuKeys {
             "risk_assessment", "risk_treatment", "isms_mapping", "isms",
             // 보안 운영
             "security_events", "incidents", "sec_findings", "monthly_checks",
-            "source_scan", "security_reviews",
+            "source_scan", "security_reviews", "operation_status",
             // 로그 통합관리
             "log_personal_info", "log_ad", "log_nac", "log_network_link", "log_search",
             // 보안 거버넌스

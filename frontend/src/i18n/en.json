@@ -33,6 +33,7 @@
     "secFindings": "Security Findings",
     "sourceScan": "Source Vulnerability Scan",
     "securityReviews": "Security Design Review",
+    "operationStatus": "Operation Status",
     "logout": "Logout",
     "profile": "Profile",
     "settings": "Settings",

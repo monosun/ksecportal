@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.18.0** — ISMS-P 이행률 대시보드 한 화면 재구성, 권한관리 기본 역할(ADMIN·MANAGER·USER) 권한 표시·수정, 문서 제품명 KSecPortal 통일 ([릴리즈 노트](release/v1.18.0/RELEASE_NOTES.md))
+> **최신 버전: v1.19.0** — 운영현황관리 신설(연간 운영 점검표·연도별 구성·월별 계획/이행 관리) ([릴리즈 노트](release/v1.19.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -39,6 +39,7 @@ docker compose up -d --build
 | **월간 보안점검** | 정보보호의 날 기준 32개 표준 점검 항목, 년월 네비게이션(←→), 우선순위(상·중·하)·구분 필터, 완료율 프로그레스바, 결과 원클릭 토글, 항목 CRUD, **담당자 지정(사용자 검색·직접입력)**, **증적 파일 관리(파일 첨부·다운로드)**, **기본 항목 불러오기 초기화 경고·중복 체크**, **이전 월 항목 복사(결과는 미완료로 초기화·담당자 승계)** |
 | **소스 취약점 점검 (SAST)** | GitHub 저장소 대상 4개 카테고리 통합 점검 — 의존성(Dependabot)·코드(Code scanning)·시크릿(Secret scanning) 알림 + **내장 OWASP Top 10:2021 정적분석**(저장소 tarball 직접 분석, 별도 활성화 불필요), 심각도·OWASP/CWE 분류·파일·라인 위치·GitHub 링크, 점검 이력 저장, **PDF 보고서(가로 A4·심각도/카테고리 분포·전체 발견 목록)**, **CWE 설명 팝업**(무엇인가/위험/조치·MITRE 링크), **오탐 억제 주석 `// sast:ignore 사유`** |
 | **보안성 심의** | 신규 구축·변경 시스템의 설계 단계 보안 검토 — 요청 접수 → 검토중 → 심의 완료(승인/조건부 승인/반려), 심의 구분 4종(신규구축·변경/고도화·외부연계·폐기), 개인정보 처리·인터넷 공개 여부, 설계서 첨부, **기본 검토 체크리스트 20항목 자동 생성**(인증·권한/접근통제/암호화/개인정보/로그·감사/개발보안/운영·보안설정), 항목별 적합·부적합·해당없음 판정과 의견, **미검토 항목 잔여 시 결과 등록 차단**, 현황 카드 클릭 필터·검토 진행률·부적합 건수 |
+| **운영현황관리** | 정보보호·개인정보보호 관리체계의 **연간 운영 점검표**(ISMS-P 운영현황표 서식) — 구분·점검기준·주기·보안적용 실적(산출물)·책임자·실무자 + **1~12월 계획/이행 매트릭스**, 연도별 구성·관리(← 연도 →), **기본 항목 불러오기**(정보보호 45개·개인정보보호 10개), **전년도 구성 복사**(계획 승계·실적 초기화), 월 칸 원클릭 이행 토글(계획 ○ / 이행 ● / 계획 외 수행 ▲), 이행률·미이행·계획 외 수행·월별 계획 대비 이행 막대 요약 |
 | **대시보드** | 위험현황(5×5 히트맵·등급별 통계·고위험 항목), 취약점 현황(심각도 바차트·기한초과 목록), 인시던트 현황(월별 추이·최근 5건), ISMS-P 이행률(코닉 게이지·도메인별 진행바), 증적 제출 현황(도메인별 제출/미제출 테이블), **KRCERT RSS 위젯(취약점 정보·보안공지 탭, 최근 7일치)** — **실 DB 데이터 실시간 반영** |
 | **감사 로그** | 모든 주요 액션 자동 기록, IP 주소 자동 캡처, 날짜·시간 범위 검색, 관리자 조회 |
 | **코드 관리** | 부서·분류 등 공통 코드 그룹/값 관리 (ADMIN), 회원가입 부서 드롭다운 연동, **월간 점검·위협 기본·위협 유형별 목록 20행 페이지네이션**, **개인정보 분류별 항목 코드 초기 데이터(13개 분류·74개 항목: 기본 식별정보·연락처·신분증·단말기·결제·신용·서비스이용·위치·복지·번호이동·미성년자대리인·마케팅·민감정보)** |
@@ -285,6 +286,18 @@ DELETE /api/risk/assessments/:id                    # 평가 항목 삭제 (MANA
 PATCH  /api/risk/assessments/bulk-treatment         # 처리방법 일괄처리 (MANAGER+)
 GET    /api/risk/rounds/:roundId/treatment-plans    # 위험처리 계획 목록
 PATCH  /api/risk/assessments/:id/treatment-plan     # 처리 계획 수정 (MANAGER+)
+
+# 운영현황관리 (v1.19.0+)
+GET    /api/operation-status/years        # 등록된 연도 목록
+GET    /api/operation-status              # 항목 목록 (?year=&type=ISMS|PRIVACY)
+GET    /api/operation-status/summary      # 연도 이행 집계 (?year=, 유형별·월별)
+POST   /api/operation-status              # 항목 등록 (MANAGER+)
+PATCH  /api/operation-status/:id          # 항목 수정 (MANAGER+)
+PATCH  /api/operation-status/:id/month    # 월 칸 계획/이행 토글 (MANAGER+)
+DELETE /api/operation-status/:id          # 항목 삭제 (MANAGER+)
+POST   /api/operation-status/defaults     # 기본 항목 불러오기 (?year=&type=, MANAGER+)
+POST   /api/operation-status/copy         # 연도 구성 복사 (?fromYear=&toYear=&type=, MANAGER+)
+DELETE /api/operation-status              # 연도·구분 전체 삭제 (?year=&type=, MANAGER+)
 
 # 보안성 심의 (v1.17.0+)
 GET    /api/security-reviews              # 목록 (status, reviewType, keyword 필터)
@@ -612,6 +625,7 @@ ksecportal/
 │       ├── security/                # 보안이벤트 관리 (연동·이벤트)
 │       ├── sourcescan/              # 소스 취약점 점검(SAST) + GitHub 연동
 │       ├── secreview/               # 보안성 심의 (요청·체크리스트·결과)
+│       ├── opstatus/               # 운영현황관리 (연도별 연간 운영 점검표)
 │       ├── admin/                   # 사용자 관리 (ADMIN), 설정 암호화 도구
 │       ├── audit/                   # 감사 로그
 │       ├── isms/                    # ISMS-P 증적관리 (의견·가이드·전년도 가져오기)
@@ -662,6 +676,7 @@ ksecportal/
             ├── security/            # 보안이벤트 관리
             ├── sourcescan/          # 소스 취약점 점검 (SAST)
             ├── secreview/           # 보안성 심의
+            ├── opstatus/            # 운영현황관리
             ├── log/                 # 로그 통합관리 (개인정보·AD·NAC·망연계·통합검색)
             ├── training/            # 교육 목록·상세(퀴즈)·교육훈련 결과
             ├── phishing/            # 모의 악성메일 훈련
@@ -726,6 +741,7 @@ ksecportal/
 | `audit_items` | 감사 점검항목 (결과: PASS/FAIL/NA, 발견사항·조치사항) |
 | `audit_files` | 감사 첨부파일 (보고서 등) |
 | `security_findings` | 보안 결함사항 (ISMS-P 인증기준·위험도·시정조치·처리상태) |
+| `operation_status_items` | 운영현황관리 항목 — 연도·구분(ISMS/PRIVACY)·점검기준·주기·산출물·책임자, 월별 계획/이행 12비트 마스크 (v1.19.0) |
 | `security_reviews` | 보안성 심의 요청 (대상 시스템·심의구분·상태·결과·설계서 첨부, v1.17.0) |
 | `security_review_items` | 심의 검토 체크리스트 항목 (기본 20항목 자동 생성·적합/부적합/해당없음, v1.17.0) |
 | `source_scans` | 소스 취약점 점검(SAST) 실행 이력 (저장소·심각도별 집계, v1.6.0) |
@@ -767,6 +783,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.19.0](release/v1.19.0/RELEASE_NOTES.md) | **운영현황관리** 신설(보안 운영) — ISMS-P *정보보호 관리체계 운영현황표* 서식을 화면으로 옮겨 **연도별로 구성·관리**. 정보보호 관리체계(구분·점검기준·주기·보안적용 실적·책임자·실무자)와 개인정보보호 관리체계(점검항목·점검주기·상세내용) 2개 탭, **1~12월 계획/이행 매트릭스**(계획 ○ / 이행 ● / 계획 외 수행 ▲ 원클릭 토글), **기본 항목 불러오기**(정보보호 45개·개인정보보호 10개)·**전년도 구성 복사**(계획 승계·실적 초기화)·구분 단위 전체 삭제, 이행률·미이행·계획 외 수행·월별 계획 대비 이행 막대 요약. 신규 테이블 `operation_status_items`(월별 계획·이행을 12비트 마스크로 저장, ddl-auto), `/api/operation-status/*` 추가, RBAC 메뉴 키 `operation_status`(43개) |
 | [v1.18.0](release/v1.18.0/RELEASE_NOTES.md) | 대시보드 **ISMS-P 이행률 한 화면 재구성** — 요약 1줄(게이지·상태 구성 막대·상태별 건수)과 도메인 3열(인증기준 3개 섹션별 묶음·섹션 이행률)로 재배치해 21개 도메인을 스크롤 없이 표시, **도메인별 상태 구성 막대·상태별 건수**(준수·부분준수·미준수·증적미제출·해당없음)로 미달 사유까지 색 구분, 이행률 기준 `준수 ÷ (전체 − 해당없음)` 명시·평가대상 0이면 `—`, 도메인 클릭 시 증적관리로 이동(`/isms?domain=`). **권한관리 기본 역할 권한**(ADMIN·MANAGER·USER)의 현재 권한 표시·수정 신설 — MANAGER·USER 편집 가능(ADMIN은 고정), 커스텀 Role과 **OR 합산**, 메뉴 표에 전체 선택/해제 추가, `custom_roles.builtin_role` 컬럼(ddl-auto)과 seed-when-empty 초기화로 **기존 화면 동작 유지**(MANAGER 전 메뉴 R/W/D 시드), `GET/PUT /api/admin/roles/builtin*` 추가. 권한 대상 메뉴에 SAST·모의훈련 보강(42개). **문서 제품명 `SecPortal` → `KSecPortal` 통일**(md 16개·51곳, 클래스명·패키지·컨테이너명·계정은 유지)과 알림 제목 접두어 `[SecPortal]` → `[KSecPortal]` 변경 |
 | [v1.17.0](release/v1.17.0/RELEASE_NOTES.md) | **보안성 심의** 신설(보안 운영) — 신규 구축·변경 시스템의 설계 보안 검토를 요청→검토→결과(승인/조건부/반려)로 관리, 기본 체크리스트 20항목 자동 생성·항목별 적합/부적합 판정·미검토 시 결과 등록 차단, 신규 테이블 `security_reviews`/`security_review_items`(ddl-auto). **개인정보 현황보고서 그래프 시각화**(조치필요 배너·이행률 미터·누적 막대·순위 막대·표 보기, PDF도 화면과 동일 구성+상세수치 부록). **SAST 지적 조치**(CWE-89 식별자 검증·CWE-611 XXE 하드닝·CWE-330 CSPRNG 도입, 오탐 억제 주석 `sast:ignore` 지원)와 **SAST PDF 보고서·CWE 설명 팝업**. 취약점 **CVE 설명 팝업**(NVD), 보안문서 **파일 미리보기**(PDF·이미지·엑셀/CSV·텍스트), 정책 **다중 선택 삭제**(ADMIN), 교육 **검색 필터**, RSS 뉴스 태그·중복 요약 정리, 문서관리 → **보안 가이드 및 자료** 명칭 변경, 보안솔루션 연동 개발 가이드 문서 추가. nginx CSP에 `frame-src/object-src 'self' blob:` 추가(미리보기용) |
 | [v1.16.0](release/v1.16.0/RELEASE_NOTES.md) | ISMS-P 증적관리 **전년도 증적 가져오기**(증적제목·내용·준수상태·첨부파일 실물 복제 + 연도별 현재상태·의견, 이미 증적이 있는 항목은 건너뜀)와 **가져오기 초기화**(가져온 레코드만 삭제·직접 등록분 보존, 참조 증적 동반 정리) 신규 — `isms_evidences/isms_item_notes.copied_from_year` 컬럼(ddl-auto 자동 반영), `GET/POST/DELETE /api/isms/copy-previous*` 추가. **코드관리 ISMS-P 101항목 탭**(항목별 기본 증적제목·증적내용·이행가이드 편집, 일괄등록 템플릿 기본값·이행가이드 열 반영, 101항목 기본 문안 시드 및 빈 값 백필). **모바일 화면 대응**(사이드바 오버레이·헤더 여백 축소·목록 테이블 25종 가로 스크롤). 취약점 **댓글 수정·삭제**(작성자 본인, `vulnerability_comments.updated_at`), 자산 목록 **자산유형(assetCategory) 필터·컬럼** |

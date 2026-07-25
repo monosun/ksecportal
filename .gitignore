@@ -47,5 +47,8 @@ uploads/
 # Docker image archives
 *.tar
 
+# Python 캐시 (scripts/)
+__pycache__/
+
 # IDE build output
 backend/bin/
