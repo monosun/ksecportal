@@ -471,6 +471,14 @@ export const operationStatusApi = {
   deleteDefaultItem: (id) => api.delete(`/operation-status/default-items/${id}`)
 }
 
+export const glossaryApi = {
+  list: (params) => api.get('/glossary', { params }),
+  summary: () => api.get('/glossary/summary'),
+  create: (data) => api.post('/glossary', data),
+  update: (id, data) => api.patch(`/glossary/${id}`, data),
+  remove: (id) => api.delete(`/glossary/${id}`)
+}
+
 export const secDocApi = {
   list: (params) => api.get('/sec-docs', { params }),
   get: (id) => api.get(`/sec-docs/${id}`),

@@ -29,7 +29,7 @@ public final class MenuKeys {
             // 교육 및 훈련
             "training", "phishing",
             // 보안 가이드 및 자료
-            "sec_docs",
+            "sec_docs", "glossary",
             // 개인정보보호
             "privacy_processing", "privacy_files", "privacy_consent", "privacy_provision",
             "privacy_contractors", "privacy_retention", "privacy_disposal", "privacy_dpia",

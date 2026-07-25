@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.20.0** — 운영현황관리 기본항목을 코드 관리에서 관리, 항목 추가 시 기본항목 선택·직접 입력 ([릴리즈 노트](release/v1.20.0/RELEASE_NOTES.md))
+> **최신 버전: v1.21.0** — 보안용어집 신설(보안 용어 178개·검색/분류/약어 색인), 코드 관리 용어집 탭 ([릴리즈 노트](release/v1.21.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -49,6 +49,7 @@ docker compose up -d --build
 | **도움말** | 앱 내 웹 매뉴얼 뷰어 — `docs/user-manual.md` 를 빌드 시 정적 배포해 목차·검색으로 열람 |
 | **메뉴 순서 관리** | 좌측 네비게이션 상위 그룹·하위 메뉴 순서 변경, 상위 메뉴 추가·삭제·이름변경, 하위 메뉴 그룹 간 이동 (app_settings `menu_order` 저장) |
 | **리포트** | 전 메뉴 PDF/CSV, 한/영 파일명·헤더 자동 전환 |
+| **보안용어집** | 보안 실무·교육 용어 **178개 / 20개 분류** 기본 제공, 한글·영문·약어·분류·의미·관련 키워드 **통합 검색**, 분류 필터(분류별 건수), **약어 색인**(AAA·MFA·SIEM 등 87개), 키워드 태그 클릭 재검색, 분류별 그룹 목록 — 내용은 코드 관리 > 용어집 탭에서 관리 |
 | **보안문서 관리** | 보안 가이드·정책서·절차서 등 8종 문서 관리, 버전 이력 보관, 파일 첨부·다운로드, 카테고리·키워드 검색, **검색 대상 선택(제목·내용·파일명·버전·제작기관)**, **제작기관 입력(코드관리 SEC_DOC_ORG 선택 또는 직접 입력)** |
 | **법령준수관리** | 업종별 적용 법령 카탈로그(21개 업종·77개 법령), **법령검토(법제처 Open API 실시간 전체 조문 조회·행정규칙 포함)**, 조문별 검토의견 작성, **검토이력(선택 법령 전체 세션 단위·조문 스냅샷·이전 검토 대비 변경 조문 빨간색 표시)**, Excel 검토 보고서(표지·법령정보·법령별 시트, 변경 조문 빨간색·[신설]/[변경] 마커) |
 | **설정관리** | 보안 설정(로그인 잠금), Okta SSO, AI LLM 연동(OpenAI/Claude/Ollama), 업종 설정(업종 내 개별 법령 선택·**법령/고시 검색 추가**), 법제처 API 키, **회사정보 등록(회사명·대표자·홈페이지·연락처·주소·소개 — PDF/Excel 보고서에 자동 반영)** |
@@ -442,6 +443,13 @@ POST   /api/admin/codes/:groupCode/values
 PATCH  /api/admin/codes/:groupCode/values/:id
 DELETE /api/admin/codes/:groupCode/values/:id
 
+# 보안용어집 (v1.21.0+)
+GET    /api/glossary                        # 용어 목록 (?keyword=&category=&activeOnly=)
+GET    /api/glossary/summary                # 총 건수·분류별 건수·약어 수
+POST   /api/glossary                        # 용어 등록 (ADMIN)
+PATCH  /api/glossary/:id                    # 용어 수정 (ADMIN)
+DELETE /api/glossary/:id                    # 용어 삭제 (ADMIN)
+
 # 보안문서
 GET    /api/sec-docs                        # 목록 (category, keyword, page, size)
 GET    /api/sec-docs/:id                    # 상세
@@ -637,6 +645,7 @@ ksecportal/
 │       ├── privacy/                 # 개인정보보호 14개 도메인 (수탁사·처리현황·DPIA·유출 등)
 │       ├── legal/                   # 법제처 Open API 프록시 (법령·행정규칙)
 │       ├── secdoc/                  # 보안문서 관리 (버전 이력)
+│       ├── glossary/                # 보안 용어집
 │       ├── rbac/                    # RBAC 권한관리
 │       ├── committee/               # 정보보호위원회 (회의·파일)
 │       ├── internalaudit/           # 내부감사 (대상·항목·파일)
@@ -688,6 +697,7 @@ ksecportal/
             ├── monthlycheck/        # 월간 보안점검
             ├── privacy/             # 개인정보보호 14개 메뉴 + 법령준수관리·현황보고서
             ├── secdoc/              # 보안문서 관리
+            ├── glossary/            # 보안용어집
             ├── committee/           # 정보보호위원회
             ├── internalaudit/       # 내부감사
             ├── secfinding/          # 보안 결함사항
@@ -735,6 +745,7 @@ ksecportal/
 | `monthly_check_items` | 월간 보안점검 항목 (년월·우선순위·점검결과) |
 | `monthly_check_evidences` | 월간 보안점검 증적 (파일 첨부) |
 | `sec_docs` | 보안문서 (버전 이력, document_key로 그룹화) |
+| `glossary_terms` | 보안 용어집 (한글·영문·약어·분류·의미·키워드, 코드 관리에서 관리, v1.21.0) |
 | `custom_roles` | RBAC Role — 커스텀 Role + 기본 역할 권한 행(`builtin_role` = MANAGER/USER, v1.18.0) |
 | `role_permissions` | Role별 메뉴 권한 (read/write/delete) |
 | `user_custom_roles` | 사용자-Role 매핑 |
@@ -788,6 +799,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.21.0](release/v1.21.0/RELEASE_NOTES.md) | **보안용어집** 신설(보안 가이드 및 자료 > 보안문서 아래) — 보안 실무·교육 용어 **178개 / 20개 분류**를 기본 제공하고 **통합 검색**(한글·영문·약어·분류·의미·키워드), **분류 필터**(분류별 건수 표시), **약어 색인**(87개), **키워드 태그 재검색**, 분류별 그룹 목록으로 조회. 관리 > 코드 관리에 **용어집** 탭 신설 — 한글 용어·영문 표기·약어·분류·의미·관련 키워드·정렬·사용 여부 CRUD(한글 용어 중복 방지, ADMIN 전용 쓰기). 신규 테이블 `glossary_terms`(ddl-auto) + seed-when-empty 초기화, `/api/glossary*` 추가, RBAC 메뉴 키 `glossary`(44개) |
 | [v1.20.0](release/v1.20.0/RELEASE_NOTES.md) | 운영현황관리 **기본항목을 코드 관리로 이관** — 관리 > 코드 관리에 **운영현황 기본항목** 탭 신설(정보보호/개인정보보호 관리체계 전환, 구분·점검기준·주기·산출물·담당자·**월별 기본 계획**·정렬·사용 여부 CRUD, ADMIN 전용 쓰기). 운영현황관리 **항목 추가 시 점검 기준을 기본항목에서 선택**(구분별 optgroup, 선택 시 주기·산출물·책임자·실무자·월별 계획 자동 입력)하고 **목록에 없으면 직접 입력**으로 전환. **기본 항목 불러오기**가 코드 상수 대신 코드 관리의 **사용 중인** 항목을 원본으로 사용. 신규 테이블 `operation_status_defaults`(ddl-auto) + seed-when-empty 초기화(ISMS 45·PRIVACY 10), `/api/operation-status/default-items` 추가 |
 | [v1.19.0](release/v1.19.0/RELEASE_NOTES.md) | **운영현황관리** 신설(보안 운영) — ISMS-P *정보보호 관리체계 운영현황표* 서식을 화면으로 옮겨 **연도별로 구성·관리**. 정보보호 관리체계(구분·점검기준·주기·보안적용 실적·책임자·실무자)와 개인정보보호 관리체계(점검항목·점검주기·상세내용) 2개 탭, **1~12월 계획/이행 매트릭스**(계획 ○ / 이행 ● / 계획 외 수행 ▲ 원클릭 토글), **기본 항목 불러오기**(정보보호 45개·개인정보보호 10개)·**전년도 구성 복사**(계획 승계·실적 초기화)·구분 단위 전체 삭제, 이행률·미이행·계획 외 수행·월별 계획 대비 이행 막대 요약. 신규 테이블 `operation_status_items`(월별 계획·이행을 12비트 마스크로 저장, ddl-auto), `/api/operation-status/*` 추가, RBAC 메뉴 키 `operation_status`(43개) |
 | [v1.18.0](release/v1.18.0/RELEASE_NOTES.md) | 대시보드 **ISMS-P 이행률 한 화면 재구성** — 요약 1줄(게이지·상태 구성 막대·상태별 건수)과 도메인 3열(인증기준 3개 섹션별 묶음·섹션 이행률)로 재배치해 21개 도메인을 스크롤 없이 표시, **도메인별 상태 구성 막대·상태별 건수**(준수·부분준수·미준수·증적미제출·해당없음)로 미달 사유까지 색 구분, 이행률 기준 `준수 ÷ (전체 − 해당없음)` 명시·평가대상 0이면 `—`, 도메인 클릭 시 증적관리로 이동(`/isms?domain=`). **권한관리 기본 역할 권한**(ADMIN·MANAGER·USER)의 현재 권한 표시·수정 신설 — MANAGER·USER 편집 가능(ADMIN은 고정), 커스텀 Role과 **OR 합산**, 메뉴 표에 전체 선택/해제 추가, `custom_roles.builtin_role` 컬럼(ddl-auto)과 seed-when-empty 초기화로 **기존 화면 동작 유지**(MANAGER 전 메뉴 R/W/D 시드), `GET/PUT /api/admin/roles/builtin*` 추가. 권한 대상 메뉴에 SAST·모의훈련 보강(42개). **문서 제품명 `SecPortal` → `KSecPortal` 통일**(md 16개·51곳, 클래스명·패키지·컨테이너명·계정은 유지)과 알림 제목 접두어 `[SecPortal]` → `[KSecPortal]` 변경 |

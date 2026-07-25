@@ -84,6 +84,7 @@ export const navGroups = [
     icon: DocumentTextIcon,
     items: [
       { to: '/sec-docs', label: 'nav.secDocs', icon: DocumentTextIcon, menuKey: 'sec_docs' },
+      { to: '/glossary', label: 'nav.glossary', icon: DocumentTextIcon, menuKey: 'glossary' },
     ]
   },
   {

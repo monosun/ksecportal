@@ -634,6 +634,157 @@
       </div>
     </div>
 
+    <!-- ─── 탭: 용어집 ─── -->
+    <div v-else-if="activeTab === 'glossary'">
+      <div class="mb-4 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">보안 용어집 관리</h2>
+          <p class="text-xs text-gray-400 mt-0.5">
+            보안 가이드 및 자료 &gt; <strong>보안용어집</strong> 화면에 표시되는 용어입니다.
+            쓰지 않는 용어는 삭제 대신 <strong>미사용</strong>으로 두면 화면에서 제외됩니다.
+          </p>
+        </div>
+        <button @click="openGlossaryModal(null)" class="btn-primary flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          용어 추가
+        </button>
+      </div>
+
+      <div class="mb-4 flex flex-wrap gap-3">
+        <input v-model="searchGlossaryKeyword" type="text" placeholder="용어, 영문, 약어, 정의, 키워드 검색..."
+          class="input flex-1 min-w-48 text-sm"/>
+        <select v-model="searchGlossaryCategory" class="input w-44 text-sm">
+          <option value="">전체 분류</option>
+          <option v-for="c in glossaryCategories" :key="c" :value="c">{{ c }}</option>
+        </select>
+        <button v-if="searchGlossaryKeyword || searchGlossaryCategory"
+          @click="searchGlossaryKeyword = ''; searchGlossaryCategory = ''"
+          class="btn-secondary text-sm px-3">초기화</button>
+        <span class="flex items-center text-sm text-gray-500">{{ filteredGlossary.length }}건</span>
+      </div>
+
+      <div class="card p-0 overflow-hidden">
+        <div v-if="loadingGlossary" class="p-8 text-center text-gray-400 text-sm">로딩 중...</div>
+        <div v-else-if="filteredGlossary.length === 0" class="p-8 text-center text-gray-400 text-sm">
+          {{ glossaryTerms.length === 0 ? '등록된 용어가 없습니다.' : '검색 결과가 없습니다.' }}
+        </div>
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-40">용어</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-48">영문 표기</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20">약어</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">분류</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">의미</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">정렬</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">사용</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-24">관리</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr v-for="t in pagedGlossary" :key="t.id" class="hover:bg-gray-50">
+              <td class="px-4 py-3 font-medium text-gray-900 text-xs">{{ t.name }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs">{{ t.nameEn || '-' }}</td>
+              <td class="px-4 py-3 text-xs">
+                <span v-if="t.abbreviation" class="font-mono font-semibold text-primary-700">{{ t.abbreviation }}</span>
+                <span v-else class="text-gray-300">-</span>
+              </td>
+              <td class="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">{{ t.category || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs max-w-md truncate" :title="t.definition">{{ t.definition || '-' }}</td>
+              <td class="px-4 py-3 text-center text-gray-400 text-sm">{{ t.sortOrder }}</td>
+              <td class="px-4 py-3 text-center">
+                <span :class="t.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                  class="text-xs px-2 py-0.5 rounded-full font-medium">
+                  {{ t.active ? '사용' : '미사용' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button @click="openGlossaryModal(t)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">수정</button>
+                  <button @click="confirmDeleteGlossary(t)" class="text-xs text-red-500 hover:text-red-700 font-medium">삭제</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div v-if="glossaryTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+          <span class="text-xs text-gray-400">
+            {{ filteredGlossary.length }}건 중 {{ glossaryPage * GLOSSARY_PAGE_SIZE + 1 }}–{{ Math.min((glossaryPage + 1) * GLOSSARY_PAGE_SIZE, filteredGlossary.length) }}건
+          </span>
+          <div class="flex items-center gap-1">
+            <button @click="glossaryPage--" :disabled="glossaryPage === 0"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">←</button>
+            <span class="text-sm text-gray-600 px-2">{{ glossaryPage + 1 }} / {{ glossaryTotalPages }}</span>
+            <button @click="glossaryPage++" :disabled="glossaryPage >= glossaryTotalPages - 1"
+              class="px-2 py-1 text-sm rounded-lg border border-gray-200 disabled:opacity-30 hover:bg-gray-50">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 용어집 모달 ─── -->
+    <div v-if="glossaryModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/40" @click="glossaryModal.show = false"></div>
+      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 p-6 max-h-[92vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-900 mb-5">
+          보안 용어 {{ glossaryModal.id ? '수정' : '추가' }}
+        </h3>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">한글 용어 *</label>
+              <input v-model="glossaryModal.form.name" class="input w-full" placeholder="예: 다중요소인증"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">약어</label>
+              <input v-model="glossaryModal.form.abbreviation" class="input w-full" placeholder="예: MFA"/>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">영문 표기</label>
+            <input v-model="glossaryModal.form.nameEn" class="input w-full" placeholder="예: Multi-Factor Authentication"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">분류</label>
+            <input v-model="glossaryModal.form.category" list="glossary-categories" class="input w-full" placeholder="예: 접근통제"/>
+            <datalist id="glossary-categories">
+              <option v-for="c in glossaryCategories" :key="c" :value="c"/>
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">의미</label>
+            <textarea v-model="glossaryModal.form.definition" class="input w-full" rows="3"
+              placeholder="용어의 뜻을 한 문장으로 설명합니다"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">관련 키워드</label>
+            <input v-model="glossaryModal.form.keywords" class="input w-full" placeholder="쉼표로 구분 — 예: OTP, 생체인증"/>
+            <p class="text-xs text-gray-400 mt-1">용어집 화면에서 태그로 표시되며, 클릭하면 그 값으로 검색됩니다.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
+              <input v-model.number="glossaryModal.form.sortOrder" type="number" class="input w-full"/>
+            </div>
+            <div class="flex items-end pb-2">
+              <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" v-model="glossaryModal.form.active" class="w-4 h-4 rounded"/>
+                사용
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button @click="glossaryModal.show = false" class="btn-secondary">취소</button>
+          <button @click="saveGlossary" :disabled="savingGlossary" class="btn-primary">
+            {{ savingGlossary ? '저장 중...' : '저장' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ─── 탭: 운영현황 기본항목 ─── -->
     <div v-else-if="activeTab === 'opsDefault'">
       <div class="mb-4 flex items-start justify-between gap-3 flex-wrap">
@@ -1121,7 +1272,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi, operationStatusApi } from '@/api'
+import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi, operationStatusApi, glossaryApi } from '@/api'
 
 const tabs = [
   { key: 'code', label: '코드 관리' },
@@ -1132,6 +1283,7 @@ const tabs = [
   { key: 'contractorDefault', label: '수탁사 기본점검항목' },
   { key: 'ismsItems', label: 'ISMS-P 101항목' },
   { key: 'opsDefault', label: '운영현황 기본항목' },
+  { key: 'glossary', label: '용어집' },
 ]
 const activeTab = ref('code')
 
@@ -1873,6 +2025,100 @@ async function confirmDeleteOpsDefault(d) {
   }
 }
 
+
+// ─── 용어집 (보안 가이드 및 자료 > 보안용어집의 원본) ───
+const GLOSSARY_PAGE_SIZE = 20
+
+const glossaryTerms = ref([])
+const loadingGlossary = ref(false)
+const savingGlossary = ref(false)
+const searchGlossaryKeyword = ref('')
+const searchGlossaryCategory = ref('')
+const glossaryPage = ref(0)
+const glossaryModal = ref({ show: false, id: null, form: emptyGlossaryForm() })
+
+function emptyGlossaryForm() {
+  return {
+    name: '', nameEn: '', abbreviation: '', category: '',
+    definition: '', keywords: '', sortOrder: 0, active: true,
+  }
+}
+
+const glossaryCategories = computed(() =>
+  [...new Set(glossaryTerms.value.map(t => t.category).filter(Boolean))].sort())
+
+const filteredGlossary = computed(() => {
+  const kw = searchGlossaryKeyword.value.trim().toLowerCase()
+  return glossaryTerms.value
+    .filter(t => !searchGlossaryCategory.value || t.category === searchGlossaryCategory.value)
+    .filter(t => !kw || [t.name, t.nameEn, t.abbreviation, t.category, t.definition, t.keywords]
+      .some(v => (v || '').toLowerCase().includes(kw)))
+})
+
+const glossaryTotalPages = computed(() => Math.ceil(filteredGlossary.value.length / GLOSSARY_PAGE_SIZE) || 1)
+const pagedGlossary = computed(() =>
+  filteredGlossary.value.slice(glossaryPage.value * GLOSSARY_PAGE_SIZE, (glossaryPage.value + 1) * GLOSSARY_PAGE_SIZE))
+
+async function loadGlossary() {
+  loadingGlossary.value = true
+  try {
+    // 관리 화면이므로 미사용 용어도 함께 보여준다
+    const res = await glossaryApi.list({ activeOnly: false })
+    glossaryTerms.value = res.data || res || []
+  } catch (e) {
+    glossaryTerms.value = []
+  } finally {
+    loadingGlossary.value = false
+  }
+}
+
+function openGlossaryModal(t) {
+  glossaryModal.value = t
+    ? {
+        show: true,
+        id: t.id,
+        form: {
+          name: t.name || '', nameEn: t.nameEn || '', abbreviation: t.abbreviation || '',
+          category: t.category || '', definition: t.definition || '', keywords: t.keywords || '',
+          sortOrder: t.sortOrder ?? 0, active: t.active,
+        },
+      }
+    : { show: true, id: null, form: emptyGlossaryForm() }
+}
+
+async function saveGlossary() {
+  const f = glossaryModal.value.form
+  if (!f.name.trim()) {
+    alert('한글 용어를 입력해주세요.')
+    return
+  }
+  savingGlossary.value = true
+  try {
+    const payload = { ...f, name: f.name.trim() }
+    if (glossaryModal.value.id) {
+      await glossaryApi.update(glossaryModal.value.id, payload)
+    } else {
+      await glossaryApi.create(payload)
+    }
+    glossaryModal.value.show = false
+    await loadGlossary()
+  } catch (e) {
+    alert(e || '저장에 실패했습니다.')
+  } finally {
+    savingGlossary.value = false
+  }
+}
+
+async function confirmDeleteGlossary(t) {
+  if (!confirm(`"${t.name}" 용어를 삭제하시겠습니까?\n\n※ 용어를 모두 삭제하면 다음 기동 시 기본 용어가 다시 생성됩니다.\n   쓰지 않는 용어는 "미사용"으로 두는 것을 권장합니다.`)) return
+  try {
+    await glossaryApi.remove(t.id)
+    await loadGlossary()
+  } catch (e) {
+    alert(e || '삭제에 실패했습니다.')
+  }
+}
+
 watch(activeTab, (tab) => {
   if (tab === 'monthly' && monthlyDefaults.value.length === 0) loadMonthlyDefaults()
   if (tab === 'threat' && allThreatDefaults.value.length === 0) loadAllThreatDefaults()
@@ -1881,6 +2127,7 @@ watch(activeTab, (tab) => {
   if (tab === 'contractorDefault' && contractorDefaults.value.length === 0) loadContractorDefaults()
   if (tab === 'ismsItems' && ismsItems.value.length === 0) loadIsmsItems()
   if (tab === 'opsDefault' && opsDefaults.value.length === 0) loadOpsDefaults()
+  if (tab === 'glossary' && glossaryTerms.value.length === 0) loadGlossary()
 })
 
 onMounted(loadGroups)
