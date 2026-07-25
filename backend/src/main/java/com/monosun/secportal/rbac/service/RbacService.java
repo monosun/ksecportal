@@ -61,10 +61,8 @@ public class RbacService {
             role.setName(newName);
         }
         if (req.getDescription() != null) role.setDescription(req.getDescription());
-        if (req.getPermissions() != null) {
-            role.getPermissions().clear();
-            applyPermissions(role, req.getPermissions());
-        }
+        // applyPermissions 가 제자리 갱신(추가·수정·삭제)을 처리한다 — clear() 하면 유니크 제약 충돌
+        if (req.getPermissions() != null) applyPermissions(role, req.getPermissions());
         return RbacDto.RoleResponse.from(role);
     }
 
@@ -156,7 +154,6 @@ public class RbacService {
                         .builtinRole(role)
                         .build()));
 
-        row.getPermissions().clear();
         applyPermissions(row, req.getPermissions());
 
         return RbacDto.BuiltinRoleResponse.builder()
@@ -239,18 +236,47 @@ public class RbacService {
         return role;
     }
 
+    /**
+     * 권한 목록을 요청 내용과 일치시킨다 — <b>기존 행을 지우고 다시 넣지 않고 제자리에서 갱신</b>한다.
+     *
+     * role_permissions 에는 (role_id, menu_key) 유니크 제약(uk_role_menu)이 있고,
+     * clear() 후 같은 menu_key 를 다시 add 하면 Hibernate 가 flush 시 DELETE 보다 INSERT 를 먼저 실행해
+     * "Duplicate entry '<roleId>-<menuKey>'" 로 저장이 실패한다. 그래서 다음 순서로 처리한다.
+     *   1) 요청에 없는 menu_key 는 제거 (orphanRemoval 로 삭제)
+     *   2) 남아 있는 menu_key 는 읽기·쓰기·삭제 값만 갱신
+     *   3) 요청에만 있는 menu_key 는 새로 추가
+     * 같은 menu_key 가 요청에 여러 번 오면 마지막 값을 쓴다.
+     */
     private void applyPermissions(CustomRole role, List<RbacDto.PermissionEntry> entries) {
         if (entries == null) return;
+
+        Map<String, RbacDto.PermissionEntry> wanted = new LinkedHashMap<>();
         for (RbacDto.PermissionEntry entry : entries) {
             if (entry.getMenuKey() == null || entry.getMenuKey().isBlank()) continue;
-            RolePermission perm = RolePermission.builder()
+            wanted.put(entry.getMenuKey(), entry);
+        }
+
+        // 1) 요청에서 빠진 권한 제거
+        role.getPermissions().removeIf(p -> !wanted.containsKey(p.getMenuKey()));
+
+        // 2) 유지되는 권한은 값만 갱신하고 처리 목록에서 뺀다
+        for (RolePermission perm : role.getPermissions()) {
+            RbacDto.PermissionEntry entry = wanted.remove(perm.getMenuKey());
+            if (entry == null) continue;
+            perm.setCanRead(entry.isCanRead());
+            perm.setCanWrite(entry.isCanWrite());
+            perm.setCanDelete(entry.isCanDelete());
+        }
+
+        // 3) 새로 생긴 권한만 추가
+        for (RbacDto.PermissionEntry entry : wanted.values()) {
+            role.getPermissions().add(RolePermission.builder()
                     .role(role)
                     .menuKey(entry.getMenuKey())
                     .canRead(entry.isCanRead())
                     .canWrite(entry.isCanWrite())
                     .canDelete(entry.isCanDelete())
-                    .build();
-            role.getPermissions().add(perm);
+                    .build());
         }
     }
 }
