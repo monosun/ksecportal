@@ -644,12 +644,21 @@
             쓰지 않는 용어는 삭제 대신 <strong>미사용</strong>으로 두면 화면에서 제외됩니다.
           </p>
         </div>
-        <button @click="openGlossaryModal(null)" class="btn-primary flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          용어 추가
-        </button>
+        <div class="flex gap-2">
+          <button @click="openGlossaryImport" class="btn-secondary flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            엑셀 일괄등록
+          </button>
+          <button @click="openGlossaryModal(null)" class="btn-primary flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            용어 추가
+          </button>
+        </div>
       </div>
 
       <div class="mb-4 flex flex-wrap gap-3">
@@ -784,6 +793,29 @@
         </div>
       </div>
     </div>
+
+    <!-- ─── 용어집 엑셀 일괄등록 ─── -->
+    <BulkImportModal v-if="showGlossaryImport"
+      title="보안 용어집 일괄등록"
+      desc="템플릿의 형식(한글 용어·영문 표기·약어·분류·의미·관련 키워드·정렬 순서·사용여부)에 맞춰 작성한 엑셀 파일을 업로드합니다. 한글 용어가 키이며, 파일 안에서 같은 용어가 반복되면 첫 행만 반영됩니다."
+      template-label="용어집 템플릿 다운로드 (.xlsx)"
+      file-label="용어집 엑셀 파일"
+      :template-loading="glossaryTemplateLoading"
+      @close="showGlossaryImport = false"
+      @download-template="downloadGlossaryTemplate"
+      @upload="uploadGlossaryFile">
+      <template #options>
+        <label class="flex items-start gap-2 text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-lg p-3">
+          <input type="checkbox" v-model="glossaryOverwrite" class="w-4 h-4 rounded mt-0.5"/>
+          <span>
+            이미 등록된 용어의 내용을 <strong>덮어쓰기</strong>
+            <span class="block text-xs text-gray-400 mt-0.5">
+              해제하면 이미 있는 용어는 건너뜁니다. 덮어쓸 때 <strong>빈 칸은 기존 값을 지우지 않습니다.</strong>
+            </span>
+          </span>
+        </label>
+      </template>
+    </BulkImportModal>
 
     <!-- ─── 탭: 운영현황 기본항목 ─── -->
     <div v-else-if="activeTab === 'opsDefault'">
@@ -1273,6 +1305,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi, operationStatusApi, glossaryApi } from '@/api'
+import BulkImportModal from '@/components/BulkImportModal.vue'
 
 const tabs = [
   { key: 'code', label: '코드 관리' },
@@ -2116,6 +2149,40 @@ async function confirmDeleteGlossary(t) {
     await loadGlossary()
   } catch (e) {
     alert(e || '삭제에 실패했습니다.')
+  }
+}
+
+
+// ─── 용어집 엑셀 일괄등록 ───
+const showGlossaryImport = ref(false)
+const glossaryTemplateLoading = ref(false)
+const glossaryOverwrite = ref(false)
+
+function openGlossaryImport() {
+  glossaryOverwrite.value = false
+  showGlossaryImport.value = true
+}
+
+async function downloadGlossaryTemplate() {
+  glossaryTemplateLoading.value = true
+  try {
+    await glossaryApi.template()
+  } catch (e) {
+    alert(e || '템플릿 다운로드에 실패했습니다.')
+  } finally {
+    glossaryTemplateLoading.value = false
+  }
+}
+
+// BulkImportModal 은 (file, resolve, reject) 형태로 업로드를 위임한다.
+async function uploadGlossaryFile(file, resolve, reject) {
+  try {
+    const res = await glossaryApi.upload(file, glossaryOverwrite.value)
+    const r = res.data || res
+    await loadGlossary()
+    resolve(r)
+  } catch (e) {
+    reject(e || '일괄등록에 실패했습니다.')
   }
 }
 

@@ -14,6 +14,8 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, Long
 
     boolean existsByNameIgnoreCase(String name);
 
+    java.util.Optional<GlossaryTerm> findFirstByNameIgnoreCase(String name);
+
     @Query("SELECT DISTINCT t.category FROM GlossaryTerm t WHERE t.category IS NOT NULL AND t.active = true ORDER BY t.category")
     List<String> findCategories();
 }

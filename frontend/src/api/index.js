@@ -476,7 +476,13 @@ export const glossaryApi = {
   summary: () => api.get('/glossary/summary'),
   create: (data) => api.post('/glossary', data),
   update: (id, data) => api.patch(`/glossary/${id}`, data),
-  remove: (id) => api.delete(`/glossary/${id}`)
+  remove: (id) => api.delete(`/glossary/${id}`),
+  template: () => downloadBlob('/glossary/bulk/template', 'glossary-template.xlsx'),
+  upload: (file, overwrite) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/glossary/bulk', fd, { params: { overwrite: !!overwrite } })
+  }
 }
 
 export const secDocApi = {

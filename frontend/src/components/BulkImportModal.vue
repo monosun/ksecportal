@@ -42,10 +42,14 @@
           </p>
         </div>
 
+        <!-- 화면별 추가 옵션 (예: 기존 데이터 덮어쓰기) -->
+        <slot name="options" />
+
         <div v-if="result" class="rounded-lg border text-sm">
           <div class="flex gap-4 p-3 border-b bg-gray-50 rounded-t-lg font-medium">
             <span>{{ $t('isms.importTotal') }} {{ result.total }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
             <span class="text-green-600">{{ $t('isms.importSuccess') }} {{ result.success }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
+            <span v-if="result.updated > 0" class="text-blue-600">{{ $t('common.loading') === '로딩 중...' ? '갱신' : 'Updated' }} {{ result.updated }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
             <span v-if="result.skipped > 0" class="text-amber-600">{{ $t('common.loading') === '로딩 중...' ? '중복 제외' : 'Skipped' }} {{ result.skipped }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
             <span v-if="result.failed > 0" class="text-red-600">{{ $t('isms.importFailed') }} {{ result.failed }}{{ $t('common.loading') === '로딩 중...' ? '건' : '' }}</span>
           </div>
