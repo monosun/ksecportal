@@ -441,6 +441,9 @@ export const monthlyCheckApi = {
 export const rbacApi = {
   myPermissions: () => api.get('/auth/my-permissions'),
   listRoles: () => api.get('/admin/roles'),
+  // 기본 역할(ADMIN·MANAGER·USER) 권한 — ADMIN 은 조회 전용
+  listBuiltinRoles: () => api.get('/admin/roles/builtin'),
+  updateBuiltinRole: (role, data) => api.put(`/admin/roles/builtin/${role}`, data),
   getRole: (id) => api.get(`/admin/roles/${id}`),
   createRole: (data) => api.post('/admin/roles', data),
   updateRole: (id, data) => api.put(`/admin/roles/${id}`, data),

@@ -29,6 +29,15 @@ public class CustomRole extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * 기본 역할(MANAGER·USER)의 권한을 담는 시스템 행이면 해당 역할이 들어간다.
+     * null 이면 관리자가 만든 일반 커스텀 Role. 시스템 행은 이름 변경·삭제·사용자 배정을 하지 않고
+     * 권한만 수정하며, 소속은 users.role 로 결정된다. (ADMIN 은 항상 전체 권한이라 행을 두지 않는다)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "builtin_role", length = 20)
+    private User.Role builtinRole;
+
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RolePermission> permissions = new ArrayList<>();

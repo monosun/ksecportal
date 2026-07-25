@@ -1,6 +1,6 @@
 ﻿# 소스코드 상세 설명
 
-SecPortal 소스코드를 처음 보는 개발자를 위한 도메인별 코드 해설입니다.  
+KSecPortal 소스코드를 처음 보는 개발자를 위한 도메인별 코드 해설입니다.  
 실제 파일 경로와 클래스명을 기준으로 설명합니다.
 
 ## 목차
@@ -649,7 +649,7 @@ public void notifyOverdueVulnerabilities() {
 
     for (Vulnerability v : overdue) {
         if (v.getAssignee() != null && v.getAssignee().getEmail() != null) {
-            String subject = "[SecPortal] 취약점 처리 기한 초과: " + v.getTitle();
+            String subject = "[KSecPortal] 취약점 처리 기한 초과: " + v.getTitle();
             emailService.send(v.getAssignee().getEmail(), subject, buildOverdueEmailHtml(v));
         }
     }

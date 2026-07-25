@@ -26,7 +26,7 @@ public class NotificationScheduler {
 
         for (Vulnerability v : overdue) {
             if (v.getAssignee() != null && v.getAssignee().getEmail() != null) {
-                String subject = "[SecPortal] 취약점 처리 기한 초과: " + v.getTitle();
+                String subject = "[KSecPortal] 취약점 처리 기한 초과: " + v.getTitle();
                 String body = buildOverdueEmailHtml(v);
                 emailService.send(v.getAssignee().getEmail(), subject, body);
             }

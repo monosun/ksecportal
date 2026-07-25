@@ -1,4 +1,4 @@
-# SecPortal FAQ — 자주 묻는 오류 및 해결 방법
+# KSecPortal FAQ — 자주 묻는 오류 및 해결 방법
 
 ---
 

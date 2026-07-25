@@ -411,6 +411,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ismsApi, exportApi } from '@/api'
 import StatusBadge from './IsmsStatusBadge.vue'
 import IsmsEvidenceModal from './IsmsEvidenceModal.vue'
@@ -430,8 +431,11 @@ function onModalYearChange(year) {
   loadItems()
 }
 
+const route = useRoute()
+
 const selectedYear = ref(new Date().getFullYear())
-const selectedDomain = ref('')
+// 대시보드 ISMS-P 이행률에서 도메인을 클릭해 들어오면 해당 도메인 탭이 선택된 상태로 연다.
+const selectedDomain = ref(typeof route.query.domain === 'string' ? route.query.domain : '')
 const searchKeyword = ref('')
 const statusFilter = ref('')
 const items = ref([])

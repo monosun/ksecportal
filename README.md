@@ -1,10 +1,10 @@
-# SecPortal — 오픈소스 정보보호 포탈
+# KSecPortal — 오픈소스 정보보호 포탈
 
 스타트업·중소기업을 위한 **올인원 정보보안·개인정보보호 관리 시스템**입니다.  
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.17.0** — 보안성 심의 신설, 개인정보 현황보고서 그래프 시각화, SAST 지적사항 조치·PDF 보고서, CVE·CWE 설명 팝업 ([릴리즈 노트](release/v1.17.0/RELEASE_NOTES.md))
+> **최신 버전: v1.18.0** — ISMS-P 이행률 대시보드 한 화면 재구성, 권한관리 기본 역할(ADMIN·MANAGER·USER) 권한 표시·수정, 문서 제품명 KSecPortal 통일 ([릴리즈 노트](release/v1.18.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -62,7 +62,7 @@ docker compose up -d --build
 | **개인정보보호 — 보호조치 관리** | 접근권한 점검·권한회수·암호화 적용현황·접속기록 점검결과·출력물 관리·반출관리·휴면계정 관리 (관리현황 중심) |
 | **개인정보보호 — 현황보고서** | 경영진·ISMS-P 심사용 자동 집계 — 처리현황·개인정보파일·수탁사·제3자 제공·보유기간·파기·권리행사·유출사고·법령 준수현황 9개 영역 |
 | **Okta SSO** | OAuth2 PKCE 방식 Okta 연동(클라이언트 시크릿 불필요), 기존 이메일 계정 자동 연동(okta_id 매핑), 신규 사용자 자동 프로비저닝(USER 역할), 관리자 환경설정 UI(활성화 토글·Client ID·Issuer·Redirect URI·연결 테스트), DB 또는 env var(OKTA_ENABLED) 설정 |
-| **RBAC 권한관리** | 메뉴별 읽기·쓰기·삭제 권한 설정, Role 생성·사용자 배정, 다중 Role 권한 합산(OR), ADMIN은 항상 전체 권한 |
+| **RBAC 권한관리** | 메뉴별 읽기·쓰기·삭제 권한 설정, **기본 역할(ADMIN·MANAGER·USER) 권한 표시·수정**(MANAGER·USER 편집 가능·ADMIN 고정·역할별 계정 수 표시), Role 생성·사용자 배정, 기본 역할 + 다중 Role 권한 합산(OR), 메뉴 표 전체 선택/해제 |
 | **MFA / 보안 설정** | TOTP 기반 2단계 인증(Google Authenticator 호환), 로그인 실패 잠금(지수 백오프), ADMIN 전용 최대 실패 횟수·잠금 시간 설정 |
 | **세션 타임아웃** | ADMIN에서 분 단위 만료시간 설정(5~1440분), 만료 2분 전 경고 모달(카운트다운·연장·로그아웃), JWT exp 클레임 기반 정확한 타이머 |
 | **비밀번호 정책** | 최초 로그인 강제 변경(관리자 설정 계정), 강도 규칙 일관 적용(8자 이상·대소문자·숫자·특수문자 각각 포함), 프론트·백엔드 이중 검증 |
@@ -133,7 +133,8 @@ docker compose up -d --build
 | **MANAGER** | 정책·취약점·인시던트·자산·보안이벤트·보안문서 생성·수정, 리포트 다운로드 |
 | **USER** | 조회, 정책 수신 확인, 취약점·인시던트 등록, 교육 이수 |
 
-> RBAC 권한관리로 메뉴별 세분화 권한 추가 설정 가능 (ADMIN 설정)
+> 위 표는 기본값입니다. **RBAC 권한관리 > 기본 역할 권한**에서 MANAGER·USER가 볼 메뉴를 직접 조정할 수 있고,
+> 커스텀 Role을 배정하면 권한이 합산(OR)됩니다. ADMIN은 항상 전체 권한입니다. (ADMIN 설정)
 
 ---
 
@@ -437,10 +438,12 @@ GET    /api/sec-docs/:id/download           # 파일 다운로드
 
 # RBAC 권한관리 (ADMIN)
 GET    /api/auth/my-permissions             # 현재 사용자 유효 권한
-GET    /api/admin/roles
+GET    /api/admin/roles                       # 커스텀 Role 목록 (기본 역할 행 제외)
 POST   /api/admin/roles
 PUT    /api/admin/roles/:id
 DELETE /api/admin/roles/:id
+GET    /api/admin/roles/builtin             # 기본 역할 3종 현재 권한·계정 수 (v1.18.0+)
+PUT    /api/admin/roles/builtin/:role       # MANAGER·USER 권한 저장 (v1.18.0+)
 GET    /api/admin/roles/:id/users           # Role 배정 사용자 목록
 POST   /api/admin/roles/:id/users/:userId   # 사용자 배정
 DELETE /api/admin/roles/:id/users/:userId   # 사용자 제거
@@ -713,7 +716,7 @@ ksecportal/
 | `monthly_check_items` | 월간 보안점검 항목 (년월·우선순위·점검결과) |
 | `monthly_check_evidences` | 월간 보안점검 증적 (파일 첨부) |
 | `sec_docs` | 보안문서 (버전 이력, document_key로 그룹화) |
-| `custom_roles` | RBAC 커스텀 Role |
+| `custom_roles` | RBAC Role — 커스텀 Role + 기본 역할 권한 행(`builtin_role` = MANAGER/USER, v1.18.0) |
 | `role_permissions` | Role별 메뉴 권한 (read/write/delete) |
 | `user_custom_roles` | 사용자-Role 매핑 |
 | `committee_meetings` | 정보보호위원회 회의 (연도·회차·개최일·상태) |
@@ -764,6 +767,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.18.0](release/v1.18.0/RELEASE_NOTES.md) | 대시보드 **ISMS-P 이행률 한 화면 재구성** — 요약 1줄(게이지·상태 구성 막대·상태별 건수)과 도메인 3열(인증기준 3개 섹션별 묶음·섹션 이행률)로 재배치해 21개 도메인을 스크롤 없이 표시, 이행률 기준 `준수 ÷ (전체 − 해당없음)` 명시·평가대상 0이면 `—`, 도메인 클릭 시 증적관리로 이동(`/isms?domain=`). **권한관리 기본 역할 권한**(ADMIN·MANAGER·USER)의 현재 권한 표시·수정 신설 — MANAGER·USER 편집 가능(ADMIN은 고정), 커스텀 Role과 **OR 합산**, 메뉴 표에 전체 선택/해제 추가, `custom_roles.builtin_role` 컬럼(ddl-auto)과 seed-when-empty 초기화로 **기존 화면 동작 유지**(MANAGER 전 메뉴 R/W/D 시드), `GET/PUT /api/admin/roles/builtin*` 추가. 권한 대상 메뉴에 SAST·모의훈련 보강(42개). **문서 제품명 `SecPortal` → `KSecPortal` 통일**(md 16개·51곳, 클래스명·패키지·컨테이너명·계정은 유지)과 알림 제목 접두어 `[SecPortal]` → `[KSecPortal]` 변경 |
 | [v1.17.0](release/v1.17.0/RELEASE_NOTES.md) | **보안성 심의** 신설(보안 운영) — 신규 구축·변경 시스템의 설계 보안 검토를 요청→검토→결과(승인/조건부/반려)로 관리, 기본 체크리스트 20항목 자동 생성·항목별 적합/부적합 판정·미검토 시 결과 등록 차단, 신규 테이블 `security_reviews`/`security_review_items`(ddl-auto). **개인정보 현황보고서 그래프 시각화**(조치필요 배너·이행률 미터·누적 막대·순위 막대·표 보기, PDF도 화면과 동일 구성+상세수치 부록). **SAST 지적 조치**(CWE-89 식별자 검증·CWE-611 XXE 하드닝·CWE-330 CSPRNG 도입, 오탐 억제 주석 `sast:ignore` 지원)와 **SAST PDF 보고서·CWE 설명 팝업**. 취약점 **CVE 설명 팝업**(NVD), 보안문서 **파일 미리보기**(PDF·이미지·엑셀/CSV·텍스트), 정책 **다중 선택 삭제**(ADMIN), 교육 **검색 필터**, RSS 뉴스 태그·중복 요약 정리, 문서관리 → **보안 가이드 및 자료** 명칭 변경, 보안솔루션 연동 개발 가이드 문서 추가. nginx CSP에 `frame-src/object-src 'self' blob:` 추가(미리보기용) |
 | [v1.16.0](release/v1.16.0/RELEASE_NOTES.md) | ISMS-P 증적관리 **전년도 증적 가져오기**(증적제목·내용·준수상태·첨부파일 실물 복제 + 연도별 현재상태·의견, 이미 증적이 있는 항목은 건너뜀)와 **가져오기 초기화**(가져온 레코드만 삭제·직접 등록분 보존, 참조 증적 동반 정리) 신규 — `isms_evidences/isms_item_notes.copied_from_year` 컬럼(ddl-auto 자동 반영), `GET/POST/DELETE /api/isms/copy-previous*` 추가. **코드관리 ISMS-P 101항목 탭**(항목별 기본 증적제목·증적내용·이행가이드 편집, 일괄등록 템플릿 기본값·이행가이드 열 반영, 101항목 기본 문안 시드 및 빈 값 백필). **모바일 화면 대응**(사이드바 오버레이·헤더 여백 축소·목록 테이블 25종 가로 스크롤). 취약점 **댓글 수정·삭제**(작성자 본인, `vulnerability_comments.updated_at`), 자산 목록 **자산유형(assetCategory) 필터·컬럼** |
 | [v1.15.0](release/v1.15.0/RELEASE_NOTES.md) | 설정관리>업종설정 **법령·고시 검색 추가** — 기본 목록에 없는 법령을 국가법령정보센터(law.go.kr) 실시간 검색(법령+행정규칙 고시)으로 찾아 업종에 직접 추가·자동 선택, 추가 법령은 삭제 가능. 추가 법령은 앱 설정 `company.customLaws`에 업종별 저장되어 **법령준수관리·법령검토**(실시간 조문 조회)에 그대로 반영. `legalApiService.searchLaws()` 신규, 업종설정·법령준수관리가 정적 법령+추가 법령을 병합 렌더링. 프론트엔드 전용(백엔드 법령 프록시·앱 설정 API 재사용, DB·API 스키마 무관) |

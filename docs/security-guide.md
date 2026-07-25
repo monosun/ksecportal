@@ -1,4 +1,4 @@
-# SecPortal 보안 설정 가이드
+# KSecPortal 보안 설정 가이드
 
 운영 환경에 적용된 nginx, Spring Boot, Docker Compose 보안 설정을 설명합니다.
 

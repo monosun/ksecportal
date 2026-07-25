@@ -111,9 +111,9 @@ public class UserAdminService {
         auditLogService.log("USER_CREATED", "USER", newUser.getId(),
                 "email=" + newUser.getEmail() + ", role=" + newUser.getRole());
         notificationService.send(
-                "[SecPortal] 신규 계정 생성 알림",
+                "[KSecPortal] 신규 계정 생성 알림",
                 buildCreatedNotificationHtml(newUser, requester),
-                "[SecPortal] 신규 계정 생성\n이름: " + newUser.getName() + "\n이메일: " + newUser.getEmail() + "\n역할: " + newUser.getRole() + "\n등록자: " + requester.getName());
+                "[KSecPortal] 신규 계정 생성\n이름: " + newUser.getName() + "\n이메일: " + newUser.getEmail() + "\n역할: " + newUser.getRole() + "\n등록자: " + requester.getName());
         return UserAdminDto.Response.from(newUser);
     }
 
@@ -134,9 +134,9 @@ public class UserAdminService {
         auditLogService.log("USER_DELETE_REQUESTED", "USER", targetId,
                 "requester=" + requester.getEmail());
         notificationService.send(
-                "[SecPortal] 계정 삭제 승인 요청",
+                "[KSecPortal] 계정 삭제 승인 요청",
                 buildDeleteApprovalHtml(target, requester, token),
-                "[SecPortal] 계정 삭제 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
+                "[KSecPortal] 계정 삭제 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
                 + "\n승인: " + baseUrl() + "/admin/approve/" + token
                 + "\n거부: " + baseUrl() + "/admin/reject/" + token);
         sendInboxToAdmins(
@@ -167,9 +167,9 @@ public class UserAdminService {
         auditLogService.log("USER_PROMOTE_ADMIN_REQUESTED", "USER", targetId,
                 "requester=" + requester.getEmail());
         notificationService.send(
-                "[SecPortal] ADMIN 권한 부여 승인 요청",
+                "[KSecPortal] ADMIN 권한 부여 승인 요청",
                 buildPromoteAdminApprovalHtml(target, requester, token),
-                "[SecPortal] ADMIN 권한 부여 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
+                "[KSecPortal] ADMIN 권한 부여 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
                 + "\n승인: " + baseUrl() + "/admin/approve/" + token
                 + "\n거부: " + baseUrl() + "/admin/reject/" + token);
         sendInboxToAdmins(
@@ -251,9 +251,9 @@ public class UserAdminService {
         auditLogService.log("USER_HARD_DELETE_REQUESTED", "USER", targetId,
                 "requester=" + requester.getEmail());
         notificationService.send(
-                "[SecPortal] 계정 영구 삭제 승인 요청",
+                "[KSecPortal] 계정 영구 삭제 승인 요청",
                 buildHardDeleteApprovalHtml(target, requester, token),
-                "[SecPortal] 계정 영구 삭제 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
+                "[KSecPortal] 계정 영구 삭제 승인 요청\n대상: " + target.getName() + " (" + target.getEmail() + ")\n요청자: " + requester.getName()
                 + "\n승인: " + baseUrl() + "/admin/approve/" + token
                 + "\n거부: " + baseUrl() + "/admin/reject/" + token);
         sendInboxToAdmins(

@@ -152,7 +152,7 @@ Client                    Nginx              Spring Boot
 ### Okta SSO 인증 (v1.54.0+, PKCE 방식)
 
 ```
-Browser          SecPortal SPA          Okta               Spring Boot
+Browser          KSecPortal SPA          Okta               Spring Boot
   │                   │                   │                    │
   ├─ 로그인 클릭 ──▶ │                   │                    │
   │                   │ (state, code_verifier 생성)            │

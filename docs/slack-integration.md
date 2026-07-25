@@ -1,6 +1,6 @@
 # Slack 연동 메뉴얼
 
-SecPortal의 알림을 Slack 채널로 전송하는 방법을 단계별로 설명합니다.  
+KSecPortal의 알림을 Slack 채널로 전송하는 방법을 단계별로 설명합니다.  
 이 메뉴얼을 따라 구현하면 취약점 기한 초과, 신규 인시던트, 정책 열람 요청 등을 Slack으로 받을 수 있습니다.
 
 ## 목차
@@ -24,7 +24,7 @@ SecPortal의 알림을 Slack 채널로 전송하는 방법을 단계별로 설�
 1. [Slack API 대시보드](https://api.slack.com/apps) 접속 (Slack 계정 로그인 필요)
 2. **Create New App** 클릭
 3. **From scratch** 선택
-4. App Name: `SecPortal` 입력
+4. App Name: `KSecPortal` 입력
 5. 알림을 받을 워크스페이스 선택 → **Create App**
 
 ### 1-2. Incoming Webhooks 활성화
@@ -56,7 +56,7 @@ https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 
 ## 2. 알림 시나리오 정의
 
-SecPortal에서 Slack으로 보낼 이벤트를 정의합니다.
+KSecPortal에서 Slack으로 보낼 이벤트를 정의합니다.
 
 | 이벤트 | 트리거 시점 | 권장 채널 | 우선순위 |
 |--------|-----------|----------|---------|
@@ -213,7 +213,7 @@ public class SlackMessageBuilder {
                 > *처리 기한:* %s
                 > *담당자:* %s
                 > *상태:* %s
-                SecPortal에서 즉시 처리해 주세요.""",
+                KSecPortal에서 즉시 처리해 주세요.""",
                 severityEmoji,
                 v.getCveId() != null ? "(" + v.getCveId() + ")" : "",
                 v.getTitle(),
@@ -242,7 +242,7 @@ public class SlackMessageBuilder {
                 > *심각도:* %s
                 > *영향 시스템:* %s
                 > *담당자:* %s
-                SecPortal에서 즉시 확인해 주세요.""",
+                KSecPortal에서 즉시 확인해 주세요.""",
                 severityEmoji,
                 incident.getSeverity() == Incident.Severity.CRITICAL ? "<!here>" : "",
                 incident.getTitle(),
@@ -302,7 +302,7 @@ public class NotificationScheduler {
         for (Vulnerability v : overdue) {
             // 이메일 알림 (기존)
             if (v.getAssignee() != null && v.getAssignee().getEmail() != null) {
-                String subject = "[SecPortal] 취약점 처리 기한 초과: " + v.getTitle();
+                String subject = "[KSecPortal] 취약점 처리 기한 초과: " + v.getTitle();
                 emailService.send(v.getAssignee().getEmail(), subject, buildOverdueEmailHtml(v));
             }
 
@@ -442,7 +442,7 @@ Webhook URL이 정상인지 먼저 확인합니다:
 ```bash
 curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXXXX \
   -H 'Content-Type: application/json' \
-  -d '{"text":"SecPortal Slack 연동 테스트 메시지입니다."}'
+  -d '{"text":"KSecPortal Slack 연동 테스트 메시지입니다."}'
 
 # 정상 응답: ok
 ```
@@ -545,7 +545,7 @@ Block Kit 메시지 예시 (JSON):
       "elements": [
         {
           "type": "button",
-          "text": { "type": "plain_text", "text": "SecPortal에서 확인" },
+          "text": { "type": "plain_text", "text": "KSecPortal에서 확인" },
           "url": "https://secportal.yourdomain.com/vulnerabilities/1",
           "style": "danger"
         }
@@ -630,7 +630,7 @@ Parameter 0 of constructor in SlackService required a bean of type 'WebClient.Bu
 
 ### Slack 채널에 앱이 초대되지 않은 경우
 
-`/invite @SecPortal` 명령을 채널에서 실행하거나,  
+`/invite @KSecPortal` 명령을 채널에서 실행하거나,  
 채널 설정 → **Integrations** → **Add apps**에서 앱을 추가합니다.
 
 ---

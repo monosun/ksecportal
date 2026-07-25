@@ -79,9 +79,31 @@ public class RbacDto {
         }
     }
 
+    /** 기본 역할(ADMIN·MANAGER·USER)의 현재 권한 */
+    @Getter @Builder
+    public static class BuiltinRoleResponse {
+        private String role;                      // ADMIN / MANAGER / USER
+        private String label;                     // 화면 표시명
+        private String description;
+        private boolean editable;                 // ADMIN 은 항상 전체 권한이라 수정 불가
+        private int userCount;                    // 해당 역할을 가진 계정 수
+        private List<PermissionEntry> permissions;
+        private LocalDateTime updatedAt;
+    }
+
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+    public static class BuiltinRoleUpdateRequest {
+        private List<PermissionEntry> permissions;
+    }
+
     @Getter @Builder
     public static class MyPermissions {
         private Map<String, PermissionEntry> permissions;
         private boolean isAdmin;
+        /**
+         * 메뉴 권한 검사를 건너뛰고 전체를 허용해야 하는 계정.
+         * ADMIN 이거나, 기본 역할 권한 행이 아직 없어 판단 근거가 없는 경우(안전 폴백) true.
+         */
+        private boolean fullAccess;
     }
 }

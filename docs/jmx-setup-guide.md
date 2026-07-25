@@ -1,6 +1,6 @@
 # JMX 모니터링 설정 가이드
 
-SecPortal 백엔드(Spring Boot)의 JVM 상태를 JMX로 모니터링하는 방법을 설명합니다.
+KSecPortal 백엔드(Spring Boot)의 JVM 상태를 JMX로 모니터링하는 방법을 설명합니다.
 
 ---
 
@@ -193,7 +193,7 @@ jconsole 127.0.0.1:9999
 
 ## 5. java-monitor 연동
 
-SecPortal 프로젝트에 포함된 `java-monitor`를 사용하면 JMX 지표를 웹 대시보드로 확인할 수 있습니다.
+KSecPortal 프로젝트에 포함된 `java-monitor`를 사용하면 JMX 지표를 웹 대시보드로 확인할 수 있습니다.
 
 자세한 설정 방법은 `java-monitoring-setup-guide.md`를 참조하세요.
 
@@ -212,7 +212,7 @@ JMX로 확인할 수 있는 주요 지표입니다.
 | HikariCP | `com.zaxxer.hikari:type=Pool (HikariPool-secportal)` | 활성·유휴·대기 커넥션 수 |
 
 > **HikariCP MBean 등록**: `application.yml`의 `hikari.register-mbeans: true` 설정이 필요합니다.  
-> 현재 SecPortal은 기본 활성화 상태입니다.
+> 현재 KSecPortal은 기본 활성화 상태입니다.
 
 ---
 

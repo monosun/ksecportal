@@ -12,5 +12,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllByActiveTrueOrderByNameAsc();
     List<User> findAllByRoleAndActiveTrue(User.Role role);
     long countByActiveTrue();
+    long countByRoleAndActiveTrue(User.Role role);
     Optional<User> findByOktaId(String oktaId);
 }

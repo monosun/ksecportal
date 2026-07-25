@@ -1,4 +1,4 @@
-# SecPortal 문서화 작업 세션 로그
+# KSecPortal 문서화 작업 세션 로그
 
 ---
 
@@ -213,7 +213,7 @@ ActionType 같이 향후 값이 추가될 가능성이 있는 컬럼은 `columnD
 
 | 파일 | 변경 내용 |
 |---|---|
-| `frontend/src/components/layout/AppLayout.vue` | 사이드바 로고 영역: 방패 아이콘 + "SecPortal" 텍스트 → 브랜드 로고 SVG (height 22px) |
+| `frontend/src/components/layout/AppLayout.vue` | 사이드바 로고 영역: 방패 아이콘 + "KSecPortal" 텍스트 → 브랜드 로고 SVG (height 22px) |
 | `frontend/src/views/auth/LoginView.vue` | 로그인 화면 상단: 방패 아이콘 + 타이틀 → 브랜드 로고 SVG (height 36px) |
 
 ### 구현 방식

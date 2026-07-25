@@ -80,7 +80,7 @@ public class MailConfigService {
             MimeMessageHelper helper = new MimeMessageHelper(msg, false, "UTF-8");
             helper.setFrom(fromAddressOf(c));
             helper.setTo(to);
-            helper.setSubject("[SecPortal] 메일서버 설정 테스트");
+            helper.setSubject("[KSecPortal] 메일서버 설정 테스트");
             helper.setText("본 메일은 SecPortal 발송 메일서버 설정 테스트 메일입니다.\n정상적으로 수신되었다면 설정이 올바릅니다.", false);
             sender.send(msg);
             return MailConfigDto.TestResult.builder()

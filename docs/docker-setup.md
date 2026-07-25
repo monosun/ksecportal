@@ -1,6 +1,6 @@
 ﻿# 신규 노트북 Docker 환경 구성 가이드
 
-SecPortal을 새 노트북에서 Docker로 실행하는 방법입니다.  
+KSecPortal을 새 노트북에서 Docker로 실행하는 방법입니다.  
 코드 편집이나 개발 도구 없이 **Docker Desktop + Git만** 있으면 됩니다.
 
 ---
@@ -142,7 +142,7 @@ chmod +x start.sh   # 최초 1회
 ✅ secportal-backend Up
 ✅ secportal-frontend Up
 
-🚀 SecPortal 실행 완료
+🚀 KSecPortal 실행 완료
    접속 주소: http://localhost
 ```
 

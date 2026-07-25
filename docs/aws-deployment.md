@@ -477,7 +477,7 @@ GET /api/admin/reject/{token}   →  요청 취소
 **Gmail 앱 비밀번호 발급:**
 ```
 Google 계정 → 보안 → 2단계 인증 → 앱 비밀번호
-→ 앱: 기타(직접 입력) → 이름: SecPortal → 생성
+→ 앱: 기타(직접 입력) → 이름: KSecPortal → 생성
 → 16자리 비밀번호 복사 → MAIL_PASSWORD에 입력
 ```
 

@@ -1,7 +1,7 @@
 # Okta SSO 연동 매뉴얼
 
-SecPortal에 Okta Single Sign-On(SSO)을 연동하는 방법을 단계별로 설명합니다.  
-이 매뉴얼을 따라 설정하면 조직 Okta 계정으로 SecPortal에 로그인할 수 있습니다.
+KSecPortal에 Okta Single Sign-On(SSO)을 연동하는 방법을 단계별로 설명합니다.  
+이 매뉴얼을 따라 설정하면 조직 Okta 계정으로 KSecPortal에 로그인할 수 있습니다.
 
 ## 목차
 
@@ -19,7 +19,7 @@ SecPortal에 Okta Single Sign-On(SSO)을 연동하는 방법을 단계별로 설
 
 ## 1. 동작 방식
 
-SecPortal은 **OAuth 2.0 PKCE(Proof Key for Code Exchange)** 방식으로 Okta와 연동합니다.  
+KSecPortal은 **OAuth 2.0 PKCE(Proof Key for Code Exchange)** 방식으로 Okta와 연동합니다.  
 클라이언트 시크릿 없이 동작하므로 SPA 환경에서도 안전합니다.
 
 ```
@@ -33,7 +33,7 @@ SecPortal은 **OAuth 2.0 PKCE(Proof Key for Code Exchange)** 방식으로 Okta�
      ↓
 [백엔드] Okta /v1/token 에서 ID 토큰 교환 → JWKS로 서명 검증 → 사용자 조회/생성
      ↓
-[백엔드] SecPortal JWT 발급 → 브라우저에 반환
+[백엔드] KSecPortal JWT 발급 → 브라우저에 반환
      ↓
 [사용자] 대시보드 접속
 ```
@@ -72,7 +72,7 @@ SecPortal은 **OAuth 2.0 PKCE(Proof Key for Code Exchange)** 방식으로 Okta�
 
 | 항목 | 값 |
 |------|-----|
-| App integration name | `SecPortal` (원하는 이름) |
+| App integration name | `KSecPortal` (원하는 이름) |
 | Grant types | **Authorization Code** 체크, PKCE 자동 활성화 |
 | Sign-in redirect URIs | 아래 표 참고 |
 | Sign-out redirect URIs | (선택사항, 비워도 됨) |
@@ -205,7 +205,7 @@ docker compose logs -f backend | head -30
 
 ### 6-1. 로그인 화면 확인
 
-SecPortal 로그인 화면(`/login`)에 접속하면 이메일/비밀번호 입력 폼 아래에 **"Okta로 로그인"** 버튼이 표시됩니다.
+KSecPortal 로그인 화면(`/login`)에 접속하면 이메일/비밀번호 입력 폼 아래에 **"Okta로 로그인"** 버튼이 표시됩니다.
 
 > 버튼이 표시되지 않으면 `OKTA_ENABLED=true` 설정 및 백엔드 재시작 여부를 확인합니다.
 
@@ -214,7 +214,7 @@ SecPortal 로그인 화면(`/login`)에 접속하면 이메일/비밀번호 입�
 1. **"Okta로 로그인"** 버튼 클릭
 2. Okta 로그인 화면으로 리다이렉트됨
 3. Okta 계정 이메일·비밀번호 입력 (또는 조직 IdP 로그인)
-4. 인증 완료 후 SecPortal 대시보드로 자동 이동
+4. 인증 완료 후 KSecPortal 대시보드로 자동 이동
 
 ### 6-3. API로 Okta 설정 상태 확인
 
@@ -240,7 +240,7 @@ curl https://yourdomain.com/api/auth/okta/config
 
 ## 7. 사용자 계정 연동 방식
 
-Okta로 로그인하면 아래 순서로 SecPortal 사용자를 처리합니다:
+Okta로 로그인하면 아래 순서로 KSecPortal 사용자를 처리합니다:
 
 ```
 Okta 로그인 완료
@@ -262,9 +262,9 @@ Okta ID(sub)로 기존 사용자 조회
 | 비밀번호 | 설정 불가 (Okta 전용 계정) |
 | MFA | 비활성화 (Okta 측에서 별도 관리) |
 
-### 기존 SecPortal 계정과 자동 연동
+### 기존 KSecPortal 계정과 자동 연동
 
-SecPortal에 `hong@company.com`으로 가입된 사용자가 Okta(`hong@company.com`)로 처음 로그인하면 **자동으로 두 계정이 연결**됩니다.  
+KSecPortal에 `hong@company.com`으로 가입된 사용자가 Okta(`hong@company.com`)로 처음 로그인하면 **자동으로 두 계정이 연결**됩니다.  
 이후에는 이메일/비밀번호 또는 Okta 중 하나로 로그인할 수 있습니다.
 
 연동 후 DB 상태 확인:
@@ -277,7 +277,7 @@ SELECT id, email, name, role, okta_id FROM users WHERE email = 'hong@company.com
 ### 역할 변경 (관리자)
 
 Okta를 통해 처음 가입된 사용자는 기본 `USER` 역할로 생성됩니다.  
-역할 변경은 SecPortal **관리자 → 사용자 관리** 메뉴에서 수행합니다.
+역할 변경은 KSecPortal **관리자 → 사용자 관리** 메뉴에서 수행합니다.
 
 ---
 
@@ -307,7 +307,7 @@ OKTA_REDIRECT_URI=https://yourdomain.com/auth/okta/callback
 **원인:** `OKTA_REDIRECT_URI` 값이 Okta 앱에 등록된 URI와 다름
 
 해결 방법:
-1. Okta 관리자 콘솔 → Applications → SecPortal 앱 → **General** 탭
+1. Okta 관리자 콘솔 → Applications → KSecPortal 앱 → **General** 탭
 2. **Sign-in redirect URIs**에 현재 `OKTA_REDIRECT_URI` 값이 있는지 확인
 3. 없으면 **Edit** → URI 추가 → **Save**
 
@@ -342,9 +342,9 @@ docker compose logs backend | grep -i "okta\|jwt\|token"
 
 ### "비활성화된 계정입니다" 오류
 
-**원인:** SecPortal에서 해당 이메일 계정이 비활성화(active=false)됨
+**원인:** KSecPortal에서 해당 이메일 계정이 비활성화(active=false)됨
 
-관리자 계정으로 SecPortal 접속 → **사용자 관리** → 해당 계정 활성화 처리
+관리자 계정으로 KSecPortal 접속 → **사용자 관리** → 해당 계정 활성화 처리
 
 ```sql
 -- 또는 DB 직접 수정
@@ -358,7 +358,7 @@ UPDATE users SET active = true WHERE email = 'user@company.com';
 **원인:** Okta ID 토큰에 `email` 클레임이 포함되지 않음
 
 해결 방법:
-1. Okta 관리자 콘솔 → **Applications** → SecPortal → **Sign On** 탭
+1. Okta 관리자 콘솔 → **Applications** → KSecPortal → **Sign On** 탭
 2. **OpenID Connect ID Token** 섹션에서 **Edit** 클릭
 3. **Groups claim type**: Expression, `Groups.startsWith("", "", 100)` 등 필요 시 설정
 4. 또는 **API** → **Authorization Servers** → **default** → **Claims** 탭에서  
@@ -394,7 +394,7 @@ OKTA_ENABLED=false
 ## 부록: Okta 그룹 기반 역할 자동 매핑 (고급)
 
 기본 구현은 모든 Okta 사용자에게 `USER` 역할을 부여합니다.  
-Okta 그룹(`SecPortal-Admin`, `SecPortal-Manager` 등)을 SecPortal 역할에 매핑하려면  
+Okta 그룹(`KSecPortal-Admin`, `KSecPortal-Manager` 등)을 KSecPortal 역할에 매핑하려면  
 `OktaAuthService.findOrCreateUser()` 메서드를 아래와 같이 확장합니다.
 
 **1. Okta 앱에서 그룹 클레임 추가**
@@ -406,7 +406,7 @@ Okta 관리자 콘솔 → **API** → **Authorization Servers** → `default` �
 | Name | `groups` |
 | Include in token type | **ID Token** |
 | Value type | **Groups** |
-| Filter | Matches regex: `SecPortal.*` |
+| Filter | Matches regex: `KSecPortal.*` |
 
 **2. OktaAuthService 수정**
 
@@ -435,8 +435,8 @@ private User findOrCreateUser(String sub, String email, String name) {
 
 private User.Role determineRole(List<String> groups) {
     if (groups == null) return User.Role.USER;
-    if (groups.contains("SecPortal-Admin")) return User.Role.ADMIN;
-    if (groups.contains("SecPortal-Manager")) return User.Role.MANAGER;
+    if (groups.contains("KSecPortal-Admin")) return User.Role.ADMIN;
+    if (groups.contains("KSecPortal-Manager")) return User.Role.MANAGER;
     return User.Role.USER;
 }
 ```

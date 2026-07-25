@@ -58,6 +58,21 @@ public class RbacController {
         return ApiResponse.ok(null);
     }
 
+    // ── 기본 역할(ADMIN·MANAGER·USER) 권한 (ADMIN 전용) ────────────────────
+
+    @GetMapping("/admin/roles/builtin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<RbacDto.BuiltinRoleResponse>> listBuiltin() {
+        return ApiResponse.ok(service.listBuiltinRoles());
+    }
+
+    @PutMapping("/admin/roles/builtin/{role}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<RbacDto.BuiltinRoleResponse> updateBuiltin(@PathVariable String role,
+                                                                   @RequestBody RbacDto.BuiltinRoleUpdateRequest req) {
+        return ApiResponse.ok(service.updateBuiltinRole(role, req));
+    }
+
     // ── Role 사용자 관리 ──────────────────────────────────────────────────
 
     @GetMapping("/admin/roles/{id}/users")

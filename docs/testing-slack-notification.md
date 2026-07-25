@@ -1,6 +1,6 @@
 ﻿# Slack 알림 연동 테스트 메뉴얼
 
-SecPortal v1.14.0 이상에서 제공하는 **승인 알림 Slack 연동**의 설정부터 수신 확인까지의 전체 테스트 절차를 설명합니다.
+KSecPortal v1.14.0 이상에서 제공하는 **승인 알림 Slack 연동**의 설정부터 수신 확인까지의 전체 테스트 절차를 설명합니다.
 
 ---
 
@@ -22,7 +22,7 @@ SecPortal v1.14.0 이상에서 제공하는 **승인 알림 Slack 연동**의 �
 
 1. [https://api.slack.com/apps](https://api.slack.com/apps) 접속 (Slack 계정 로그인 필요)
 2. **Create New App** → **From scratch** 클릭
-3. App Name: `SecPortal` 입력 → 알림 받을 워크스페이스 선택 → **Create App**
+3. App Name: `KSecPortal` 입력 → 알림 받을 워크스페이스 선택 → **Create App**
 4. 좌측 메뉴 **Incoming Webhooks** → 토글을 **On**
 5. **Add New Webhook to Workspace** 클릭 → 채널 선택 (예: `#secportal-approval`) → **허용**
 6. 생성된 URL 복사
@@ -74,7 +74,7 @@ https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 
 ```powershell
 $webhookUrl = "https://hooks.slack.com/services/T00000000/B00000000/XXXX"
-$body = '{"text":"SecPortal Slack 연동 직접 테스트 메시지입니다."}'
+$body = '{"text":"KSecPortal Slack 연동 직접 테스트 메시지입니다."}'
 Invoke-RestMethod -Uri $webhookUrl -Method POST -ContentType "application/json" -Body $body
 ```
 
@@ -83,7 +83,7 @@ Invoke-RestMethod -Uri $webhookUrl -Method POST -ContentType "application/json" 
 ```bash
 curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXX \
   -H 'Content-Type: application/json' \
-  -d '{"text":"SecPortal Slack 연동 직접 테스트 메시지입니다."}'
+  -d '{"text":"KSecPortal Slack 연동 직접 테스트 메시지입니다."}'
 ```
 
 **예상 응답**: `ok`
@@ -122,7 +122,7 @@ curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXX \
 
 ```
 신규 계정 생성 알림
-[SecPortal] 신규 계정 생성
+[KSecPortal] 신규 계정 생성
 이름: 테스트유저
 이메일: test-slack@example.com
 역할: USER
@@ -145,7 +145,7 @@ curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXX \
 #### 예상 Slack 메시지
 
 ```
-[SecPortal] 계정 삭제 승인 요청
+[KSecPortal] 계정 삭제 승인 요청
 대상: 테스트유저 (test-slack@example.com)
 요청자: 관리자
 승인: http://서버IP/api/admin/approve/{token}
@@ -207,7 +207,7 @@ curl -X POST http://localhost/api/admin/users/{userId}/promote-admin \
 #### 예상 Slack 메시지
 
 ```
-[SecPortal] ADMIN 권한 부여 승인 요청
+[KSecPortal] ADMIN 권한 부여 승인 요청
 대상: 테스트유저 (test-slack@example.com)
 요청자: 관리자
 승인: http://서버IP/api/admin/approve/{token}
