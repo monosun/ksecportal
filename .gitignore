@@ -35,6 +35,7 @@ secportal-v*.tar.gz
 
 # SBOM 스캔 산출물 (cdxgen 등이 생성)
 ksecportal_bom.json
+bom.json
 
 # Backup files
 release/*/backups/

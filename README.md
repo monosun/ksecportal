@@ -1,7 +1,8 @@
 # SecPortal — 오픈소스 정보보호 포탈
 
-스타트업·중소기업을 위한 **올인원 정보보안 관리 시스템**입니다.  
-보안 정책, 취약점, 인시던트, 자산, 보안이벤트, 교육을 단일 플랫폼에서 관리합니다.
+스타트업·중소기업을 위한 **올인원 정보보안·개인정보보호 관리 시스템**입니다.  
+정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
+개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
 > **최신 버전: v1.17.0** — 보안성 심의 신설, 개인정보 현황보고서 그래프 시각화, SAST 지적사항 조치·PDF 보고서, CVE·CWE 설명 팝업 ([릴리즈 노트](release/v1.17.0/RELEASE_NOTES.md))
 
@@ -25,8 +26,7 @@ docker compose up -d --build
 | **취약점 관리** | CVE/CVSS 등록, 심각도·상태 추적, 담당자 배정, 댓글, 기한 알림, 엑셀 일괄 등록, CSV 다운로드, **NVD API 자동 조회(CVE ID 입력 시 CVSS 점수·심각도·설명 자동 입력, NVD 링크)** |
 | **위협 관리** | 위협 카탈로그 CRUD, 위협 유형·발생 가능성·영향도·위험 점수 관리, 색상 코드 위험도 표시, **기본 위협항목 추가(560개 Master Risk Register 일괄 로드, 중복 체크)**, **컬럼별 인라인 필터(이름·유형·카테고리·발생가능성·잠재영향·위험수준·수정일), 결과 건수 요약, 필터 초기화** |
 | **위험평가** | 자산×위협 카르테지안 곱 전수 자동생성(차수 추가 시 1클릭), 위험 등급 자동 계산(발생가능성×영향도), 위험 처리 방안 결정(**수용·감소·회피·이전 4종 일괄처리**), 스냅샷 격리(자산·위협 변경에 영향 없음), 페이지네이션(10/20/50/100건), **엑셀 다운로드(전체 요약 시트 + 자산별 개별 시트, 위험등급 셀 색상 자동 적용)**, **위험수용 기준 점수 설정(수용 기준 이하 자동선택·일괄처리)**, **체크박스 전체/개별 선택**, **검색 필터(자산·위협·취약점·등급·처리방법·위험점수 범위)**, 요약 카드 차수 전체 기준 고정 |
-| **위험 처리 계획** | 위험평가 **완료 차수**의 처리방법 '감소' 항목을 연동해 조치 계획 수립(조치계획·담당자·완료기한·진행률·상태), **연도/차수별 스냅샷**, 상태 탭·검색 필터·페이지네이션 |
-| **위험처리 계획** | 처리 계획 등록, 진행률 프로그레스바, 회피/수용/이전/감소 탭 필터, 담당자·기한 관리 |
+| **위험처리 계획** | 위험평가 **완료 차수**의 처리방법 '감소' 항목을 연동해 조치 계획 수립(조치계획·담당자·완료기한·진행률·상태), **연도/차수별 스냅샷**, 진행률 프로그레스바, 상태 탭·검색 필터·페이지네이션 |
 | **ISMS-P 통제항목 매핑** | 도메인·통제항목 2패널 레이아웃, ISMS-P 인증기준 직접 매핑 관리 |
 | **보안 인시던트** | 8가지 유형, 5단계 상태 추적, 대응 타임라인, 엑셀 일괄 등록, PDF 다운로드 |
 | **자산 관리** | IT 자산 인벤토리, 온프레미스+클라우드(AWS/GCP/Azure) 통합, 13가지 유형, 환경·중요도 분류, 월 비용·계약 만료·점검 일정 관리, PDF/CSV 다운로드, **ISMS-P 자산식별 기준(자산유형 6종·기밀성/무결성/가용성 개별 등급·개인정보 포함 여부·보안관리 대상·연계 시스템·운영중/중지/폐기 상태 관리)**, **자산유형별 현황·유형 단위 일괄 삭제**, **자산 시점(스냅샷) 이력(저장 시점 자산 목록 보관)**, 등록/수정/상세 팝업 UX |
@@ -37,11 +37,16 @@ docker compose up -d --build
 | **모의 악성메일 훈련** | 피싱 이메일 템플릿 CRUD(HTML 편집·변수 치환), 발송대상 관리, 캠페인 생성·실시·완료·취소, 클릭/열람/신고 실시간 추적, **발송 처리 결과 로그(대상별 성공/실패·실패 사유·발송/열람/클릭 시각)**, 결과 통계 대시보드 |
 | **ISMS-P 증적관리** | 101개 인증항목(관리체계·보호대책·개인정보 3개 섹션), 연도별 증적 CRUD, 준수 상태 4단계, CSV 다운로드, PDF 다운로드, 엑셀 일괄 등록, **다른 항목 증적 파일 참조 등록(파일 중복 업로드 없이 재사용)** |
 | **월간 보안점검** | 정보보호의 날 기준 32개 표준 점검 항목, 년월 네비게이션(←→), 우선순위(상·중·하)·구분 필터, 완료율 프로그레스바, 결과 원클릭 토글, 항목 CRUD, **담당자 지정(사용자 검색·직접입력)**, **증적 파일 관리(파일 첨부·다운로드)**, **기본 항목 불러오기 초기화 경고·중복 체크**, **이전 월 항목 복사(결과는 미완료로 초기화·담당자 승계)** |
+| **소스 취약점 점검 (SAST)** | GitHub 저장소 대상 4개 카테고리 통합 점검 — 의존성(Dependabot)·코드(Code scanning)·시크릿(Secret scanning) 알림 + **내장 OWASP Top 10:2021 정적분석**(저장소 tarball 직접 분석, 별도 활성화 불필요), 심각도·OWASP/CWE 분류·파일·라인 위치·GitHub 링크, 점검 이력 저장, **PDF 보고서(가로 A4·심각도/카테고리 분포·전체 발견 목록)**, **CWE 설명 팝업**(무엇인가/위험/조치·MITRE 링크), **오탐 억제 주석 `// sast:ignore 사유`** |
+| **보안성 심의** | 신규 구축·변경 시스템의 설계 단계 보안 검토 — 요청 접수 → 검토중 → 심의 완료(승인/조건부 승인/반려), 심의 구분 4종(신규구축·변경/고도화·외부연계·폐기), 개인정보 처리·인터넷 공개 여부, 설계서 첨부, **기본 검토 체크리스트 20항목 자동 생성**(인증·권한/접근통제/암호화/개인정보/로그·감사/개발보안/운영·보안설정), 항목별 적합·부적합·해당없음 판정과 의견, **미검토 항목 잔여 시 결과 등록 차단**, 현황 카드 클릭 필터·검토 진행률·부적합 건수 |
 | **대시보드** | 위험현황(5×5 히트맵·등급별 통계·고위험 항목), 취약점 현황(심각도 바차트·기한초과 목록), 인시던트 현황(월별 추이·최근 5건), ISMS-P 이행률(코닉 게이지·도메인별 진행바), 증적 제출 현황(도메인별 제출/미제출 테이블), **KRCERT RSS 위젯(취약점 정보·보안공지 탭, 최근 7일치)** — **실 DB 데이터 실시간 반영** |
 | **감사 로그** | 모든 주요 액션 자동 기록, IP 주소 자동 캡처, 날짜·시간 범위 검색, 관리자 조회 |
 | **코드 관리** | 부서·분류 등 공통 코드 그룹/값 관리 (ADMIN), 회원가입 부서 드롭다운 연동, **월간 점검·위협 기본·위협 유형별 목록 20행 페이지네이션**, **개인정보 분류별 항목 코드 초기 데이터(13개 분류·74개 항목: 기본 식별정보·연락처·신분증·단말기·결제·신용·서비스이용·위치·복지·번호이동·미성년자대리인·마케팅·민감정보)** |
 | **사용자 관리** | 계정 추가·삭제·역할 변경, 이메일 승인 워크플로우, 계정 엑셀 일괄 등록, CSV/PDF 다운로드 |
 | **알림 / 수신함** | 이메일·Slack·Both·수신함 방식 승인 알림, 기한 초과 취약점 자동 알림(스케줄러), **수신함 비우기** |
+| **공지사항** | ADMIN 공지 등록·수정·삭제, 노출 여부(active)·상단 고정(pinned) 관리, 일반 사용자에게는 활성 공지만 노출 |
+| **도움말** | 앱 내 웹 매뉴얼 뷰어 — `docs/user-manual.md` 를 빌드 시 정적 배포해 목차·검색으로 열람 |
+| **메뉴 순서 관리** | 좌측 네비게이션 상위 그룹·하위 메뉴 순서 변경, 상위 메뉴 추가·삭제·이름변경, 하위 메뉴 그룹 간 이동 (app_settings `menu_order` 저장) |
 | **리포트** | 전 메뉴 PDF/CSV, 한/영 파일명·헤더 자동 전환 |
 | **보안문서 관리** | 보안 가이드·정책서·절차서 등 8종 문서 관리, 버전 이력 보관, 파일 첨부·다운로드, 카테고리·키워드 검색, **검색 대상 선택(제목·내용·파일명·버전·제작기관)**, **제작기관 입력(코드관리 SEC_DOC_ORG 선택 또는 직접 입력)** |
 | **법령준수관리** | 업종별 적용 법령 카탈로그(21개 업종·77개 법령), **법령검토(법제처 Open API 실시간 전체 조문 조회·행정규칙 포함)**, 조문별 검토의견 작성, **검토이력(선택 법령 전체 세션 단위·조문 스냅샷·이전 검토 대비 변경 조문 빨간색 표시)**, Excel 검토 보고서(표지·법령정보·법령별 시트, 변경 조문 빨간색·[신설]/[변경] 마커) |
@@ -80,7 +85,7 @@ docker compose up -d --build
 
 ```bash
 git clone https://github.com/monosun/ksecportal.git
-cd secportal
+cd ksecportal
 docker compose up -d --build
 ```
 
@@ -112,10 +117,10 @@ docker compose up -d --build
 | 레이어 | 기술 |
 |--------|------|
 | **Frontend** | Vue 3, Vite, Pinia, Tailwind CSS, vue-i18n, Chart.js, Axios |
-| **Backend** | Spring Boot 3.5, Spring Security 6.5 (JWT), Spring Data JPA, Hibernate 6.6 |
-| **Runtime** | Java 21 (Temurin) |
+| **Backend** | Spring Boot 3.5.16, Spring Security 6.5 (JWT), Spring Data JPA, Hibernate 6.6, jasypt 4.0.4 |
+| **Runtime** | Java 21 (Temurin JRE, 빌드는 Gradle 8.10 + JDK 17 / `sourceCompatibility 17`) |
 | **Database** | MySQL 8.4 LTS |
-| **인프라** | Docker Compose, Nginx (reverse proxy + SPA fallback) |
+| **인프라** | Docker Compose, Nginx (reverse proxy + SPA fallback), Node 20 (프론트 빌드) |
 | **폰트** | Inter, Noto Sans KR (Google Fonts), Pretendard |
 
 ---
@@ -239,6 +244,104 @@ GET    /api/training/courses/:id
 POST   /api/training/courses/:id/submit
 DELETE /api/training/courses/:id          # (ADMIN)
 
+# 문제은행 (MANAGER+)
+GET    /api/quiz-bank                     # 목록 (category, difficulty, keyword, 페이징)
+GET    /api/quiz-bank/categories          # 분류 목록
+GET    /api/quiz-bank/categories/stats    # 분류별 문항 수
+POST   /api/quiz-bank
+PATCH  /api/quiz-bank/:id
+DELETE /api/quiz-bank/:id
+DELETE /api/quiz-bank/by-category         # 분류 단위 일괄 삭제
+GET    /api/quiz-bank/bulk/template       # 엑셀 템플릿
+POST   /api/quiz-bank/bulk                # 엑셀 일괄 등록 (동일 문제 자동 제외)
+
+# 위협 관리
+GET    /api/threats                       # 위협 목록
+GET    /api/threats/:id
+POST   /api/threats                       # (MANAGER+)
+PATCH  /api/threats/:id                   # (MANAGER+)
+DELETE /api/threats/:id                   # (MANAGER+)
+GET    /api/threats/defaults              # 기본 위협항목 마스터 목록 (560개)
+GET    /api/threats/defaults/check        # 기본항목 로드 가능 여부·중복 확인
+POST   /api/threats/defaults              # 기본 위협항목 일괄 로드
+POST   /api/threats/defaults/item         # 기본항목 추가 (ADMIN)
+PATCH  /api/threats/defaults/:id          # 기본항목 수정 (ADMIN)
+DELETE /api/threats/defaults/:id          # 기본항목 삭제 (ADMIN)
+POST   /api/threats/reset                 # 위협 카탈로그 초기화 (MANAGER+)
+
+# 위험평가 · 위험처리 계획
+GET    /api/risk/years                    # 평가 연도 목록
+GET    /api/risk/rounds                   # 차수 목록 (?year=YYYY)
+POST   /api/risk/rounds                   # 차수 생성 (MANAGER+)
+PATCH  /api/risk/rounds/:id               # 차수 수정 (MANAGER+)
+DELETE /api/risk/rounds/:id               # 차수 삭제 (MANAGER+)
+GET    /api/risk/rounds/:roundId/assessments        # 평가 항목 목록 (검색·페이징)
+GET    /api/risk/rounds/:roundId/export/excel       # 엑셀 다운로드 (요약 + 자산별 시트)
+POST   /api/risk/rounds/:roundId/auto-populate      # 자산×위협 전수 자동생성 (MANAGER+)
+POST   /api/risk/assessments                        # 평가 항목 추가 (MANAGER+)
+PATCH  /api/risk/assessments/:id                    # 평가 항목 수정 (MANAGER+)
+DELETE /api/risk/assessments/:id                    # 평가 항목 삭제 (MANAGER+)
+PATCH  /api/risk/assessments/bulk-treatment         # 처리방법 일괄처리 (MANAGER+)
+GET    /api/risk/rounds/:roundId/treatment-plans    # 위험처리 계획 목록
+PATCH  /api/risk/assessments/:id/treatment-plan     # 처리 계획 수정 (MANAGER+)
+
+# 보안성 심의 (v1.17.0+)
+GET    /api/security-reviews              # 목록 (status, reviewType, keyword 필터)
+GET    /api/security-reviews/summary      # 상태별 현황 카드 집계
+GET    /api/security-reviews/:id          # 상세 (체크리스트 항목 포함)
+POST   /api/security-reviews              # 심의 요청 (multipart, 설계서 첨부 — 로그인 사용자)
+PATCH  /api/security-reviews/:id          # 요청 수정 (MANAGER+)
+POST   /api/security-reviews/:id/decision # 심의 결과 등록 (승인/조건부/반려, MANAGER+)
+DELETE /api/security-reviews/:id          # 삭제 (MANAGER+)
+POST   /api/security-reviews/:id/file     # 첨부파일 등록 (multipart)
+GET    /api/security-reviews/:id/file     # 첨부파일 다운로드
+POST   /api/security-reviews/:id/items    # 검토 항목 추가 (MANAGER+)
+PATCH  /api/security-reviews/items/:itemId  # 항목 판정·의견 (MANAGER+)
+DELETE /api/security-reviews/items/:itemId  # 항목 삭제 (MANAGER+)
+
+# 소스 취약점 점검 (SAST, MANAGER+)
+GET    /api/source-scan/repos             # GitHub 저장소 목록
+POST   /api/source-scan/run               # 점검 실행 (의존성·코드·시크릿·SAST)
+GET    /api/source-scan/scans             # 점검 이력
+GET    /api/source-scan/scans/:id         # 점검 상세 (발견 목록)
+DELETE /api/source-scan/scans/:id         # 점검 이력 삭제
+GET    /api/admin/github-config           # GitHub PAT 설정 조회 (ADMIN, 마스킹)
+PUT    /api/admin/github-config           # 설정 저장 (ADMIN)
+POST   /api/admin/github-config/test      # 연결 테스트 (ADMIN)
+
+# 백업 관리 (ADMIN)
+POST   /api/admin/backup/download         # 즉시 백업 후 암호화 파일 다운로드
+POST   /api/admin/backup/save             # 서버 저장 방식 백업
+POST   /api/admin/backup/restore          # 암호화 백업 복원 (비밀번호 검증)
+GET    /api/admin/backup/files            # 저장된 백업 파일 목록
+GET    /api/admin/backup/files/:filename/download
+DELETE /api/admin/backup/files/:filename
+GET    /api/admin/backup/history          # 백업 이력
+GET    /api/admin/backup/config           # 정기 백업 Cron 설정 조회
+PUT    /api/admin/backup/config           # 정기 백업 설정 저장
+
+# 공지사항
+GET    /api/notices                       # 활성 공지 목록
+GET    /api/notices/all                   # 전체 공지 (ADMIN)
+POST   /api/notices                       # (ADMIN)
+PUT    /api/notices/:id                   # (ADMIN)
+DELETE /api/notices/:id                   # (ADMIN)
+
+# 수신함
+GET    /api/inbox                         # 메시지 목록
+GET    /api/inbox/unread-count            # 미읽음 건수
+PATCH  /api/inbox/:id/read
+PATCH  /api/inbox/read-all
+DELETE /api/inbox                         # 수신함 비우기
+POST   /api/inbox/:id/approve             # 승인 액션 처리
+POST   /api/inbox/:id/reject
+
+# 외부 연동 프록시
+GET    /api/rss/krcert                    # KRCERT RSS (?days=, 취약점정보·보안공지)
+GET    /api/nvd/cve/:cveId                # NVD CVE 조회 (CVSS·심각도·설명)
+GET    /api/law-proxy/search              # 법제처 Open API 법령·행정규칙 검색
+GET    /api/law-proxy/content             # 법령 본문(조문) 조회
+
 # 보안 지표 (KPI)
 GET    /api/metrics/summary
 
@@ -249,6 +352,8 @@ GET    /api/reports/policies/pdf
 GET    /api/reports/assets/pdf
 GET    /api/reports/incidents/pdf
 GET    /api/reports/isms/pdf              # ?year=YYYY 필요
+GET    /api/reports/privacy/pdf           # 개인정보 현황보고서 (화면과 동일한 그래프 구성)
+GET    /api/reports/source-scan/:scanId/pdf  # SAST 점검 보고서 (가로 A4)
 GET    /api/reports/policies/csv
 GET    /api/reports/vulnerabilities/csv
 GET    /api/reports/assets/csv
@@ -286,10 +391,23 @@ POST   /api/admin/users/bulk
 # ISMS-P 증적관리
 GET    /api/isms/items                    # 항목 목록 (year, domainCode 필터)
 GET    /api/isms/items/:id
+GET    /api/isms/items/:id/note           # 항목별 의견·현재 상태 (항목+연도 1건, v1.13.0+)
+PUT    /api/isms/items/:id/note
+PATCH  /api/isms/items/:id/guide          # 이행 가이드 (연도 무관, v1.13.0+)
+PATCH  /api/isms/items/:id/defaults       # 기본 증적제목·증적내용 (v1.16.0+, ADMIN)
+POST   /api/isms/items/:itemId/policies/:policyId    # 통제항목 × 정책 매핑 추가
+DELETE /api/isms/items/:itemId/policies/:policyId    # 매핑 해제
 GET    /api/isms/items/:id/evidences      # 증적 목록 (year 필터)
 POST   /api/isms/items/:id/evidences
 PATCH  /api/isms/evidences/:id
 DELETE /api/isms/evidences/:id
+GET    /api/isms/evidences/search         # 다른 항목 증적 검색 (참조 등록용)
+POST   /api/isms/items/:id/evidence-refs  # 다른 항목 증적 파일 참조 등록
+GET    /api/isms/evidences/:id/file       # 증적 파일 다운로드
+DELETE /api/isms/evidences/:id/file
+GET    /api/isms/copy-previous/status     # 전년도 증적 가져오기 가능 여부 (v1.16.0+)
+POST   /api/isms/copy-previous            # 전년도 증적 가져오기 (v1.16.0+)
+DELETE /api/isms/copy-previous            # 가져오기 초기화 (가져온 레코드만 삭제, v1.16.0+)
 GET    /api/isms/summary
 GET    /api/isms/export/csv
 GET    /api/isms/import/template
@@ -337,6 +455,10 @@ GET    /api/admin/audit-logs              # ?dateFrom=&dateTo= (ISO 8601)
 GET    /api/admin/users/simple            # 활성 사용자 목록 (담당자 선택용, MANAGER+)
 GET    /api/admin/notification-config
 PUT    /api/admin/notification-config
+GET    /api/admin/security-config         # 로그인 실패 잠금 정책 조회
+PUT    /api/admin/security-config         # 로그인 실패 잠금 정책 저장
+POST   /api/admin/tools/encrypt           # 설정값 jasypt 암호화 도구
+GET    /api/monthly-checks/default-items  # 월간점검 기본 항목 마스터 (코드관리)
 
 # 정보보호위원회 (MANAGER+ 쓰기)
 GET    /api/committee/years
@@ -446,49 +568,69 @@ GET    /api/admin/reject/:token
 ## 디렉토리 구조
 
 ```
-secportal/
+ksecportal/
 ├── docker-compose.yml
 ├── .env.example
+├── start.sh / start.ps1             # compose 래퍼 (--build / --clean / --logs)
+├── docs/                            # 매뉴얼·API·설치/배포 가이드 (user-manual.md 가 인앱 도움말 원본)
+├── release/vX.Y.Z/RELEASE_NOTES.md  # 버전별 릴리즈 노트
+├── scripts/
 ├── nginx/
 │   ├── nginx.conf
 │   └── error-pages/             # HTTP 에러 페이지 (400·403·404·429·500·502·503·504)
 ├── db/
-│   └── init/
-│       ├── 01_schema.sql            # 전체 테이블 DDL
-│       ├── 02_seed.sql              # 기본 관리자 + 샘플 데이터
-│       ├── 03_comments.sql
-│       ├── 04_assets.sql
-│       ├── 05_incidents.sql
-│       ├── 06_isms.sql              # ISMS-P 항목 마스터 (101개)
-│       ├── 07_extended_schema.sql   # v1.17.0~v1.42.0 추가 테이블 27개
-│       ├── 08_extended_seed.sql     # 앱 설정 기본값 (로그인 로고, 세션 타임아웃)
-│       └── 09_threat_seed.sql       # 위협 카탈로그 기본 560개 (MRR-0001~MRR-0560)
+│   ├── init/                        # 최초(빈 볼륨) 기동 시에만 실행되는 fresh-install 스키마
+│   │   ├── 01_schema.sql            # 전체 테이블 DDL
+│   │   ├── 02_seed.sql              # 기본 관리자 + 샘플 데이터
+│   │   ├── 03_comments.sql
+│   │   ├── 04_assets.sql
+│   │   ├── 05_incidents.sql
+│   │   ├── 06_isms.sql              # ISMS-P 항목 마스터 (101개)
+│   │   ├── 07_extended_schema.sql   # 추가 테이블 27개
+│   │   ├── 08_extended_seed.sql     # 앱 설정 기본값 (로그인 로고, 세션 타임아웃)
+│   │   ├── 09_threat_seed.sql       # 위협 카탈로그 기본 560개 (MRR-0001~MRR-0560)
+│   │   ├── 10_sbom.sql              # SBOM 테이블 (CycloneDX 필드)
+│   │   └── 11_source_scan.sql       # SAST 점검 이력·발견 테이블
+│   └── migration/                   # 운영 DB용 수동 마이그레이션 (제약·ENUM 변경, 데이터 백필)
 ├── backend/
 │   ├── build.gradle
 │   └── src/main/java/com/monosun/secportal/
 │       ├── SecPortalApplication.java
-│       ├── auth/                    # JWT 인증, 사용자 엔티티
+│       ├── auth/                    # JWT 인증, 사용자 엔티티, 로그인 잠금 정책
 │       ├── policy/                  # 보안 정책 관리
 │       ├── vulnerability/           # 취약점 관리 + 댓글
-│       ├── training/                # 교육 코스 + 퀴즈
+│       ├── training/                # 교육 코스 + 퀴즈 + 문제은행
+│       ├── phishing/                # 모의 악성메일 훈련 (템플릿·대상·캠페인)
 │       ├── incident/                # 보안 인시던트
-│       ├── asset/                   # IT 자산 관리
+│       ├── asset/                   # IT 자산 관리 + 시점(스냅샷) 이력
 │       ├── sbom/                    # SBOM 관리 (SW·라이브러리 구성)
+│       ├── threat/                  # 위협 카탈로그 + 기본항목 마스터
+│       ├── risk/                    # 위험평가 차수·항목·위험처리 계획
 │       ├── security/                # 보안이벤트 관리 (연동·이벤트)
-│       ├── admin/                   # 사용자 관리 (ADMIN)
+│       ├── sourcescan/              # 소스 취약점 점검(SAST) + GitHub 연동
+│       ├── secreview/               # 보안성 심의 (요청·체크리스트·결과)
+│       ├── admin/                   # 사용자 관리 (ADMIN), 설정 암호화 도구
 │       ├── audit/                   # 감사 로그
-│       ├── isms/                    # ISMS-P 증적관리
-│       ├── monthlycheck/            # 월간 보안점검
+│       ├── isms/                    # ISMS-P 증적관리 (의견·가이드·전년도 가져오기)
+│       ├── monthlycheck/            # 월간 보안점검 + 기본항목 마스터
+│       ├── privacy/                 # 개인정보보호 14개 도메인 (수탁사·처리현황·DPIA·유출 등)
+│       ├── legal/                   # 법제처 Open API 프록시 (법령·행정규칙)
 │       ├── secdoc/                  # 보안문서 관리 (버전 이력)
 │       ├── rbac/                    # RBAC 권한관리
 │       ├── committee/               # 정보보호위원회 (회의·파일)
 │       ├── internalaudit/           # 내부감사 (대상·항목·파일)
 │       ├── secfinding/              # 보안 결함사항 (ISMS-P)
 │       ├── code/                    # 공통 코드 관리
+│       ├── setting/                 # 앱 전역 설정 (app_settings)
+│       ├── backup/                  # DB 암호화 백업·복원·스케줄
+│       ├── notice/                  # 공지사항
+│       ├── inbox/                   # 수신함 (승인 워크플로 메시지)
+│       ├── rss/                     # KRCERT RSS 수집
+│       ├── nvd/                     # NVD CVE 조회
 │       ├── metrics/                 # KPI 집계 API
-│       ├── notification/            # 이메일·Slack 알림 + 스케줄러
+│       ├── notification/            # 이메일·Slack 알림 + 스케줄러, SMTP 설정
 │       ├── report/                  # PDF/CSV 리포트
-│       └── common/                  # 공통 (응답 형식, 예외, 보안 설정)
+│       └── common/                  # 공통 (응답 형식, 예외, 보안 설정, 버전 API)
 └── frontend/
     └── src/
         ├── main.js
@@ -497,6 +639,7 @@ secportal/
         │   ├── auth.js              # Pinia 인증 스토어
         │   └── uiSettings.js        # UI 설정 스토어 (테마·폰트·로고)
         ├── router/index.js
+        ├── config/navMenu.js        # 좌측 네비게이션 정의 (AppLayout·메뉴순서 설정 공용 원본)
         ├── i18n/
         │   ├── ko.json
         │   └── en.json
@@ -506,7 +649,7 @@ secportal/
         └── views/
             ├── auth/                # 로그인, 회원가입
             ├── dashboard/           # 대시보드 현황 5종 (위험·취약점·인시던트·이행률·증적)
-            ├── policy/              # 정책 목록·상세·폼
+            ├── policy/              # 정책 목록·상세·폼 (마크다운 편집기)
             ├── vulnerability/       # 취약점 목록·상세(댓글)·폼
             ├── threat/              # 위협 관리 (카탈로그 CRUD)
             ├── risk/                # 위험평가, 위험처리 계획
@@ -514,16 +657,22 @@ secportal/
             ├── asset/               # 자산 목록·상세·폼
             ├── sbom/                # SBOM 관리 (SW·라이브러리·엑셀 일괄등록)
             ├── security/            # 보안이벤트 관리
+            ├── sourcescan/          # 소스 취약점 점검 (SAST)
+            ├── secreview/           # 보안성 심의
             ├── log/                 # 로그 통합관리 (개인정보·AD·NAC·망연계·통합검색)
-            ├── training/            # 교육 목록·상세(퀴즈)
+            ├── training/            # 교육 목록·상세(퀴즈)·교육훈련 결과
+            ├── phishing/            # 모의 악성메일 훈련
             ├── isms/                # ISMS-P 증적관리, 통제항목 매핑
             ├── monthlycheck/        # 월간 보안점검
+            ├── privacy/             # 개인정보보호 14개 메뉴 + 법령준수관리·현황보고서
             ├── secdoc/              # 보안문서 관리
             ├── committee/           # 정보보호위원회
             ├── internalaudit/       # 내부감사
             ├── secfinding/          # 보안 결함사항
+            ├── inbox/               # 수신함
+            ├── help/                # 도움말 (웹 매뉴얼 뷰어)
             ├── settings/            # UI 환경설정 (반응형 2열 그리드)
-            └── admin/               # 사용자·코드·감사 로그·RBAC 관리
+            └── admin/               # 사용자·코드·감사 로그·RBAC·백업·공지·메뉴순서 관리
 ```
 
 ---
@@ -538,8 +687,13 @@ secportal/
 | `vulnerabilities` | 취약점 |
 | `vulnerability_comments` | 취약점 댓글 |
 | `training_courses` | 교육 코스 |
-| `quiz_questions` | 퀴즈 문항 |
+| `quiz_questions` | 퀴즈 문항 (코스에 출제된 문항) |
+| `quiz_bank_questions` | 문제은행 (분류·난이도·해설, 랜덤 출제 원본) |
 | `training_completions` | 교육 이수 기록 |
+| `phishing_templates` | 모의 악성메일 템플릿 (HTML 본문·변수 치환) |
+| `phishing_targets` | 모의훈련 발송대상 |
+| `phishing_campaigns` | 모의훈련 캠페인 (생성·실시·완료·취소) |
+| `phishing_campaign_targets` | 캠페인별 대상 발송·열람·클릭·신고 추적 및 발송 결과 로그 |
 | `audit_logs` | 감사 로그 |
 | `assets` | IT 자산 (sbom_software_id로 SBOM SW 맵핑) |
 | `sbom_software` | SBOM SW 정보 (name+version UNIQUE) |
@@ -553,8 +707,9 @@ secportal/
 | `inbox_messages` | 받은 메시지함 |
 | `notices` | 공지사항 |
 | `pending_admin_actions` | 이메일 승인 대기 중인 관리자 액션 |
-| `isms_items` | ISMS-P 인증 항목 마스터 (101개) |
-| `isms_evidences` | 연도별 증적 기록 |
+| `isms_items` | ISMS-P 인증 항목 마스터 (101개, 기본 증적제목·증적내용·이행가이드 포함) |
+| `isms_evidences` | 연도별 증적 기록 (`copied_from_year` — 전년도 가져오기 출처) |
+| `isms_item_notes` | 항목+연도별 의견·현재 상태 설명 (v1.13.0) |
 | `monthly_check_items` | 월간 보안점검 항목 (년월·우선순위·점검결과) |
 | `monthly_check_evidences` | 월간 보안점검 증적 (파일 첨부) |
 | `sec_docs` | 보안문서 (버전 이력, document_key로 그룹화) |
@@ -568,6 +723,12 @@ secportal/
 | `audit_items` | 감사 점검항목 (결과: PASS/FAIL/NA, 발견사항·조치사항) |
 | `audit_files` | 감사 첨부파일 (보고서 등) |
 | `security_findings` | 보안 결함사항 (ISMS-P 인증기준·위험도·시정조치·처리상태) |
+| `security_reviews` | 보안성 심의 요청 (대상 시스템·심의구분·상태·결과·설계서 첨부, v1.17.0) |
+| `security_review_items` | 심의 검토 체크리스트 항목 (기본 20항목 자동 생성·적합/부적합/해당없음, v1.17.0) |
+| `source_scans` | 소스 취약점 점검(SAST) 실행 이력 (저장소·심각도별 집계, v1.6.0) |
+| `source_scan_findings` | 점검 발견 내역 (카테고리·심각도·OWASP/CWE·파일·라인, v1.6.0) |
+| `github_config` | GitHub 연동 설정 — 단일 행, PAT·API Base URL (ADMIN, v1.6.0) |
+| `backup_history` | DB 암호화 백업 이력 (파일명·크기·방식·결과, v1.49.0) |
 | `threats` | 위협 카탈로그 (유형·카테고리·자산분류·발생가능성·잠재영향·위험점수) |
 | `threat_defaults` | 위협 기본항목 마스터 (Master Risk Register 560개, 기본 로드용 참조 테이블, name+type+category UNIQUE) |
 | `monthly_check_defaults` | 월간 보안점검 기본 항목 마스터 |
@@ -587,10 +748,12 @@ secportal/
 | `privacy_processing_activities` | 개인정보 처리업무(처리현황) — 목적·항목·보유기간·처리근거·업무흐름도·라이프사이클 |
 | `privacy_files` | 개인정보파일대장 — DB 테이블·민감정보/고유식별정보 포함 여부·보유 건수 |
 | `privacy_consents` | 수집·이용 동의서 (버전·필수/선택·이용목적·처리근거) |
+| `privacy_consent_versions` | 동의서 개정 버전 이력 (자동 증가·삭제 시 하위버전 롤백) |
 | `privacy_provisions` | 제3자 제공·공동이용·국외이전 (`provision_type`) |
 | `privacy_retentions` | 보유기간 관리 — 만료예정일·삭제예정일·연장사유·자동알림 |
 | `privacy_disposals` | 파기계획·승인·이력·증적 (`retention_id`로 보유기간 항목 연계) |
 | `privacy_dpia` | 개인정보 영향평가(DPIA) — 체크리스트·위험도·개선계획·완료보고 |
+| `privacy_dpia_files` | DPIA 보고서 첨부파일 (구분별 다중 첨부, v1.12.0) |
 | `privacy_breaches` | 개인정보 유출사고 — 인지일시·신고기한(72h)·통지·관계기관 신고·재발방지 |
 | `privacy_rights_requests` | 정보주체 권리행사 — 열람/정정/삭제/처리정지/동의철회, 처리기한(10일) |
 | `privacy_safeguards` | 개인정보 보호조치 관리현황 (`safeguard_type` 7종) |
@@ -615,6 +778,7 @@ secportal/
 | [v1.10.2](release/v1.10.2/RELEASE_NOTES.md) | 개인정보 처리현황 `처리시스템`을 자산관리 연계 콤보박스로 전환(자산유형 SERVICE + 유형 APPLICATION + 사용중 자산 목록에서 선택 또는 직접 입력, 자산명·담당부서 함께 표시), 파일관리 `운영 시스템`에도 동일 목록 적용(흐름 지도의 시스템명 일치 연결이 표기 불일치로 끊기는 것 예방). 스키마·API 변경 없음 |
 | [v1.10.1](release/v1.10.1/RELEASE_NOTES.md) | 개인정보 흐름도 신설 — 업무별 흐름도(라이프사이클 해당 단계 강조, `업무흐름도` 텍스트를 `→`·줄바꿈 기준으로 단계 노드 분해, 나가는 제공처), 전체 흐름 지도(처리업무 → 시스템·개인정보파일 → 제공·국외이전; 파일은 시스템명 일치로, 제공처는 연계 처리업무 지정으로 연결), 미연결 개인정보파일·미연결 제공 누락 점검 섹션, 제공관리 `연계 처리업무` 선택 추가(`privacy_provisions.processing_id`, ddl-auto 자동 추가) |
 | [v1.10.0](release/v1.10.0/RELEASE_NOTES.md) | 개인정보보호 메뉴 14개 재편(라이프사이클 순), 신규 11개 메뉴 — 처리현황·파일관리(민감정보/고유식별정보)·수집이용(동의서 버전관리·개정본)·제공관리(제3자/공동이용/국외이전)·보유기간(만료 D-day·자동알림)·파기관리(승인·증적·**보유기간 자동 전이**)·DPIA·유출관리(**신고기한 72h 자동산정**)·권리행사(**SLA 10일 자동산정**)·보호조치(7종)·현황보고서(9개 영역 집계), Spring Boot 3.3.5(EOL)→3.5.16·Spring Security 6.5.11·jasypt 4.0.4 보안 업그레이드, nginx 릴리즈 이미지 1.27→1.30-alpine, 환경설정 정보 탭 기술스택 실제 버전 자동 조회(`/api/system/version`) |
+| [v1.9.0](release/v1.9.0/RELEASE_NOTES.md) | 대시보드 **법령 개정정보 위젯** 신설(KRCERT 위젯에 탭 추가·위젯명 "보안 · 법령 정보", 법제처 Open API 실시간 조회·법령구분 배지·소관부처/제개정구분/시행일/공포일 표시, 업종 설정 법령 기준·12시간 브라우저 캐시), 설정관리 **법령 개정정보 조회 기간**(프리셋 1주~12개월 또는 1~365일, 기본 30일), 수탁사 관리 **선택(일괄) 삭제**(화면에 보이는 항목만·점검 이력 동반 삭제 안내), 개인정보처리방침 일괄등록 **최근 URL 이력**, 보안이벤트 목록 상태별 건수 표시 오류 수정. 프론트엔드 전용(백엔드·DB 변경 없음) |
 | [v1.8.0](release/v1.8.0/RELEASE_NOTES.md) | 개인정보처리방침 URL에서 수탁사·위탁업무·재수탁사 자동 추출·확인·수정 후 일괄등록(중복 자동 제외), 수탁사 재수탁사 항목 추가, 월간점검 이전 월 항목 복사, 피싱 발송 처리 결과 로그(성공/실패·사유), 메일서버(SMTP) 설정 화면(ADMIN·연결 테스트) |
 | [v1.7.1](release/v1.7.1/RELEASE_NOTES.md) | 수탁사 점검 건별 이력 보관(연도·수탁사 유니크 제약 제거), 점검항목 기본 템플릿 코드관리 일원화·수탁사 점검항목 관리 메뉴 제거, 월간(32)·수탁사(20) 기본항목 시작 시 자동 시드 |
 | [v1.7.0](release/v1.7.0/RELEASE_NOTES.md) | 자산 시점(스냅샷) 이력·자산유형별 현황, 위험 처리 계획(완료 차수 '감소' 항목 연동·차수 스냅샷), 등록/수정/상세 팝업 UX 전면 개편, 사용자 계정 잠금 관리, 위험평가 처리방법 '경감→감소'·일괄처리 4종·처리방법/취약점 필터 |
@@ -633,11 +797,21 @@ secportal/
 | 문서 | 설명 |
 |------|------|
 | [INSTALL.md](INSTALL.md) | 최초 설치 단계별 가이드 |
-| [security-guide.md](security-guide.md) | nginx·Spring Boot·Docker 보안 설정 상세 설명, HTTPS 적용 방법 |
-| [jmx-setup-guide.md](jmx-setup-guide.md) | JMX 모니터링 활성화 방법 (로컬·운영 서버·SSH 터널·인증) |
-| [java-monitoring-setup-guide.md](java-monitoring-setup-guide.md) | java-monitor 대시보드 연동 가이드 |
-| [aws-deployment.md](aws-deployment.md) | AWS EC2 배포 가이드 |
-| [api.md](api.md) | REST API 전체 명세 |
+| [docs/user-manual.md](docs/user-manual.md) | 사용자 매뉴얼 (앱 내 **도움말** 메뉴에서 보는 문서의 원본) |
+| [docs/api.md](docs/api.md) | REST API 전체 명세 |
+| [docs/architecture.md](docs/architecture.md) | 시스템 아키텍처 개요 |
+| [docs/menu-list.md](docs/menu-list.md) | 전체 메뉴 구조 목록 |
+| [docs/faq.md](docs/faq.md) | 자주 묻는 질문 |
+| [docs/security-guide.md](docs/security-guide.md) | nginx·Spring Boot·Docker 보안 설정 상세 설명, HTTPS 적용 방법 |
+| [docs/security-solution-integration-guide.md](docs/security-solution-integration-guide.md) | 보안솔루션 연동 개발 가이드 |
+| [docs/okta-integration.md](docs/okta-integration.md) | Okta SSO 연동 가이드 |
+| [docs/slack-integration.md](docs/slack-integration.md) | Slack 알림 연동 가이드 |
+| [docs/docker-setup.md](docs/docker-setup.md) | Docker 환경 구성 |
+| [docs/development-setup.md](docs/development-setup.md) | 로컬 개발 환경 설정 |
+| [docs/intellij-community-setup-guide.md](docs/intellij-community-setup-guide.md) | IntelliJ Community 개발 환경 설정 |
+| [docs/aws-deployment.md](docs/aws-deployment.md) · [docs/ec2-deploy-setup.md](docs/ec2-deploy-setup.md) | AWS EC2 배포 가이드 |
+| [docs/jmx-setup-guide.md](docs/jmx-setup-guide.md) | JMX 모니터링 활성화 방법 (로컬·운영 서버·SSH 터널·인증) |
+| [docs/java-monitoring-setup-guide.md](docs/java-monitoring-setup-guide.md) | java-monitor 대시보드 연동 가이드 |
 
 ---
 
