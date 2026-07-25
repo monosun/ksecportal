@@ -96,14 +96,18 @@
           <!-- 월별 이행/계획 미니 막대 -->
           <div class="flex-1 min-w-[280px]">
             <p class="text-[11px] text-gray-500 mb-1">월별 계획 대비 이행</p>
-            <div class="flex items-end gap-1 h-10">
-              <div v-for="(p, i) in typeSummary.plannedByMonth" :key="i" class="flex-1 flex flex-col items-center gap-0.5"
+            <!-- 막대 트랙 높이를 고정하고(BAR_TRACK) 월 숫자는 그 아래에 둔다.
+                 컨테이너에 고정 높이를 주면 막대+숫자가 넘쳐 위 라벨을 가린다. -->
+            <div class="flex items-end gap-1">
+              <div v-for="(p, i) in typeSummary.plannedByMonth" :key="i" class="flex-1 flex flex-col items-center"
                 :title="`${i + 1}월 — 계획 ${p}건 / 이행 ${typeSummary.doneByMonth[i]}건`">
-                <div class="w-full bg-gray-100 rounded-sm relative" :style="{ height: `${barHeight(p)}px` }">
-                  <div class="absolute bottom-0 left-0 right-0 bg-primary-500 rounded-sm"
-                    :style="{ height: `${p > 0 ? (typeSummary.doneByMonth[i] / p) * 100 : 0}%` }"></div>
+                <div class="w-full flex items-end" :style="{ height: `${BAR_TRACK}px` }">
+                  <div class="w-full bg-gray-100 rounded-sm relative" :style="{ height: `${barHeight(p)}px` }">
+                    <div class="absolute bottom-0 left-0 right-0 bg-primary-500 rounded-sm"
+                      :style="{ height: `${p > 0 ? (typeSummary.doneByMonth[i] / p) * 100 : 0}%` }"></div>
+                  </div>
                 </div>
-                <span class="text-[9px] text-gray-400 tabular-nums">{{ i + 1 }}</span>
+                <span class="text-[9px] text-gray-400 tabular-nums leading-none mt-1">{{ i + 1 }}</span>
               </div>
             </div>
           </div>
@@ -369,10 +373,13 @@ function rateColor(rate, planned) {
   return rate >= 90 ? '#0ca30c' : rate >= 70 ? '#fab219' : '#d03b3b'
 }
 
+// 막대가 그려지는 영역의 고정 높이(px). barHeight 의 최댓값과 같아야 트랙을 넘치지 않는다.
+const BAR_TRACK = 36
+
 /** 월별 막대 높이 — 계획 건수에 비례하되 최소 높이를 둬서 0건도 자리를 차지하게 한다 */
 function barHeight(planned) {
   const max = Math.max(1, ...(typeSummary.value?.plannedByMonth || [1]))
-  return 6 + Math.round((planned / max) * 30)
+  return 6 + Math.round((planned / max) * (BAR_TRACK - 6))
 }
 
 /** 같은 구분이 연속될 때 첫 행에만 구분명을 표시한다(엑셀 병합셀과 같은 모양) */
