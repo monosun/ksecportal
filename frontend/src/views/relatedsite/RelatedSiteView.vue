@@ -64,13 +64,13 @@
         <p v-if="canWrite" class="text-xs text-gray-400 mt-1">우측 상단의 <strong>사이트 등록</strong>으로 추가할 수 있습니다.</p>
       </div>
 
-      <!-- 사이트 카드 -->
-      <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- 사이트 목록 — 한 열로 쌓고, 가져온 내용이 없는 사이트는 한 줄로 최소화한다 -->
+      <div v-else class="space-y-3">
         <section v-for="s in filtered" :key="s.id"
-          class="card !p-0 overflow-hidden flex flex-col" :class="{ 'opacity-60': !s.active }">
+          class="card !p-0 overflow-hidden" :class="{ 'opacity-60': !s.active }">
           <!-- 헤더 -->
-          <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
-            <div class="flex items-start justify-between gap-2">
+          <div class="px-4 py-2.5" :class="hasContent(s) ? 'border-b border-gray-100 bg-gray-50/60' : ''">
+            <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <a :href="s.url" target="_blank" rel="noopener noreferrer"
@@ -83,56 +83,57 @@
                   </span>
                   <span v-if="!s.active"
                     class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[11px]">미사용</span>
+                  <a :href="s.url" target="_blank" rel="noopener noreferrer"
+                    class="text-[11px] text-gray-400 hover:text-primary-600 break-all">{{ hostOf(s.url) }}</a>
                 </div>
-                <a :href="s.url" target="_blank" rel="noopener noreferrer"
-                  class="text-[11px] text-gray-400 hover:text-primary-600 break-all">{{ hostOf(s.url) }}</a>
+                <p v-if="s.description" class="text-xs text-gray-500 mt-1 leading-relaxed">{{ s.description }}</p>
+                <!-- 가져온 내용이 없으면 상태만 한 줄로 -->
+                <p v-if="!hasContent(s)" class="text-[11px] mt-1" :class="statusClass(s.fetchStatus)">
+                  {{ s.fetchMessage || statusLabel(s) }}
+                </p>
               </div>
-              <div v-if="canWrite" class="flex gap-1 shrink-0">
-                <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-white"
-                  :disabled="busyId === s.id" @click="refreshOne(s)">
-                  {{ busyId === s.id ? '…' : '새로고침' }}
-                </button>
-                <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-white"
-                  @click="openEdit(s)">수정</button>
-                <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-red-500 hover:bg-white"
-                  @click="remove(s)">삭제</button>
+              <div class="flex items-center gap-1 shrink-0">
+                <a :href="s.url" target="_blank" rel="noopener noreferrer"
+                  class="text-[11px] text-gray-400 hover:text-primary-600 whitespace-nowrap">바로가기 →</a>
+                <template v-if="canWrite">
+                  <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50"
+                    :disabled="busyId === s.id" @click="refreshOne(s)">
+                    {{ busyId === s.id ? '…' : '새로고침' }}
+                  </button>
+                  <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50"
+                    @click="openEdit(s)">수정</button>
+                  <button class="text-[11px] px-1.5 py-0.5 rounded border border-gray-200 text-red-500 hover:bg-gray-50"
+                    @click="remove(s)">삭제</button>
+                </template>
               </div>
             </div>
-            <p v-if="s.description" class="text-xs text-gray-500 mt-1.5 leading-relaxed">{{ s.description }}</p>
           </div>
 
-          <!-- 가져온 내용 -->
-          <div class="flex-1">
+          <!-- 가져온 내용 (있을 때만) -->
+          <template v-if="hasContent(s)">
             <ul v-if="s.items && s.items.length" class="divide-y divide-gray-100">
-              <li v-for="it in s.items" :key="it.id" class="px-4 py-2.5 hover:bg-gray-50/60">
-                <a :href="it.link || s.url" target="_blank" rel="noopener noreferrer"
-                  class="text-sm text-gray-800 hover:text-primary-700 hover:underline font-medium line-clamp-2">
-                  {{ it.title }}
-                </a>
-                <p v-if="it.summary" class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{{ it.summary }}</p>
-                <p v-if="dateLabel(it)" class="text-[11px] text-gray-400 mt-0.5">{{ dateLabel(it) }}</p>
+              <li v-for="it in s.items" :key="it.id" class="px-4 py-2 hover:bg-gray-50/60">
+                <div class="flex items-baseline justify-between gap-3">
+                  <a :href="it.link || s.url" target="_blank" rel="noopener noreferrer"
+                    class="text-sm text-gray-800 hover:text-primary-700 hover:underline font-medium line-clamp-1">
+                    {{ it.title }}
+                  </a>
+                  <span v-if="dateLabel(it)" class="text-[11px] text-gray-400 whitespace-nowrap tabular-nums">
+                    {{ dateLabel(it) }}
+                  </span>
+                </div>
+                <p v-if="it.summary" class="text-xs text-gray-500 mt-0.5 line-clamp-1 leading-relaxed">{{ it.summary }}</p>
               </li>
             </ul>
 
-            <div v-else-if="s.fetchedSummary" class="px-4 py-3">
+            <div v-else class="px-4 py-2.5">
               <p class="text-sm text-gray-600 leading-relaxed">{{ s.fetchedSummary }}</p>
             </div>
 
-            <div v-else class="px-4 py-5 text-center">
-              <p class="text-xs text-gray-400">
-                {{ s.fetchMessage || '아직 사이트 내용을 가져오지 않았습니다.' }}
-              </p>
-              <a :href="s.url" target="_blank" rel="noopener noreferrer"
-                class="text-xs text-primary-600 hover:underline mt-1 inline-block">사이트 바로가기 →</a>
+            <div class="px-4 py-1.5 border-t border-gray-100">
+              <span class="text-[11px]" :class="statusClass(s.fetchStatus)">{{ statusLabel(s) }}</span>
             </div>
-          </div>
-
-          <!-- 푸터 -->
-          <div class="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
-            <span class="text-[11px]" :class="statusClass(s.fetchStatus)">{{ statusLabel(s) }}</span>
-            <a :href="s.url" target="_blank" rel="noopener noreferrer"
-              class="text-[11px] text-gray-400 hover:text-primary-600">사이트 바로가기 →</a>
-          </div>
+          </template>
         </section>
       </div>
 
@@ -194,6 +195,11 @@ const lastFetchedLabel = computed(() => {
   const times = sites.value.map(s => s.lastFetchedAt).filter(Boolean).sort()
   return times.length ? formatDateTime(times[times.length - 1]) : ''
 })
+
+/** 가져온 게시물이나 소개문이 있는지 — 없으면 카드를 한 줄로 접어 보여준다 */
+function hasContent(s) {
+  return !!((s.items && s.items.length) || s.fetchedSummary)
+}
 
 function hostOf(url) {
   try { return new URL(url).host } catch { return url }
