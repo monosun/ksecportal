@@ -226,6 +226,11 @@ const routes = [
         component: () => import('@/views/glossary/GlossaryView.vue')
       },
       {
+        path: 'related-sites',
+        name: 'RelatedSites',
+        component: () => import('@/views/relatedsite/RelatedSiteView.vue')
+      },
+      {
         path: 'committee',
         name: 'Committee',
         component: () => import('@/views/committee/CommitteeView.vue')

@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.22.2** — 권한관리 메뉴 권한 저장 실패 수정, 신규 메뉴 MANAGER 자동 보충 ([릴리즈 노트](release/v1.22.2/RELEASE_NOTES.md))
+> **최신 버전: v1.23.0** — 관련 사이트 메뉴 신설(외부 사이트 등록 + 최신 게시물 자동 수집) ([릴리즈 노트](release/v1.23.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -50,6 +50,7 @@ docker compose up -d --build
 | **메뉴 순서 관리** | 좌측 네비게이션 상위 그룹·하위 메뉴 순서 변경, 상위 메뉴 추가·삭제·이름변경, 하위 메뉴 그룹 간 이동 (app_settings `menu_order` 저장) |
 | **리포트** | 전 메뉴 PDF/CSV, 한/영 파일명·헤더 자동 전환 |
 | **보안용어집** | 보안 실무·교육 용어 **178개 / 20개 분류** 기본 제공, **엑셀 일괄등록**(템플릿·덮어쓰기 옵션), 한글·영문·약어·분류·의미·관련 키워드 **통합 검색**, 분류 필터(분류별 건수), **약어 색인**(AAA·MFA·SIEM 등 87개), 키워드 태그 클릭 재검색, 분류별 그룹 목록 — 내용은 코드 관리 > 용어집 탭에서 관리 |
+| **관련 사이트** | 보안·개인정보 참고 사이트를 등록해 **각 사이트 최신 게시물을 카드로 모아 조회**(사이트당 최대 5건), **RSS/Atom 자동 탐색**·피드가 없으면 사이트 소개문(og 메타) 수집, EUC-KR·`dc:date`·meta refresh 대응, **매일 자동 수집**(기본 07:10)·전체/개별 새로고침, 사이트명·주소·설명·게시물 통합 검색, 분류 필터, 기본 사이트 15개 제공, 등록·수정·삭제(MANAGER+) |
 | **보안문서 관리** | 보안 가이드·정책서·절차서 등 8종 문서 관리, 버전 이력 보관, 파일 첨부·다운로드, 카테고리·키워드 검색, **검색 대상 선택(제목·내용·파일명·버전·제작기관)**, **제작기관 입력(코드관리 SEC_DOC_ORG 선택 또는 직접 입력)** |
 | **법령준수관리** | 업종별 적용 법령 카탈로그(21개 업종·77개 법령), **법령검토(법제처 Open API 실시간 전체 조문 조회·행정규칙 포함)**, 조문별 검토의견 작성, **검토이력(선택 법령 전체 세션 단위·조문 스냅샷·이전 검토 대비 변경 조문 빨간색 표시)**, Excel 검토 보고서(표지·법령정보·법령별 시트, 변경 조문 빨간색·[신설]/[변경] 마커) |
 | **설정관리** | 보안 설정(로그인 잠금), Okta SSO, AI LLM 연동(OpenAI/Claude/Ollama), 업종 설정(업종 내 개별 법령 선택·**법령/고시 검색 추가**), 법제처 API 키, **회사정보 등록(회사명·대표자·홈페이지·연락처·주소·소개 — PDF/Excel 보고서에 자동 반영)** |
@@ -452,6 +453,15 @@ DELETE /api/glossary/:id                    # 용어 삭제 (ADMIN)
 GET    /api/glossary/bulk/template          # 엑셀 템플릿 (ADMIN)
 POST   /api/glossary/bulk                   # 엑셀 일괄 등록 (?overwrite=, ADMIN)
 
+# 관련 사이트 (v1.23.0+)
+GET    /api/related-sites                   # 사이트 목록 + 가져온 게시물 (?keyword=&category=&activeOnly=)
+GET    /api/related-sites/:id               # 사이트 1건
+POST   /api/related-sites                   # 사이트 등록 (MANAGER+)
+PATCH  /api/related-sites/:id               # 사이트 수정 (MANAGER+)
+DELETE /api/related-sites/:id               # 사이트 삭제 (MANAGER+)
+POST   /api/related-sites/:id/refresh       # 사이트 1건 내용 새로고침 (MANAGER+)
+POST   /api/related-sites/refresh           # 전체 새로고침 (MANAGER+)
+
 # 보안문서
 GET    /api/sec-docs                        # 목록 (category, keyword, page, size)
 GET    /api/sec-docs/:id                    # 상세
@@ -648,6 +658,7 @@ ksecportal/
 │       ├── legal/                   # 법제처 Open API 프록시 (법령·행정규칙)
 │       ├── secdoc/                  # 보안문서 관리 (버전 이력)
 │       ├── glossary/                # 보안 용어집
+│       ├── relatedsite/             # 관련 사이트 (피드·소개문 수집, 일 1회 스케줄러)
 │       ├── rbac/                    # RBAC 권한관리
 │       ├── committee/               # 정보보호위원회 (회의·파일)
 │       ├── internalaudit/           # 내부감사 (대상·항목·파일)
@@ -700,6 +711,7 @@ ksecportal/
             ├── privacy/             # 개인정보보호 14개 메뉴 + 법령준수관리·현황보고서
             ├── secdoc/              # 보안문서 관리
             ├── glossary/            # 보안용어집
+            ├── relatedsite/         # 관련 사이트
             ├── committee/           # 정보보호위원회
             ├── internalaudit/       # 내부감사
             ├── secfinding/          # 보안 결함사항
@@ -748,6 +760,8 @@ ksecportal/
 | `monthly_check_evidences` | 월간 보안점검 증적 (파일 첨부) |
 | `sec_docs` | 보안문서 (버전 이력, document_key로 그룹화) |
 | `glossary_terms` | 보안 용어집 (한글·영문·약어·분류·의미·키워드, 코드 관리에서 관리, v1.21.0) |
+| `related_sites` | 관련 사이트 (이름·주소·피드 주소·분류·설명·수집 상태·소개문, v1.23.0) |
+| `related_site_items` | 관련 사이트에서 가져온 최신 게시물 캐시 (제목·링크·요약·게시일, 새로고침 시 교체, v1.23.0) |
 | `custom_roles` | RBAC Role — 커스텀 Role + 기본 역할 권한 행(`builtin_role` = MANAGER/USER, v1.18.0) |
 | `role_permissions` | Role별 메뉴 권한 (read/write/delete) |
 | `user_custom_roles` | 사용자-Role 매핑 |
@@ -801,6 +815,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.23.0](release/v1.23.0/RELEASE_NOTES.md) | **관련 사이트** 신설(보안 가이드 및 자료 > 보안용어집 아래) — 보안·개인정보 참고 사이트를 등록해 두고 **각 사이트의 최신 게시물을 최대 5건씩 가져와 카드로 조회**. RSS/Atom 피드를 읽고, 피드 주소를 비우면 홈페이지 `<link rel="alternate">` 에서 **자동 탐색**, 피드가 없으면 **og:description** 을 소개문으로 수집. EUC-KR 인코딩·`dc:date`·두 자리 연도 RFC-822·`meta http-equiv="refresh"` 첫 화면까지 대응하며, XML 파싱은 DOCTYPE·외부 엔티티 차단(XXE 방어). **매일 07:10 자동 수집**(`RELATED_SITE_CRON`)·전체/개별 새로고침, 사이트·게시물 통합 검색, 분류 필터, 미사용 포함 보기. 기본 사이트 15개(보호나라·KNVD·CISA·NVD·KISA·개인정보위·개인정보 포털·NCSC·금융보안원·법령정보센터·보안뉴스·데일리시큐·OWASP 등) seed-when-empty 제공. 신규 테이블 `related_sites`·`related_site_items`(ddl-auto), `/api/related-sites*` 추가, RBAC 메뉴 키 `related_sites`(45개) |
 | [v1.22.2](release/v1.22.2/RELEASE_NOTES.md) | **권한관리 메뉴 권한 저장이 실패하던 문제 수정** — 기존 권한을 `clear()` 후 다시 넣는 방식이라 Hibernate 가 DELETE 보다 INSERT 를 먼저 실행해 `role_permissions.uk_role_menu`(role_id+menu_key) 유니크 제약과 충돌했음(`Duplicate entry '1-dash_risks'`). 이미 있는 권한은 **제자리에서 값만 갱신**하고 빠진 것만 제거·새것만 추가하도록 변경(기본 역할·사용자 지정 Role 공통). **업그레이드로 늘어난 메뉴가 MANAGER 에게 보이지 않던 문제 수정** — 시더가 비어 있을 때만 돌아 신규 메뉴 키가 기존 MANAGER 권한 행에 반영되지 않았음. 기동 시 **없는 메뉴만** 읽기·쓰기·삭제로 보충(관리자가 끈 메뉴는 유지, USER 는 대상 아님) |
 | [v1.22.1](release/v1.22.1/RELEASE_NOTES.md) | 운영현황관리 요약의 **월별 계획 대비 이행 막대가 "월별 계획 대비 이행" 제목을 가리던 표시 오류 수정** — 막대 행에 고정 높이(40px)를 줬는데 실제로는 막대(최대 36px) + 월 숫자가 더 필요해 `items-end` 정렬에서 위로 넘쳐 라벨을 덮고 있었음. 막대 트랙 높이를 고정하고 월 숫자를 트랙 아래로 분리해 해결(기본 항목 45건을 불러와 계획 막대가 커질 때 특히 두드러짐) |
 | [v1.22.0](release/v1.22.0/RELEASE_NOTES.md) | 보안 용어집 **엑셀 일괄등록** — 템플릿 다운로드(헤더·예시 2행·열 너비·틀 고정), **한글 용어를 키로 중복 판단**하고 파일 내 중복은 첫 행만 반영, **덮어쓰기 옵션**(해제 시 기존 용어 건너뜀 / 선택 시 갱신하되 **빈 칸은 기존 값을 지우지 않음**), 사용여부는 `Y/N·사용/미사용·true/false` 허용, 결과에 **전체·등록·갱신·중복제외·실패** 건수와 행별 사유 표시. `GET /api/glossary/bulk/template`·`POST /api/glossary/bulk?overwrite=` 추가, 공용 `BulkImportModal` 에 옵션 슬롯과 '갱신' 건수 표시 추가 |

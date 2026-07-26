@@ -471,6 +471,16 @@ export const operationStatusApi = {
   deleteDefaultItem: (id) => api.delete(`/operation-status/default-items/${id}`)
 }
 
+export const relatedSiteApi = {
+  list: (params) => api.get('/related-sites', { params }),
+  get: (id) => api.get(`/related-sites/${id}`),
+  create: (data) => api.post('/related-sites', data),
+  update: (id, data) => api.patch(`/related-sites/${id}`, data),
+  remove: (id) => api.delete(`/related-sites/${id}`),
+  refresh: (id) => api.post(`/related-sites/${id}/refresh`),
+  refreshAll: () => api.post('/related-sites/refresh'),
+}
+
 export const glossaryApi = {
   list: (params) => api.get('/glossary', { params }),
   summary: () => api.get('/glossary/summary'),

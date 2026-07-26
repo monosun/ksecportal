@@ -53,6 +53,10 @@ notification:
   overdue-check-cron: ${NOTIFICATION_CRON:0 0 9 * * MON-FRI}
   from-address: ${MAIL_USERNAME:noreply@secportal.io}
 
+# 관련 사이트(보안 가이드 및 자료) 내용 자동 수집 주기
+relatedsite:
+  refresh-cron: ${RELATED_SITE_CRON:0 10 7 * * *}
+
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080/api}
   upload:

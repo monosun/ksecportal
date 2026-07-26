@@ -1307,6 +1307,86 @@ GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenSt
 
 ---
 
+## 관련 사이트 (Related Site, v1.23.0)
+
+보안·개인정보 업무에 참고하는 외부 사이트를 등록하고, 각 사이트의 최신 게시물(RSS/Atom) 또는
+사이트 소개문(og 메타)을 가져와 보관한다. **조회는 로그인 사용자, 등록·수정·삭제·새로고침은 MANAGER+** 이다.
+
+### GET /related-sites
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `keyword` | String | 사이트명 · 주소 · 분류 · 설명 · 수집 소개문 |
+| `category` | String | 분류 (예: `유관기관`) |
+| `activeOnly` | Boolean | 기본 `true`. `false` 면 미사용 사이트도 포함 |
+
+응답은 사이트별로 가져온 게시물(`items`, 최대 5건)을 함께 담는다.
+
+```json
+{
+  "id": 2,
+  "name": "KISA 취약점 정보포털(KNVD) 보안공지",
+  "url": "https://knvd.krcert.or.kr",
+  "feedUrl": "https://knvd.krcert.or.kr/rss/security/notice",
+  "category": "침해사고·취약점",
+  "description": "국내 보안공지 — 제품 취약점 패치·긴급 대응 권고",
+  "sortOrder": 20,
+  "active": true,
+  "fetchStatus": "FEED",
+  "fetchMessage": null,
+  "fetchedSummary": null,
+  "lastFetchedAt": "2026-07-27T00:49:50",
+  "items": [
+    {
+      "id": 11,
+      "title": "Zoom 제품 보안 업데이트 권고",
+      "link": "https://knvd.krcert.or.kr/detailSecNoticeView.do?bulletin_writing_sequence=...",
+      "summary": "□ 개요 o Zoom社는 자사 제품에서 발생하는 취약점을 해결한 보안 업데이트 발표",
+      "publishedText": "Mon, 20 Jul 2026 03:52:28 GMT",
+      "publishedAt": "2026-07-20T12:52:28"
+    }
+  ]
+}
+```
+
+`fetchStatus` 값
+
+| 값 | 의미 |
+|----|------|
+| `NONE` | 아직 한 번도 가져오지 않음 |
+| `FEED` | 게시물 목록(피드) 수집 성공 |
+| `SUMMARY` | 피드가 없어 사이트 소개문(og 메타)만 수집 |
+| `EMPTY` | 접속했으나 가져올 내용 없음 |
+| `ERROR` | 접속 실패 (망 차단 · 타임아웃 · 오류) — 사유는 `fetchMessage` |
+
+### POST /related-sites *(MANAGER+)*
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `name` | String | 사이트 이름 (필수) |
+| `url` | String | 홈페이지 주소 (필수, 중복 불가). `http(s)://` 생략 시 `https://` 로 저장 |
+| `feedUrl` | String | RSS/Atom 주소. 비우면 홈페이지에서 자동 탐색 |
+| `category` | String | 분류 |
+| `description` | String | 설명 |
+| `sortOrder` | int | 정렬 순서 (비우면 자동 부여) |
+| `active` | Boolean | 사용 여부 (기본 `true`) |
+
+등록 직후 해당 사이트의 내용을 한 번 가져온다(수집 실패해도 등록은 유지).
+
+### 그 외
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/related-sites/{id}` | 사이트 1건 + 게시물 |
+| `PATCH` | `/related-sites/{id}` | 사이트 수정 (MANAGER+). 주소·피드 변경 시 즉시 재수집 |
+| `DELETE` | `/related-sites/{id}` | 삭제 (MANAGER+). 가져온 게시물도 함께 삭제 |
+| `POST` | `/related-sites/{id}/refresh` | 사이트 1건 새로고침 (MANAGER+) |
+| `POST` | `/related-sites/refresh` | 사용 중인 사이트 전체 새로고침 (MANAGER+) — `{ total, succeeded, failed, items, sites }` |
+
+전체 수집은 `relatedsite.refresh-cron`(기본 `0 10 7 * * *`, 환경변수 `RELATED_SITE_CRON`) 스케줄로도 하루 한 번 실행된다.
+
+---
+
 ## 관련 문서
 
 - [FAQ — 자주 묻는 오류](faq.md)
