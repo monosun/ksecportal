@@ -42,7 +42,8 @@ public class QuizBankQuestion extends BaseEntity {
     @Column(name = "option_d", length = 500)
     private String optionD;
 
-    @Column(name = "correct_answer", nullable = false, length = 1)
+    /** 정답 — 단일은 "A", 복수 정답은 콤마로 구분해 오름차순 저장한다 (예: "A,C") */
+    @Column(name = "correct_answer", nullable = false, length = 7)
     private String correctAnswer;
 
     /** 해설 (선택) */

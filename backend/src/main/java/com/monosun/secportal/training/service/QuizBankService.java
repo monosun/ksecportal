@@ -30,11 +30,10 @@ public class QuizBankService {
     private final QuizBankQuestionRepository repository;
     private final AuditLogService auditLogService;
 
-    private static final Set<String> ANSWERS = Set.of("A", "B", "C", "D");
     private static final Set<String> DIFFICULTIES = Set.of("상", "중", "하");
 
     private static final String[] HEADERS = {
-            "분류", "난이도(상/중/하)*", "문제*", "보기A*", "보기B*", "보기C", "보기D", "정답(A~D)*", "해설"
+            "분류", "난이도(상/중/하)*", "문제*", "보기A*", "보기B*", "보기C", "보기D", "정답(A~D, 복수는 A,C)*", "해설"
     };
 
     // ── 조회 ─────────────────────────────────────────────────────────
@@ -77,7 +76,7 @@ public class QuizBankService {
 
     @Transactional
     public QuizBankDto.Response create(QuizBankDto.Request req) {
-        validate(req.getCorrectAnswer(), req.getOptionC(), req.getOptionD());
+        String answer = validate(req);
         QuizBankQuestion q = QuizBankQuestion.builder()
                 .category(trim(req.getCategory()))
                 .difficulty(normalizeDifficulty(req.getDifficulty()))
@@ -86,7 +85,7 @@ public class QuizBankService {
                 .optionB(req.getOptionB().trim())
                 .optionC(trim(req.getOptionC()))
                 .optionD(trim(req.getOptionD()))
-                .correctAnswer(req.getCorrectAnswer().trim().toUpperCase())
+                .correctAnswer(answer)
                 .explanation(trim(req.getExplanation()))
                 .build();
         q = repository.save(q);
@@ -96,7 +95,7 @@ public class QuizBankService {
 
     @Transactional
     public QuizBankDto.Response update(Long id, QuizBankDto.Request req) {
-        validate(req.getCorrectAnswer(), req.getOptionC(), req.getOptionD());
+        String answer = validate(req);
         QuizBankQuestion q = find(id);
         q.setCategory(trim(req.getCategory()));
         q.setDifficulty(normalizeDifficulty(req.getDifficulty()));
@@ -105,7 +104,7 @@ public class QuizBankService {
         q.setOptionB(req.getOptionB().trim());
         q.setOptionC(trim(req.getOptionC()));
         q.setOptionD(trim(req.getOptionD()));
-        q.setCorrectAnswer(req.getCorrectAnswer().trim().toUpperCase());
+        q.setCorrectAnswer(answer);
         q.setExplanation(trim(req.getExplanation()));
         auditLogService.log("QUIZ_BANK_UPDATED", "QUIZ_BANK", id, "");
         return QuizBankDto.Response.from(q);
@@ -150,7 +149,19 @@ public class QuizBankService {
             ex.createCell(7).setCellValue("A");
             ex.createCell(8).setCellValue("개인정보는 살아 있는 개인에 관한 정보만 해당합니다.");
 
-            int[] widths = {14, 14, 60, 30, 30, 30, 30, 12, 40};
+            // 예시 행 — 복수 정답
+            Row ex2 = sheet.createRow(2);
+            ex2.createCell(0).setCellValue("정보보안 일반");
+            ex2.createCell(1).setCellValue("중");
+            ex2.createCell(2).setCellValue("안전한 비밀번호 관리 방법으로 옳은 것을 모두 고르시오.");
+            ex2.createCell(3).setCellValue("영문·숫자·특수문자를 조합한다");
+            ex2.createCell(4).setCellValue("사이트마다 다른 비밀번호를 사용한다");
+            ex2.createCell(5).setCellValue("모니터에 메모지로 붙여둔다");
+            ex2.createCell(6).setCellValue("동료와 공유해 함께 사용한다");
+            ex2.createCell(7).setCellValue("A,B");
+            ex2.createCell(8).setCellValue("복수 정답은 이렇게 콤마로 구분해 입력합니다. (이 행은 예시이므로 삭제 후 사용하세요)");
+
+            int[] widths = {14, 14, 60, 30, 30, 30, 30, 22, 40};
             for (int i = 0; i < widths.length; i++) sheet.setColumnWidth(i, widths[i] * 256);
 
             wb.write(out);
@@ -189,9 +200,12 @@ public class QuizBankService {
                     }
                     String optC = str(row, 5);
                     String optD = str(row, 6);
-                    if (!ANSWERS.contains(answer)) { errors.add(rowNo + "행: 정답은 A~D 중 하나여야 합니다."); continue; }
-                    if (("C".equals(answer) && optC.isBlank()) || ("D".equals(answer) && optD.isBlank())) {
-                        errors.add(rowNo + "행: 정답 보기가 비어 있습니다.");
+                    // 복수 정답 허용 — "A,C" / "AC" 등을 정규형으로 변환하고, 정답 보기가 비었는지 확인
+                    try {
+                        answer = QuizAnswers.normalize(answer);
+                        QuizAnswers.validateOptionsPresent(answer, optA, optB, optC, optD);
+                    } catch (BusinessException be) {
+                        errors.add(rowNo + "행: " + be.getMessage());
                         continue;
                     }
                     // 동일 문제(기존 등록분 또는 파일 내 중복)는 등록하지 않고 건너뛴다.
@@ -230,11 +244,12 @@ public class QuizBankService {
         return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("QuizBankQuestion", id));
     }
 
-    private void validate(String answer, String optC, String optD) {
-        String a = answer == null ? "" : answer.trim().toUpperCase();
-        if (!ANSWERS.contains(a)) throw new BusinessException("정답은 A~D 중 하나여야 합니다.");
-        if ("C".equals(a) && (optC == null || optC.isBlank())) throw new BusinessException("정답으로 지정한 보기C가 비어 있습니다.");
-        if ("D".equals(a) && (optD == null || optD.isBlank())) throw new BusinessException("정답으로 지정한 보기D가 비어 있습니다.");
+    /** 정답을 정규화(복수 정답 허용)하고 정답으로 지정한 보기가 채워져 있는지 확인한다. */
+    private String validate(QuizBankDto.Request req) {
+        String answer = QuizAnswers.normalize(req.getCorrectAnswer());
+        QuizAnswers.validateOptionsPresent(answer,
+                req.getOptionA(), req.getOptionB(), req.getOptionC(), req.getOptionD());
+        return answer;
     }
 
     /** 난이도 정규화 — 비어 있으면 '중', 그 외에는 상/중/하만 허용 */

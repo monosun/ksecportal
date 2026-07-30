@@ -73,7 +73,7 @@ public class TrainingService {
                             .optionB(q.getOptionB())
                             .optionC(q.getOptionC())
                             .optionD(q.getOptionD())
-                            .correctAnswer(q.getCorrectAnswer().toUpperCase())
+                            .correctAnswer(QuizAnswers.normalize(q.getCorrectAnswer()))
                             .difficulty(defaultDifficulty(q.getDifficulty()))
                             .explanation(q.getExplanation())
                             .sortOrder(q.getSortOrder())
@@ -93,8 +93,9 @@ public class TrainingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
 
+        // 복수 정답 문항은 정답 보기를 모두 선택해야 정답으로 인정한다.
         int correct = (int) course.getQuestions().stream()
-                .filter(q -> q.getCorrectAnswer().equalsIgnoreCase(answers.getOrDefault(q.getId(), "")))
+                .filter(q -> QuizAnswers.matches(q.getCorrectAnswer(), answers.getOrDefault(q.getId(), "")))
                 .count();
         int total = course.getQuestions().size();
         int score = total > 0 ? (correct * 100 / total) : 0;
@@ -136,7 +137,7 @@ public class TrainingService {
                             .optionB(q.getOptionB())
                             .optionC(q.getOptionC())
                             .optionD(q.getOptionD())
-                            .correctAnswer(q.getCorrectAnswer().toUpperCase())
+                            .correctAnswer(QuizAnswers.normalize(q.getCorrectAnswer()))
                             .difficulty(defaultDifficulty(q.getDifficulty()))
                             .explanation(q.getExplanation())
                             .sortOrder(q.getSortOrder())

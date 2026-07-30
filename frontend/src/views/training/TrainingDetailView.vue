@@ -77,15 +77,23 @@
 
         <!-- 현재 문항 -->
         <div :key="currentQuestion.id">
-          <p class="font-medium text-gray-900 mb-3">{{ currentIdx + 1 }}. {{ currentQuestion.question }}</p>
-          <div class="space-y-2">
+          <p class="font-medium text-gray-900 mb-1">{{ currentIdx + 1 }}. {{ currentQuestion.question }}</p>
+          <p v-if="isMulti(currentQuestion)" class="text-xs text-indigo-600 font-medium mb-3">
+            복수 정답 문항입니다 — 정답을 모두 선택하세요.
+          </p>
+          <div class="space-y-2" :class="isMulti(currentQuestion) ? '' : 'mt-3'">
             <label v-for="opt in options(currentQuestion)" :key="opt.key"
               class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors"
-              :class="answers[currentQuestion.id] === opt.key ? 'border-primary-500 bg-primary-50' : 'border-gray-200'">
-              <input type="radio" :name="`q${currentQuestion.id}`" :value="opt.key" v-model="answers[currentQuestion.id]" class="hidden" />
-              <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                :class="answers[currentQuestion.id] === opt.key ? 'border-primary-500 bg-primary-500' : 'border-gray-300'">
-                <span v-if="answers[currentQuestion.id] === opt.key" class="text-white text-xs font-bold">{{ opt.key }}</span>
+              :class="isChosen(currentQuestion, opt.key) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'">
+              <input :type="isMulti(currentQuestion) ? 'checkbox' : 'radio'" :name="`q${currentQuestion.id}`"
+                class="hidden" :checked="isChosen(currentQuestion, opt.key)"
+                @change="chooseOption(currentQuestion, opt.key)" />
+              <div class="w-6 h-6 border-2 flex items-center justify-center flex-shrink-0"
+                :class="[
+                  isMulti(currentQuestion) ? 'rounded-md' : 'rounded-full',
+                  isChosen(currentQuestion, opt.key) ? 'border-primary-500 bg-primary-500' : 'border-gray-300'
+                ]">
+                <span v-if="isChosen(currentQuestion, opt.key)" class="text-white text-xs font-bold">{{ opt.key }}</span>
               </div>
               <span class="text-sm">{{ opt.text }}</span>
             </label>
@@ -132,22 +140,24 @@
             <div class="space-y-1.5">
               <div v-for="opt in options(q)" :key="opt.key"
                 class="flex items-center gap-3 p-2.5 rounded-lg border text-sm"
-                :class="opt.key === q.correctAnswer
+                :class="isCorrectOption(q.correctAnswer, opt.key)
                   ? 'border-green-500 bg-green-50'
-                  : opt.key === q.myAnswer
+                  : isCorrectOption(q.myAnswer, opt.key)
                     ? 'border-red-400 bg-red-50'
                     : 'border-gray-200'">
                 <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                  :class="opt.key === q.correctAnswer
+                  :class="isCorrectOption(q.correctAnswer, opt.key)
                     ? 'border-green-500 bg-green-500 text-white'
-                    : opt.key === q.myAnswer
+                    : isCorrectOption(q.myAnswer, opt.key)
                       ? 'border-red-400 bg-red-400 text-white'
                       : 'border-gray-300 text-gray-400'">
                   {{ opt.key }}
                 </div>
                 <span class="flex-1">{{ opt.text }}</span>
-                <span v-if="opt.key === q.correctAnswer" class="text-xs font-semibold text-green-600 flex-shrink-0">정답</span>
-                <span v-else-if="opt.key === q.myAnswer" class="text-xs font-semibold text-red-500 flex-shrink-0">내가 선택한 답</span>
+                <span v-if="isCorrectOption(q.correctAnswer, opt.key)" class="text-xs font-semibold text-green-600 flex-shrink-0">
+                  정답{{ isCorrectOption(q.myAnswer, opt.key) ? ' · 내가 선택한 답' : '' }}
+                </span>
+                <span v-else-if="isCorrectOption(q.myAnswer, opt.key)" class="text-xs font-semibold text-red-500 flex-shrink-0">내가 선택한 답</span>
               </div>
             </div>
             <div v-if="q.explanation" class="mt-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
@@ -165,6 +175,7 @@ import { ref, computed, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { trainingApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { answerLetters, toAnswerString, isCorrectOption, isMultiAnswer, answersMatch } from '@/utils/quizAnswer'
 
 const auth = useAuthStore()
 const isManager = auth.isManager
@@ -189,13 +200,28 @@ const allAnswered = computed(() =>
   course.value?.questions?.every(q => answers.value[q.id]) ?? false
 )
 
-// 제출 직후 오답 리뷰용 — 백엔드 채점(equalsIgnoreCase)과 동일 기준으로 비교
+// 제출 직후 오답 리뷰용 — 백엔드 채점(QuizAnswers.matches)과 동일 기준으로 비교
 const wrongQuestions = computed(() => {
   if (!result.value || !course.value?.questions) return []
   return course.value.questions
     .map((q, idx) => ({ ...q, number: idx + 1, myAnswer: answers.value[q.id] || null }))
-    .filter(q => (q.myAnswer || '').toUpperCase() !== (q.correctAnswer || '').toUpperCase())
+    .filter(q => !answersMatch(q.correctAnswer, q.myAnswer))
 })
+
+// ── 답안 선택 (복수 정답 문항은 여러 개 선택) ──
+function isMulti(q) { return isMultiAnswer(q?.correctAnswer) }
+
+function isChosen(q, letter) { return isCorrectOption(answers.value[q.id], letter) }
+
+function chooseOption(q, letter) {
+  if (!isMulti(q)) {
+    answers.value[q.id] = letter
+    return
+  }
+  const current = answerLetters(answers.value[q.id])
+  const next = current.includes(letter) ? current.filter(l => l !== letter) : [...current, letter]
+  answers.value[q.id] = toAnswerString(next)
+}
 
 function options(q) {
   const opts = [{ key: 'A', text: q.optionA }, { key: 'B', text: q.optionB }]

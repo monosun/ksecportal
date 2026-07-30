@@ -103,13 +103,19 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-gray-500 mb-1">정답 *</label>
-                <select v-model="q.correctAnswer" class="input w-full" required>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C" :disabled="!q.optionC">C</option>
-                  <option value="D" :disabled="!q.optionD">D</option>
-                </select>
+                <label class="block text-xs text-gray-500 mb-1">정답 * <span class="text-gray-400">(복수 선택 가능)</span></label>
+                <div class="flex gap-1">
+                  <label v-for="l in ['A','B','C','D']" :key="l"
+                    class="flex-1 flex items-center justify-center py-2 rounded-lg border text-sm font-medium select-none"
+                    :class="[
+                      isCorrectOption(q.correctAnswer, l) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500',
+                      answerSelectable(q, l) ? 'cursor-pointer hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'
+                    ]">
+                    <input type="checkbox" class="hidden" :disabled="!answerSelectable(q, l)"
+                      :checked="isCorrectOption(q.correctAnswer, l)" @change="toggleAnswer(q, l)" />
+                    {{ l }}
+                  </label>
+                </div>
               </div>
             </div>
             <div>
@@ -203,7 +209,7 @@
             <span class="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5" :class="difficultyClass(q.difficulty)">{{ q.difficulty || '중' }}</span>
             <span class="text-sm text-gray-700">{{ q.question }}</span>
             <span v-if="isAdded(q)" class="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-500 mt-0.5">추가됨</span>
-            <span class="ml-auto flex-shrink-0 text-xs font-mono font-bold text-primary-600">{{ q.correctAnswer }}</span>
+            <span class="ml-auto flex-shrink-0 text-xs font-mono font-bold text-primary-600 whitespace-nowrap">{{ formatAnswer(q.correctAnswer) }}</span>
           </label>
         </div>
         <div class="flex items-center justify-between mt-3">
@@ -230,6 +236,7 @@
 import { ref, computed, watch } from 'vue'
 import { trainingApi, quizBankApi } from '@/api'
 import { shuffle as secureShuffle } from '@/utils/secureRandom.js'
+import { answerLetters, toAnswerString, formatAnswer, isCorrectOption } from '@/utils/quizAnswer'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -285,6 +292,18 @@ function addQuestion() {
 function removeQuestion(idx) {
   questions.value.splice(idx, 1)
   questions.value.forEach((q, i) => { q.sortOrder = i })
+}
+
+// ── 정답(복수 선택 가능) ──
+/** 보기 A·B는 필수라 항상 선택 가능, C·D는 내용이 있을 때만 정답으로 지정할 수 있다. */
+function answerSelectable(q, letter) {
+  return letter === 'A' || letter === 'B' ? true : !!q['option' + letter]?.trim()
+}
+
+function toggleAnswer(q, letter) {
+  const current = answerLetters(q.correctAnswer)
+  const next = current.includes(letter) ? current.filter(l => l !== letter) : [...current, letter]
+  q.correctAnswer = toAnswerString(next)
 }
 
 // ── 문제은행 피커 ────────────────────────────────────
@@ -423,6 +442,11 @@ function addFromBank() {
 }
 
 async function handleSubmit() {
+  const noAnswer = questions.value.findIndex(q => answerLetters(q.correctAnswer).length === 0)
+  if (noAnswer >= 0) {
+    error.value = `${noAnswer + 1}번 문항의 정답을 하나 이상 선택하세요.`
+    return
+  }
   loading.value = true
   error.value = ''
   try {

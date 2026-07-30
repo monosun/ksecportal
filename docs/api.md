@@ -702,12 +702,14 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 ### POST /training/courses/:id/submit
 
 ```json
-// Request: { questionId: answer, ... }
-{ "1": "A", "2": "B", "3": "C" }
+// Request: { questionId: answer, ... }  — 복수 정답 문항은 "A,C" 형식
+{ "1": "A", "2": "B", "3": "A,C" }
 
 // Response
 { "score": 100, "passed": true, "correctCount": 3, "totalCount": 3 }
 ```
+
+채점은 집합 비교입니다. 복수 정답 문항은 **정답 보기를 모두 정확히** 선택해야 정답으로 인정되며, 하나라도 빠지거나 오답이 섞이면 오답 처리됩니다.
 
 ### GET /training/results *(MANAGER+)*
 
@@ -767,6 +769,8 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
   "explanation": "개인정보 수집 시 정보주체의 동의가 필요합니다."
 }
 ```
+
+`correctAnswer` 는 **복수 정답**을 지원합니다. 단일은 `"A"`, 복수는 `"A,C"` 형식으로 저장되며, 입력은 `"AC"` · `"a c"` · `"A/C"` 처럼 보내도 `"A,C"` 로 정규화됩니다. A~D 외의 문자가 있거나 정답이 하나도 없으면 400(BusinessException)이고, 정답으로 지정한 보기가 비어 있어도 거부됩니다.
 
 ### PATCH /quiz-bank/:id
 

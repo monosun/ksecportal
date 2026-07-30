@@ -35,7 +35,8 @@ public class QuizQuestion {
     @Column(name = "option_d")
     private String optionD;
 
-    @Column(nullable = false, columnDefinition = "CHAR(1)")
+    /** 정답 — 단일은 "A", 복수 정답은 콤마로 구분해 오름차순 저장한다 (예: "A,C") */
+    @Column(name = "correct_answer", nullable = false, length = 7)
     private String correctAnswer;
 
     /** 난이도: 상 / 중 / 하 */

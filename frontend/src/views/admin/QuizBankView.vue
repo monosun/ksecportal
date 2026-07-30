@@ -13,6 +13,14 @@
           </svg>
           선택 문제 다운로드 ({{ selected.size }})
         </button>
+        <button v-if="totalElements > 0" @click="downloadAll" :disabled="downloadingAll"
+          class="btn-secondary text-sm flex items-center gap-1.5 !border-green-300 !text-green-700 hover:!bg-green-50 disabled:opacity-50"
+          :title="hasFilter ? '현재 검색조건에 해당하는 문항을 모두 Excel로 내려받습니다' : '문제은행 전체 문항을 Excel로 내려받습니다'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          {{ downloadingAll ? '다운로드 중...' : `${hasFilter ? '검색결과' : '전체'} 다운로드 (${totalElements})` }}
+        </button>
         <button @click="showBulkModal = true" class="btn-secondary text-sm flex items-center gap-1.5">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/>
@@ -135,7 +143,7 @@
                   </div>
                 </td>
                 <td class="py-3 px-4">
-                  <span class="font-mono font-bold text-primary-600">{{ q.correctAnswer }}</span>
+                  <span class="font-mono font-bold text-primary-600 whitespace-nowrap">{{ formatAnswer(q.correctAnswer) }}</span>
                 </td>
                 <td class="py-3 px-4 text-gray-400 text-xs whitespace-nowrap">{{ formatDate(q.createdAt) }}</td>
                 <td class="py-3 px-4" @click.stop>
@@ -152,12 +160,15 @@
                 <td colspan="2"></td>
                 <td colspan="6" class="py-3 px-4">
                   <div class="space-y-1 text-sm">
+                    <p v-if="isMultiAnswer(q.correctAnswer)" class="text-[11px] text-indigo-600 font-medium mb-1">
+                      복수 정답 문항 — 정답 보기를 모두 선택해야 정답 처리됩니다.
+                    </p>
                     <p v-for="letter in ['A','B','C','D']" :key="letter" v-show="optionOf(q, letter)"
                       class="flex gap-2"
-                      :class="q.correctAnswer === letter ? 'text-green-700 font-semibold' : 'text-gray-600'">
+                      :class="isCorrectOption(q.correctAnswer, letter) ? 'text-green-700 font-semibold' : 'text-gray-600'">
                       <span class="font-mono w-4 flex-shrink-0">{{ letter }}.</span>
                       <span>{{ optionOf(q, letter) }}</span>
-                      <span v-if="q.correctAnswer === letter" class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold self-center">정답</span>
+                      <span v-if="isCorrectOption(q.correctAnswer, letter)" class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold self-center">정답</span>
                     </p>
                     <p v-if="q.explanation" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
                       <span class="font-semibold text-gray-600">해설</span> {{ q.explanation }}
@@ -202,10 +213,19 @@
               </select>
             </div>
             <div>
-              <label class="text-sm font-medium text-gray-700">정답 *</label>
-              <select v-model="form.correctAnswer" class="input w-full mt-1">
-                <option v-for="l in ['A','B','C','D']" :key="l" :value="l">{{ l }}</option>
-              </select>
+              <label class="text-sm font-medium text-gray-700">정답 * <span class="text-xs font-normal text-gray-400">(복수 선택 가능)</span></label>
+              <div class="flex gap-1.5 mt-1">
+                <label v-for="l in ['A','B','C','D']" :key="l"
+                  class="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border text-sm font-medium select-none"
+                  :class="[
+                    answerLetters.includes(l) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500',
+                    optionFilled(l) ? 'cursor-pointer hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'
+                  ]">
+                  <input type="checkbox" class="hidden" :value="l" :disabled="!optionFilled(l)"
+                    :checked="answerLetters.includes(l)" @change="toggleAnswer(l)" />
+                  {{ l }}
+                </label>
+              </div>
             </div>
           </div>
           <div>
@@ -223,7 +243,7 @@
         </div>
         <div class="flex justify-end gap-2 mt-5">
           <button @click="showForm = false" class="btn-secondary">취소</button>
-          <button @click="submitForm" :disabled="saving || !form.question || !form.optionA || !form.optionB" class="btn-primary">
+          <button @click="submitForm" :disabled="saving || !form.question || !form.optionA || !form.optionB || !answerLetters.length" class="btn-primary">
             {{ saving ? '저장 중...' : '저장' }}
           </button>
         </div>
@@ -235,7 +255,7 @@
       v-if="showBulkModal"
       ref="bulkModalRef"
       title="문제은행 Excel 일괄 등록"
-      desc="엑셀 템플릿을 다운로드하여 문항을 작성한 후 업로드하세요. 분류·문제·보기A/B·정답(A~D)은 필수입니다."
+      desc="엑셀 템플릿을 다운로드하여 문항을 작성한 후 업로드하세요. 분류·문제·보기A/B·정답(A~D)은 필수이며, 복수 정답은 'A,C'처럼 콤마로 구분해 입력합니다."
       :template-loading="templateLoading"
       @close="showBulkModal = false; bulkModalRef?.reset()"
       @download-template="downloadTemplate"
@@ -247,11 +267,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import * as XLSX from 'xlsx-js-style'
 import { quizBankApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
 import { useDebounceFn } from '@vueuse/core'
+import { answerLetters as parseAnswer, toAnswerString, formatAnswer, isMultiAnswer, isCorrectOption } from '@/utils/quizAnswer'
 
 const questions = ref([])
 const categories = ref([])
@@ -263,6 +284,19 @@ const totalPages = ref(0)
 const totalElements = ref(0)
 const filters = ref({ category: '', difficulty: '', keyword: '' })
 const expandedId = ref(null)
+const downloadingAll = ref(false)
+
+const hasFilter = computed(() =>
+  !!(filters.value.category || filters.value.difficulty || filters.value.keyword))
+
+// 목록 조회/다운로드가 동일한 검색조건을 쓰도록 공통화
+function activeFilterParams() {
+  return {
+    ...(filters.value.category && { category: filters.value.category }),
+    ...(filters.value.difficulty && { difficulty: filters.value.difficulty }),
+    ...(filters.value.keyword && { keyword: filters.value.keyword }),
+  }
+}
 
 const showForm = ref(false)
 const saving = ref(false)
@@ -277,6 +311,21 @@ function emptyForm() {
 }
 
 function optionOf(q, letter) { return q['option' + letter] }
+
+// ── 정답(복수 선택 가능) ──
+const answerLetters = computed(() => parseAnswer(form.value.correctAnswer))
+
+/** 보기 A·B는 필수라 항상 선택 가능, C·D는 내용이 있을 때만 정답으로 지정할 수 있다. */
+function optionFilled(letter) {
+  return letter === 'A' || letter === 'B' ? true : !!form.value['option' + letter]?.trim()
+}
+
+function toggleAnswer(letter) {
+  const next = answerLetters.value.includes(letter)
+    ? answerLetters.value.filter(l => l !== letter)
+    : [...answerLetters.value, letter]
+  form.value.correctAnswer = toAnswerString(next)
+}
 
 function difficultyClass(d) {
   return { '상': 'bg-red-100 text-red-600', '중': 'bg-amber-100 text-amber-700', '하': 'bg-green-100 text-green-700' }[d] || 'bg-amber-100 text-amber-700'
@@ -303,13 +352,12 @@ function togglePageAll(checked) {
   selected.value = next
 }
 
-function downloadSelected() {
-  const items = [...selected.value.values()].sort((a, b) => a.id - b.id)
-  if (!items.length) return
-  const HEADERS = ['분류', '난이도(상/중/하)*', '문제*', '보기A*', '보기B*', '보기C', '보기D', '정답(A~D)*', '해설']
+// 문항 배열을 일괄등록 양식과 동일한 형식의 Excel로 저장
+function exportQuestions(items, scopeLabel) {
+  const HEADERS = ['분류', '난이도(상/중/하)*', '문제*', '보기A*', '보기B*', '보기C', '보기D', '정답(A~D, 복수는 A,C)*', '해설']
   const rows = items.map(q => [
     q.category ?? '', q.difficulty ?? '중', q.question, q.optionA, q.optionB,
-    q.optionC ?? '', q.optionD ?? '', q.correctAnswer, q.explanation ?? '',
+    q.optionC ?? '', q.optionD ?? '', toAnswerString(parseAnswer(q.correctAnswer)), q.explanation ?? '',
   ])
   const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
   // 헤더 스타일 (일괄등록 템플릿과 동일한 느낌)
@@ -317,11 +365,42 @@ function downloadSelected() {
     const addr = XLSX.utils.encode_cell({ r: 0, c })
     ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E5E7EB' } } }
   }
-  ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 60 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 12 }, { wch: 40 }]
+  ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 60 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 22 }, { wch: 40 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, '문제은행')
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  XLSX.writeFile(wb, `문제은행_선택${items.length}건_${d}.xlsx`)
+  XLSX.writeFile(wb, `문제은행_${scopeLabel}${items.length}건_${d}.xlsx`)
+}
+
+function downloadSelected() {
+  const items = [...selected.value.values()].sort((a, b) => a.id - b.id)
+  if (!items.length) return
+  exportQuestions(items, '선택')
+}
+
+// 현재 검색조건(없으면 전체)의 모든 문항을 서버에서 페이지 단위로 모아 다운로드
+async function downloadAll() {
+  downloadingAll.value = true
+  try {
+    const CHUNK = 500
+    const items = []
+    for (let p = 0; ; p++) {
+      const res = await quizBankApi.list({ page: p, size: CHUNK, ...activeFilterParams() })
+      const content = res.data?.content ?? []
+      items.push(...content)
+      const totalPages = res.data?.page?.totalPages ?? res.data?.totalPages ?? 0
+      if (content.length < CHUNK || p + 1 >= totalPages) break
+    }
+    if (!items.length) {
+      alert('다운로드할 문제가 없습니다.')
+      return
+    }
+    exportQuestions(items, hasFilter.value ? '검색결과' : '전체')
+  } catch (e) {
+    alert(e || '다운로드에 실패했습니다.')
+  } finally {
+    downloadingAll.value = false
+  }
 }
 
 const debouncedSearch = useDebounceFn(() => { page.value = 0; load() }, 400)
@@ -334,12 +413,7 @@ function goPage(p) {
 async function load() {
   loading.value = true
   try {
-    const res = await quizBankApi.list({
-      page: page.value, size: 20,
-      ...(filters.value.category && { category: filters.value.category }),
-      ...(filters.value.difficulty && { difficulty: filters.value.difficulty }),
-      ...(filters.value.keyword && { keyword: filters.value.keyword }),
-    })
+    const res = await quizBankApi.list({ page: page.value, size: 20, ...activeFilterParams() })
     const d = res.data
     questions.value = d?.content || []
     totalPages.value = d?.page?.totalPages ?? d?.totalPages ?? 0
