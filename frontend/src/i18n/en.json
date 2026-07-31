@@ -328,6 +328,7 @@
     "users": "User Management",
     "rbac": "Access Control",
     "auditLogs": "Audit Logs",
+    "performance": "Performance",
     "notices": "Notice Management",
     "role": "Role",
     "active": "Active",

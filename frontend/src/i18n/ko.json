@@ -342,6 +342,7 @@
     "users": "사용자 관리",
     "rbac": "권한관리",
     "auditLogs": "감사 로그",
+    "performance": "성능관리",
     "codes": "코드 관리",
     "quizBank": "문제은행 관리",
     "notices": "공지사항 관리",

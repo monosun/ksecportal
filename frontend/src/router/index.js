@@ -176,6 +176,12 @@ const routes = [
         meta: { adminOnly: true }
       },
       {
+        path: 'admin/performance',
+        name: 'AdminPerformance',
+        component: () => import('@/views/admin/PerformanceView.vue'),
+        meta: { adminOnly: true }
+      },
+      {
         path: 'admin/rbac',
         name: 'AdminRbac',
         component: () => import('@/views/admin/RbacManagementView.vue'),

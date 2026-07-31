@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.25.1** — 위험평가 자산 자동 불러오기를 자산유형 매칭 조합만 생성하도록 개선 ([릴리즈 노트](release/v1.25.1/RELEASE_NOTES.md))
+> **최신 버전: v1.26.0** — 성능관리 신설(지연 기준 초과 화면·SQL 기록/조회, 기본 3초) ([릴리즈 노트](release/v1.26.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -492,6 +492,11 @@ PATCH  /api/admin/users/:id
 DELETE /api/admin/users/:id
 POST   /api/admin/users/:id/unlock        # 비밀번호 오류 횟수 초기화·잠금 해제 (ADMIN)
 GET    /api/admin/audit-logs              # ?dateFrom=&dateTo= (ISO 8601)
+GET    /api/admin/performance/logs        # 성능관리 — 지연 기록 조회 (logType·keyword·minMs·기간, ADMIN)
+GET    /api/admin/performance/stats       # 성능관리 요약 통계
+GET    /api/admin/performance/config      # 지연 기준·보관기간 조회
+PUT    /api/admin/performance/config      # 지연 기준·보관기간 저장
+DELETE /api/admin/performance/logs        # 기록 삭제 (?days= 미지정 시 전체)
 GET    /api/admin/users/simple            # 활성 사용자 목록 (담당자 선택용, MANAGER+)
 GET    /api/admin/notification-config
 PUT    /api/admin/notification-config
@@ -741,6 +746,7 @@ ksecportal/
 | `phishing_campaigns` | 모의훈련 캠페인 (생성·실시·완료·취소) |
 | `phishing_campaign_targets` | 캠페인별 대상 발송·열람·클릭·신고 추적 및 발송 결과 로그 |
 | `audit_logs` | 감사 로그 |
+| `slow_logs` | 성능관리 — 지연 기준 초과 화면 요청·SQL 기록 |
 | `assets` | IT 자산 (sbom_software_id로 SBOM SW 맵핑) |
 | `sbom_software` | SBOM SW 정보 (name+version UNIQUE) |
 | `sbom_components` | SW별 포함 라이브러리 — CycloneDX component 필드 (type·group·name·version·purl·SPDX 라이선스) |
@@ -815,6 +821,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.26.0](release/v1.26.0/RELEASE_NOTES.md) | **성능관리 신설**(관리 메뉴, ADMIN) — 지연 기준(**기본 3초**, 화면에서 변경)을 넘긴 **화면 요청**과 **SQL**을 감사 로그처럼 기록·조회. 요약 카드·유형/검색어/최소 소요시간/기간 필터·페이징·행 펼침(전체 SQL 구문), 전체/7·30·90일 이전 삭제, 보관기간(기본 30일) 초과분 매일 03:20 자동 정리. 기록은 메모리 큐에 모아 5초 간격 일괄 저장하고, SQL 계측은 외부 라이브러리 없이 JDK 동적 프록시로 DataSource를 감싸 `execute*` 만 계측. 신규 테이블 `slow_logs`(ddl-auto), 설정은 `app_settings`의 `perf.*` 키, `/api/admin/performance/*` 추가 |
 | [v1.25.1](release/v1.25.1/RELEASE_NOTES.md) | **위험평가 자산 자동 불러오기 — 자산유형 매칭** — 자산×위협 전조합 생성에서, **자산의 자산유형이 위협의 대상 자산유형 중 하나와 일치하는 조합만** 평가 항목으로 생성하도록 변경. 대상 자산유형이 없는 위협은 종전처럼 전 자산 적용(호환), 자산유형이 없는 자산은 대상 자산유형이 지정된 위협과 매칭 제외. 안내 문구·완료 메시지에 매칭 규칙 반영 |
 | [v1.25.0](release/v1.25.0/RELEASE_NOTES.md) | **퀴즈 보기 E 추가(5지선다 지원)** — 문제은행·교육 문항의 보기를 A~E까지 입력 가능(A·B 필수, C~E 선택). 정답 지정 버튼도 A~E로 확장되고, 복수 정답·채점 규칙(정답 보기를 모두 정확히 선택)은 동일. 엑셀 일괄등록·다운로드 양식에 **보기E 열 추가(10열)** 및 정답 헤더를 `정답(A~E, 복수는 A,B 또는 AB)*` 로 변경하되, **보기E 열이 없는 예전 9열 양식도 헤더 자동 판별로 그대로 업로드** 가능. 문제은행 상세는 보기 A~E를 항상 표시하고 **내용 없는 보기는 `-` 로 표기**. `option_e` 컬럼 추가·`correct_answer` `VARCHAR(9)` 확장(마이그레이션 `v1.25.0_quiz_option_e.sql` 필요). **위협 카탈로그 대상 자산유형(복수 선택)** 신설 — 코드관리 `ASSET_TYPE` 값을 칩으로 복수 지정하고 목록 열·인라인 필터 제공, 기본 560개 위협에 자산분류 기준 사전 할당(`threats`·`threat_defaults`의 `asset_types`, 백필 `v1.25.0_threat_asset_types.sql`). **위협 카탈로그 Excel 다운로드**(전체/검색결과, 13개 항목) 신설 |
 | [v1.24.0](release/v1.24.0/RELEASE_NOTES.md) | **퀴즈 복수 정답 허용** — 문제은행·교육 문항의 정답을 A~D 중 여러 개로 지정 가능. 저장 형식은 콤마 구분 정렬 문자열(`A,C`)이고 엑셀 일괄등록·다운로드도 같은 형식(`AC`처럼 붙여 써도 인식). 응시 화면은 복수 정답 문항을 **체크박스**로 표시하고 "정답을 모두 선택하세요" 안내를 노출하며, 채점은 **정답 보기를 모두 정확히 선택해야 정답**(집합 비교). 오답 리뷰도 복수 정답 기준으로 표시. `quiz_bank_questions.correct_answer`·`quiz_questions.correct_answer` 를 `VARCHAR(7)` 로 확장(마이그레이션 `v1.24.0_quiz_multi_answer.sql` 필요). **문제은행 문항 다운로드** 신설 — 전체/검색결과/선택 문항을 일괄등록 양식과 동일한 Excel로 저장해 그대로 재업로드 가능. **최초 로그인 비밀번호 변경 화면에 비밀번호 표시(눈 아이콘) 토글** 3개 입력란 모두 추가 |

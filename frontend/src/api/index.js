@@ -817,6 +817,14 @@ export const threatDefaultApi = {
   delete: (id) => api.delete(`/threats/defaults/${id}`),
 }
 
+export const performanceApi = {
+  listLogs:   (params) => api.get('/admin/performance/logs', { params }),
+  stats:      () => api.get('/admin/performance/stats'),
+  getConfig:  () => api.get('/admin/performance/config'),
+  saveConfig: (data) => api.put('/admin/performance/config', data),
+  purge:      (days) => api.delete('/admin/performance/logs', { params: days ? { days } : {} }),
+}
+
 export const appSettingApi = {
   getAll: () => api.get('/public/app-settings'),
   update: (key, value) => api.put(`/admin/app-settings/${key}`, { value }),

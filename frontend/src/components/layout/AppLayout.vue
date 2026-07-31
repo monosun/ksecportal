@@ -379,6 +379,7 @@ const adminNavItems = [
   { to: '/admin/menu-order',          label: 'admin.menuOrder',   icon: DocumentTextIcon },
   { to: '/admin/quiz-bank',           label: 'admin.quizBank',    icon: DocumentTextIcon },
   { to: '/admin/audit-logs',          label: 'admin.auditLogs',   icon: DocumentTextIcon },
+  { to: '/admin/performance',         label: 'admin.performance', icon: DocumentTextIcon },
   { to: '/admin/backup',              label: 'admin.backup',      icon: DocumentTextIcon },
   { to: '/admin/settings-management', label: 'admin.settingsMgmt',icon: ShieldExclamationIcon },
 ]

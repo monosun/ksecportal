@@ -917,6 +917,51 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 
 ---
 
+## 성능관리 (Performance, v1.26.0)
+
+지연 기준(기본 3초)을 넘긴 화면 요청·SQL 기록. 모두 **ADMIN** 권한이 필요합니다.
+
+### GET /admin/performance/logs
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `logType` | String | `SCREEN`(화면 요청) / `SQL`. 미지정 시 전체 |
+| `keyword` | String | 대상(URL·SQL 구문) 부분 일치 |
+| `minMs` | Long | 최소 소요시간(ms) |
+| `dateFrom` · `dateTo` | String | 발생 일시 범위 (ISO 8601) |
+
+```json
+// 응답 항목
+{
+  "id": 12, "logType": "SQL", "target": "select a1_0.id ... from assets a1_0",
+  "detail": "select a1_0.id ... from assets a1_0 where ...",
+  "durationMs": 4175, "thresholdMs": 3000,
+  "username": "admin@example.com", "ipAddress": null,
+  "httpMethod": null, "statusCode": null,
+  "occurredAt": "2026-08-01T03:10:22"
+}
+```
+
+`thresholdMs` 는 **기록 시점의 기준값**이므로 이후 기준을 바꿔도 당시 판단 근거가 유지됩니다.
+
+### GET /admin/performance/stats
+
+`{ "total": 128, "screenCount": 90, "sqlCount": 38, "maxDurationMs": 8421 }`
+
+### GET · PUT /admin/performance/config
+
+```json
+{ "thresholdMs": 3000, "enabled": true, "sqlEnabled": true, "retentionDays": 30 }
+```
+
+PUT 은 보낸 필드만 반영합니다. `thresholdMs` 는 100~600000, `retentionDays` 는 1~3650 범위로 보정되며, 값은 `app_settings` 의 `perf.threshold_ms` · `perf.enabled` · `perf.sql_enabled` · `perf.retention_days` 에 저장됩니다.
+
+### DELETE /admin/performance/logs
+
+`days` 를 주면 그보다 오래된 기록만, 없으면 전체를 삭제하고 삭제 건수를 반환합니다.
+
+---
+
 ## 페이지네이션
 
 Spring Data Pageable을 사용합니다.
