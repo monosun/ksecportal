@@ -29,6 +29,10 @@ public class Threat extends BaseEntity {
     @Column(name = "asset_detail", length = 100)
     private String assetDetail;
 
+    /** 대상 자산유형(복수) — 코드관리 ASSET_TYPE 값을 콤마로 구분해 저장한다 (예: "서버,네트워크") */
+    @Column(name = "asset_types", length = 500)
+    private String assetTypes;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

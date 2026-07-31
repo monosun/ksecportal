@@ -567,3 +567,27 @@ INSERT IGNORE INTO threat_defaults (risk_id, name, type, category, asset_detail,
 ('MRR-0558','무단 출입 #558','내부위협','물리보안','IDC','무단 출입 관련 통제 미흡',4,1),
 ('MRR-0559','Prompt Injection #559','외부공격','AI/LLM','생성형AI','Prompt Injection 관련 통제 미흡',5,2),
 ('MRR-0560','민감정보 Retrieval #560','외부공격','AI/LLM','RAG','민감정보 Retrieval 관련 통제 미흡',1,3);
+
+-- ============================================================
+-- 대상 자산유형(복수) 기본 할당 — 자산분류(asset_detail) 기준
+-- 값은 코드관리 ASSET_TYPE 그룹의 코드값이며, 화면에서 개별 수정할 수 있다.
+-- ============================================================
+
+UPDATE threat_defaults SET asset_types = CASE asset_detail
+    WHEN 'SSO/MFA'     THEN 'APPLICATION,SERVER'
+    WHEN 'IAM/S3'      THEN 'S3,CLOUD_OTHER'
+    WHEN 'Kubernetes'  THEN 'EC2,CLOUD_OTHER,APPLICATION'
+    WHEN 'DB'          THEN 'DATABASE,RDS'
+    WHEN 'IDC'         THEN 'SERVER,NETWORK,WORKSTATION'
+    WHEN 'RAG'         THEN 'APPLICATION,DATABASE,CLOUD_OTHER'
+    WHEN '생성형AI'    THEN 'APPLICATION,CLOUD_OTHER'
+    WHEN '결제/정산'   THEN 'APPLICATION,DATABASE'
+    WHEN '고객포털'    THEN 'APPLICATION,ELB,EC2'
+    WHEN '배포플랫폼'  THEN 'APPLICATION,CLOUD_OTHER'
+    WHEN '셀프개통'    THEN 'APPLICATION,DATABASE'
+    WHEN '소스코드'    THEN 'APPLICATION,CLOUD_OTHER'
+    WHEN '협력사'      THEN 'APPLICATION,OTHER'
+    WHEN '회원정보'    THEN 'DATABASE,APPLICATION'
+    ELSE 'APPLICATION,SERVER'
+END
+WHERE asset_types IS NULL OR asset_types = '';

@@ -8,12 +8,12 @@ import java.util.TreeSet;
 
 /**
  * 퀴즈 정답 문자열 유틸.
- * 정답은 단일 "A" 또는 복수 "A,C" 형태(콤마 구분·오름차순)로 저장한다.
+ * 보기는 A~E(최대 5지선다), 정답은 단일 "A" 또는 복수 "A,C" 형태(콤마 구분·오름차순)로 저장한다.
  * 입력은 "a c", "AC", "A/C" 처럼 느슨하게 들어와도 같은 정규형으로 받아들인다.
  */
 public final class QuizAnswers {
 
-    private static final Set<String> VALID = Set.of("A", "B", "C", "D");
+    private static final Set<String> VALID = Set.of("A", "B", "C", "D", "E");
 
     private QuizAnswers() {
     }
@@ -26,7 +26,7 @@ public final class QuizAnswers {
             if (isSeparator(ch)) continue;
             String letter = String.valueOf(ch);
             if (!VALID.contains(letter)) {
-                throw new BusinessException("정답은 A~D 중 하나 이상이어야 합니다. (입력값: " + raw + ")");
+                throw new BusinessException("정답은 A~E 중 하나 이상이어야 합니다. (입력값: " + raw + ")");
             }
             letters.add(letter);
         }
@@ -34,7 +34,7 @@ public final class QuizAnswers {
         return String.join(",", letters);
     }
 
-    /** 채점·비교용 — 유효한 A~D만 추려낸 집합. 응시자 입력이 비정상이어도 예외를 던지지 않는다. */
+    /** 채점·비교용 — 유효한 A~E만 추려낸 집합. 응시자 입력이 비정상이어도 예외를 던지지 않는다. */
     public static Set<String> toSet(String raw) {
         Set<String> letters = new TreeSet<>();
         if (raw == null) return letters;
@@ -51,7 +51,7 @@ public final class QuizAnswers {
         return !correct.isEmpty() && correct.equals(toSet(submitted));
     }
 
-    /** 정답으로 지정한 보기에 내용이 있는지 검증한다. options는 A,B,C,D 순서. */
+    /** 정답으로 지정한 보기에 내용이 있는지 검증한다. options는 A,B,C,D,E 순서. */
     public static void validateOptionsPresent(String correctAnswer, String... options) {
         Set<String> missing = new LinkedHashSet<>();
         for (String letter : toSet(correctAnswer)) {

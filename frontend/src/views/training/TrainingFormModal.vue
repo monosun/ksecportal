@@ -92,6 +92,10 @@
                 <label class="block text-xs text-gray-500 mb-1">D 선택지</label>
                 <input v-model="q.optionD" type="text" class="input w-full" />
               </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">E 선택지</label>
+                <input v-model="q.optionE" type="text" class="input w-full" />
+              </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -105,7 +109,7 @@
               <div>
                 <label class="block text-xs text-gray-500 mb-1">정답 * <span class="text-gray-400">(복수 선택 가능)</span></label>
                 <div class="flex gap-1">
-                  <label v-for="l in ['A','B','C','D']" :key="l"
+                  <label v-for="l in OPTION_LETTERS" :key="l"
                     class="flex-1 flex items-center justify-center py-2 rounded-lg border text-sm font-medium select-none"
                     :class="[
                       isCorrectOption(q.correctAnswer, l) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500',
@@ -236,7 +240,7 @@
 import { ref, computed, watch } from 'vue'
 import { trainingApi, quizBankApi } from '@/api'
 import { shuffle as secureShuffle } from '@/utils/secureRandom.js'
-import { answerLetters, toAnswerString, formatAnswer, isCorrectOption } from '@/utils/quizAnswer'
+import { answerLetters, toAnswerString, formatAnswer, isCorrectOption, OPTION_LETTERS } from '@/utils/quizAnswer'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -268,7 +272,7 @@ watch(() => props.open, async (open) => {
       }
       questions.value = (course.questions || []).map(q => ({
         question: q.question, optionA: q.optionA, optionB: q.optionB,
-        optionC: q.optionC || '', optionD: q.optionD || '',
+        optionC: q.optionC || '', optionD: q.optionD || '', optionE: q.optionE || '',
         correctAnswer: q.correctAnswer || 'A', difficulty: q.difficulty || '중',
         explanation: q.explanation || '', sortOrder: q.sortOrder
       }))
@@ -285,7 +289,7 @@ watch(() => props.open, async (open) => {
 
 function addQuestion() {
   questions.value.push({
-    question: '', optionA: '', optionB: '', optionC: '', optionD: '',
+    question: '', optionA: '', optionB: '', optionC: '', optionD: '', optionE: '',
     correctAnswer: 'A', difficulty: '중', explanation: '', sortOrder: questions.value.length
   })
 }
@@ -295,7 +299,7 @@ function removeQuestion(idx) {
 }
 
 // ── 정답(복수 선택 가능) ──
-/** 보기 A·B는 필수라 항상 선택 가능, C·D는 내용이 있을 때만 정답으로 지정할 수 있다. */
+/** 보기 A·B는 필수라 항상 선택 가능, C~E는 내용이 있을 때만 정답으로 지정할 수 있다. */
 function answerSelectable(q, letter) {
   return letter === 'A' || letter === 'B' ? true : !!q['option' + letter]?.trim()
 }
@@ -433,7 +437,7 @@ function addFromBank() {
     if (existing.has(key)) continue
     questions.value.push({
       question: q.question, optionA: q.optionA, optionB: q.optionB,
-      optionC: q.optionC || '', optionD: q.optionD || '',
+      optionC: q.optionC || '', optionD: q.optionD || '', optionE: q.optionE || '',
       correctAnswer: q.correctAnswer || 'A', difficulty: q.difficulty || '중',
       explanation: q.explanation || '', sortOrder: questions.value.length,
     })
@@ -455,7 +459,7 @@ async function handleSubmit() {
       contentUrl: form.value.contentUrl || null,
       questions: questions.value.map((q, i) => ({
         question: q.question, optionA: q.optionA, optionB: q.optionB,
-        optionC: q.optionC || null, optionD: q.optionD || null,
+        optionC: q.optionC || null, optionD: q.optionD || null, optionE: q.optionE || null,
         correctAnswer: q.correctAnswer, difficulty: q.difficulty || '중',
         explanation: q.explanation || null, sortOrder: i
       }))

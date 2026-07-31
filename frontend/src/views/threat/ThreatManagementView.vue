@@ -13,6 +13,13 @@
           </svg>
           초기화
         </button>
+        <button @click="downloadThreats" :disabled="threats.length === 0"
+          class="btn-secondary flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          {{ hasFilter ? `검색결과 다운로드 (${filteredThreats.length}건)` : `전체 다운로드 (${threats.length}건)` }}
+        </button>
         <button @click="handleLoadDefaults" class="btn-secondary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -67,6 +74,7 @@
               <th class="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">위협명</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">유형</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">카테고리</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">대상 자산유형</th>
               <th class="text-center px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">발생가능성</th>
               <th class="text-center px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">잠재영향</th>
               <th class="text-center px-4 py-3 font-semibold text-gray-600 whitespace-nowrap">위험점수</th>
@@ -99,6 +107,15 @@
                   placeholder="카테고리 검색"
                   class="w-full text-xs border border-gray-200 rounded px-2 py-1.5 font-normal focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 bg-white placeholder-gray-400"
                 />
+              </th>
+              <th class="px-3 py-2">
+                <select
+                  v-model="filterAssetType"
+                  class="w-full text-xs border border-gray-200 rounded px-2 py-1.5 font-normal focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 bg-white text-gray-700"
+                >
+                  <option value="">전체 자산유형</option>
+                  <option v-for="t in assetTypes" :key="t.value" :value="t.value">{{ t.label || t.value }}</option>
+                </select>
               </th>
               <th class="px-3 py-2">
                 <select
@@ -153,7 +170,7 @@
           <tbody class="divide-y divide-gray-50">
             <!-- 필터 결과 없음 -->
             <tr v-if="filteredThreats.length === 0">
-              <td colspan="8" class="text-center py-14 text-gray-400">
+              <td colspan="9" class="text-center py-14 text-gray-400">
                 <svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
@@ -167,6 +184,15 @@
                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold" :class="typeClass(threat.type)">{{ threat.type }}</span>
               </td>
               <td class="px-4 py-3.5 text-gray-600 text-sm">{{ threat.category || '-' }}</td>
+              <td class="px-4 py-3.5">
+                <div v-if="threat.assetTypes?.length" class="flex flex-wrap gap-1">
+                  <span v-for="t in threat.assetTypes" :key="t"
+                    class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap">
+                    {{ assetTypeLabel(t) }}
+                  </span>
+                </div>
+                <span v-else class="text-gray-400 text-sm">-</span>
+              </td>
               <td class="px-4 py-3.5 text-center">
                 <div class="flex items-center justify-center gap-0.5">
                   <span v-for="n in 5" :key="n"
@@ -230,6 +256,23 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
             <input v-model="form.category" class="input w-full" placeholder="예: IAM, WEB/API, EKS"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              대상 자산유형 <span class="text-xs font-normal text-gray-400">(복수 선택 가능 · 코드관리 ASSET_TYPE)</span>
+            </label>
+            <div v-if="assetTypes.length" class="flex flex-wrap gap-1.5 mt-1">
+              <label v-for="t in assetTypes" :key="t.value"
+                class="px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer select-none transition-colors"
+                :class="form.assetTypes.includes(t.value)
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'">
+                <input type="checkbox" class="hidden" :value="t.value"
+                  :checked="form.assetTypes.includes(t.value)" @change="toggleAssetType(t.value)" />
+                {{ t.label || t.value }}
+              </label>
+            </div>
+            <p v-else class="text-xs text-gray-400 mt-1">코드관리에 등록된 자산유형(ASSET_TYPE)이 없습니다.</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">설명</label>
@@ -302,9 +345,12 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import * as XLSX from 'xlsx-js-style'
 import { threatApi, codeApi } from '@/api'
 
 const threatTypes = ref([])
+// 코드관리 ASSET_TYPE 값 목록 — { value, label }
+const assetTypes = ref([])
 
 const threats = ref([])
 const loading = ref(false)
@@ -319,6 +365,7 @@ const deleteTarget = ref(null)
 const filterName = ref('')
 const filterType = ref('')
 const filterCategory = ref('')
+const filterAssetType = ref('')
 const filterLikelihood = ref('')
 const filterImpact = ref('')
 const filterRiskLevel = ref('')
@@ -328,6 +375,7 @@ const hasFilter = computed(() =>
   filterName.value ||
   filterType.value ||
   filterCategory.value ||
+  filterAssetType.value ||
   filterLikelihood.value !== '' ||
   filterImpact.value !== '' ||
   filterRiskLevel.value ||
@@ -339,6 +387,7 @@ const filteredThreats = computed(() => {
     if (filterName.value && !t.name.toLowerCase().includes(filterName.value.toLowerCase())) return false
     if (filterType.value && t.type !== filterType.value) return false
     if (filterCategory.value && !(t.category || '').toLowerCase().includes(filterCategory.value.toLowerCase())) return false
+    if (filterAssetType.value && !(t.assetTypes || []).includes(filterAssetType.value)) return false
     if (filterLikelihood.value !== '' && t.likelihood !== Number(filterLikelihood.value)) return false
     if (filterImpact.value !== '' && t.impact !== Number(filterImpact.value)) return false
     if (filterRiskLevel.value) {
@@ -356,14 +405,26 @@ function clearFilter() {
   filterName.value = ''
   filterType.value = ''
   filterCategory.value = ''
+  filterAssetType.value = ''
   filterLikelihood.value = ''
   filterImpact.value = ''
   filterRiskLevel.value = ''
   filterDate.value = ''
 }
 
-const defaultForm = () => ({ name: '', type: '', category: '', description: '', likelihood: 3, impact: 3, remark: '' })
+const defaultForm = () => ({ name: '', type: '', category: '', assetTypes: [], description: '', likelihood: 3, impact: 3, remark: '' })
 const form = reactive(defaultForm())
+
+/** 코드값 → 표시용 라벨 (코드관리에서 삭제된 값이면 저장된 코드값 그대로 보여준다) */
+function assetTypeLabel(value) {
+  return assetTypes.value.find(t => t.value === value)?.label || value
+}
+
+function toggleAssetType(value) {
+  const idx = form.assetTypes.indexOf(value)
+  if (idx >= 0) form.assetTypes.splice(idx, 1)
+  else form.assetTypes.push(value)
+}
 
 async function loadList() {
   loading.value = true
@@ -375,6 +436,46 @@ async function loadList() {
   } finally {
     loading.value = false
   }
+}
+
+// ── Excel 다운로드 (필터가 걸려 있으면 검색결과만) ──
+function downloadThreats() {
+  const items = filteredThreats.value
+  if (!items.length) return
+  const HEADERS = ['위협명', '유형', '카테고리', '대상 자산유형', '자산분류', '설명',
+    '발생가능성', '잠재영향', '위험점수', '위험수준', '비고', '등록일', '수정일']
+  const rows = items.map(t => [
+    t.name,
+    t.type,
+    t.category ?? '',
+    (t.assetTypes || []).map(assetTypeLabel).join(', '),
+    t.assetDetail ?? '',
+    t.description ?? '',
+    t.likelihood,
+    t.impact,
+    t.riskScore,
+    riskLevelLabel(t.riskScore),
+    t.remark ?? '',
+    formatDate(t.createdAt),
+    formatDate(t.updatedAt),
+  ])
+  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
+  for (let c = 0; c < HEADERS.length; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c })
+    ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E5E7EB' } } }
+  }
+  ws['!cols'] = [{ wch: 40 }, { wch: 12 }, { wch: 16 }, { wch: 24 }, { wch: 16 }, { wch: 60 },
+    { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 12 }]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '위협카탈로그')
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  XLSX.writeFile(wb, `위협카탈로그_${hasFilter.value ? '검색결과' : '전체'}${items.length}건_${d}.xlsx`)
+}
+
+function riskLevelLabel(score) {
+  if (score <= 7) return '낮음'
+  if (score <= 15) return '중간'
+  return '높음'
 }
 
 function riskScoreClass(score) {
@@ -413,6 +514,7 @@ function openEdit(threat) {
     name: threat.name,
     type: threat.type,
     category: threat.category || '',
+    assetTypes: [...(threat.assetTypes || [])],
     description: threat.description || '',
     likelihood: threat.likelihood,
     impact: threat.impact,
@@ -434,6 +536,7 @@ async function saveForm() {
       name: form.name,
       type: form.type,
       category: form.category || null,
+      assetTypes: [...form.assetTypes],
       description: form.description || null,
       likelihood: form.likelihood,
       impact: form.impact,
@@ -509,6 +612,12 @@ onMounted(async () => {
     threatTypes.value = (res.data || []).map(t => t.value)
   } catch {
     threatTypes.value = ['외부공격', '내부위협', '기술적위협', '물리적위협', '인적위협', '자연재해', '기타']
+  }
+  try {
+    const res = await codeApi.getValues('ASSET_TYPE')
+    assetTypes.value = (res.data || []).map(t => ({ value: t.value, label: t.label || t.value }))
+  } catch {
+    assetTypes.value = []
   }
   loadList()
 })

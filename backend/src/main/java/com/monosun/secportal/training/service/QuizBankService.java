@@ -33,7 +33,8 @@ public class QuizBankService {
     private static final Set<String> DIFFICULTIES = Set.of("상", "중", "하");
 
     private static final String[] HEADERS = {
-            "분류", "난이도(상/중/하)*", "문제*", "보기A*", "보기B*", "보기C", "보기D", "정답(A~D, 복수는 A,C)*", "해설"
+            "분류", "난이도(상/중/하)*", "문제*", "보기A*", "보기B*", "보기C", "보기D", "보기E",
+            "정답(A~E, 복수는 A,B 또는 AB)*", "해설"
     };
 
     // ── 조회 ─────────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ public class QuizBankService {
                 .optionB(req.getOptionB().trim())
                 .optionC(trim(req.getOptionC()))
                 .optionD(trim(req.getOptionD()))
+                .optionE(trim(req.getOptionE()))
                 .correctAnswer(answer)
                 .explanation(trim(req.getExplanation()))
                 .build();
@@ -104,6 +106,7 @@ public class QuizBankService {
         q.setOptionB(req.getOptionB().trim());
         q.setOptionC(trim(req.getOptionC()));
         q.setOptionD(trim(req.getOptionD()));
+        q.setOptionE(trim(req.getOptionE()));
         q.setCorrectAnswer(answer);
         q.setExplanation(trim(req.getExplanation()));
         auditLogService.log("QUIZ_BANK_UPDATED", "QUIZ_BANK", id, "");
@@ -146,8 +149,9 @@ public class QuizBankService {
             ex.createCell(4).setCellValue("법인에 관한 정보");
             ex.createCell(5).setCellValue("사망한 사람에 관한 정보");
             ex.createCell(6).setCellValue("국가기관에 관한 정보");
-            ex.createCell(7).setCellValue("A");
-            ex.createCell(8).setCellValue("개인정보는 살아 있는 개인에 관한 정보만 해당합니다.");
+            ex.createCell(7).setCellValue("");
+            ex.createCell(8).setCellValue("A");
+            ex.createCell(9).setCellValue("개인정보는 살아 있는 개인에 관한 정보만 해당합니다. (보기E는 5지선다일 때만 입력하세요)");
 
             // 예시 행 — 복수 정답
             Row ex2 = sheet.createRow(2);
@@ -158,10 +162,11 @@ public class QuizBankService {
             ex2.createCell(4).setCellValue("사이트마다 다른 비밀번호를 사용한다");
             ex2.createCell(5).setCellValue("모니터에 메모지로 붙여둔다");
             ex2.createCell(6).setCellValue("동료와 공유해 함께 사용한다");
-            ex2.createCell(7).setCellValue("A,B");
-            ex2.createCell(8).setCellValue("복수 정답은 이렇게 콤마로 구분해 입력합니다. (이 행은 예시이므로 삭제 후 사용하세요)");
+            ex2.createCell(7).setCellValue("주기적으로 변경한다");
+            ex2.createCell(8).setCellValue("A,B,E");
+            ex2.createCell(9).setCellValue("복수 정답은 'A,B,E'처럼 콤마로 구분하거나 'ABE'처럼 붙여 써도 됩니다. (이 행은 예시이므로 삭제 후 사용하세요)");
 
-            int[] widths = {14, 14, 60, 30, 30, 30, 30, 22, 40};
+            int[] widths = {14, 14, 60, 30, 30, 30, 30, 30, 24, 40};
             for (int i = 0; i < widths.length; i++) sheet.setColumnWidth(i, widths[i] * 256);
 
             wb.write(out);
@@ -182,16 +187,21 @@ public class QuizBankService {
 
         try (Workbook wb = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = wb.getSheetAt(0);
+            // 보기E 열이 없는 예전 양식(9열)도 그대로 올릴 수 있도록 헤더로 판별해 정답·해설 열 위치를 잡는다.
+            boolean hasOptionE = hasOptionEColumn(sheet.getRow(0));
+            int colAnswer = hasOptionE ? 8 : 7;
+            int colExplanation = hasOptionE ? 9 : 8;
+            int lastCol = hasOptionE ? 9 : 8;
             for (int r = 1; r <= sheet.getLastRowNum(); r++) {
                 Row row = sheet.getRow(r);
-                if (row == null || isEmptyRow(row)) continue;
+                if (row == null || isEmptyRow(row, lastCol)) continue;
                 int rowNo = r + 1;
                 try {
                     String difficulty = str(row, 1);
                     String question = str(row, 2);
                     String optA = str(row, 3);
                     String optB = str(row, 4);
-                    String answer = str(row, 7).toUpperCase();
+                    String answer = str(row, colAnswer).toUpperCase();
                     if (question.isBlank()) { errors.add(rowNo + "행: 문제가 비어 있습니다."); continue; }
                     if (optA.isBlank() || optB.isBlank()) { errors.add(rowNo + "행: 보기A·보기B는 필수입니다."); continue; }
                     if (!difficulty.isBlank() && !DIFFICULTIES.contains(difficulty)) {
@@ -200,10 +210,11 @@ public class QuizBankService {
                     }
                     String optC = str(row, 5);
                     String optD = str(row, 6);
+                    String optE = hasOptionE ? str(row, 7) : "";
                     // 복수 정답 허용 — "A,C" / "AC" 등을 정규형으로 변환하고, 정답 보기가 비었는지 확인
                     try {
                         answer = QuizAnswers.normalize(answer);
-                        QuizAnswers.validateOptionsPresent(answer, optA, optB, optC, optD);
+                        QuizAnswers.validateOptionsPresent(answer, optA, optB, optC, optD, optE);
                     } catch (BusinessException be) {
                         errors.add(rowNo + "행: " + be.getMessage());
                         continue;
@@ -218,8 +229,9 @@ public class QuizBankService {
                             .optionB(optB)
                             .optionC(blankToNull(optC))
                             .optionD(blankToNull(optD))
+                            .optionE(blankToNull(optE))
                             .correctAnswer(answer)
-                            .explanation(blankToNull(str(row, 8)))
+                            .explanation(blankToNull(str(row, colExplanation)))
                             .build());
                 } catch (Exception e) {
                     errors.add(rowNo + "행: " + e.getMessage());
@@ -248,7 +260,7 @@ public class QuizBankService {
     private String validate(QuizBankDto.Request req) {
         String answer = QuizAnswers.normalize(req.getCorrectAnswer());
         QuizAnswers.validateOptionsPresent(answer,
-                req.getOptionA(), req.getOptionB(), req.getOptionC(), req.getOptionD());
+                req.getOptionA(), req.getOptionB(), req.getOptionC(), req.getOptionD(), req.getOptionE());
         return answer;
     }
 
@@ -268,11 +280,17 @@ public class QuizBankService {
         return s.isBlank() ? null : s;
     }
 
-    private boolean isEmptyRow(Row row) {
-        for (int c = 0; c <= 8; c++) {
+    private boolean isEmptyRow(Row row, int lastCol) {
+        for (int c = 0; c <= lastCol; c++) {
             if (!str(row, c).isBlank()) return false;
         }
         return true;
+    }
+
+    /** 업로드 파일이 보기E 열을 가진 현재 양식인지 — 헤더 8번째 칸이 "보기E"면 현재 양식으로 본다. */
+    private boolean hasOptionEColumn(Row header) {
+        if (header == null) return false;
+        return str(header, 7).replace(" ", "").startsWith("보기E");
     }
 
     private String str(Row row, int col) {

@@ -88,6 +88,10 @@
               <label class="block text-xs text-gray-500 mb-1">D 선택지</label>
               <input v-model="q.optionD" type="text" class="input" />
             </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">E 선택지</label>
+              <input v-model="q.optionE" type="text" class="input" />
+            </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -101,7 +105,7 @@
             <div>
               <label class="block text-xs text-gray-500 mb-1">정답 * <span class="text-gray-400">(복수 선택 가능)</span></label>
               <div class="flex gap-1">
-                <label v-for="l in ['A','B','C','D']" :key="l"
+                <label v-for="l in OPTION_LETTERS" :key="l"
                   class="flex-1 flex items-center justify-center py-2 rounded-lg border text-sm font-medium select-none"
                   :class="[
                     isCorrectOption(q.correctAnswer, l) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500',
@@ -251,7 +255,7 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { trainingApi, quizBankApi } from '@/api'
 import { shuffle as secureShuffle } from '@/utils/secureRandom.js'
-import { answerLetters, toAnswerString, formatAnswer, isCorrectOption } from '@/utils/quizAnswer'
+import { answerLetters, toAnswerString, formatAnswer, isCorrectOption, OPTION_LETTERS } from '@/utils/quizAnswer'
 
 const router = useRouter()
 const route = useRoute()
@@ -291,6 +295,7 @@ async function loadCourse() {
       optionB: q.optionB,
       optionC: q.optionC || '',
       optionD: q.optionD || '',
+      optionE: q.optionE || '',
       correctAnswer: q.correctAnswer || 'A',
       difficulty: q.difficulty || '중',
       explanation: q.explanation || '',
@@ -310,6 +315,7 @@ function addQuestion() {
     optionB: '',
     optionC: '',
     optionD: '',
+    optionE: '',
     correctAnswer: 'A',
     difficulty: '중',
     explanation: '',
@@ -318,7 +324,7 @@ function addQuestion() {
 }
 
 // ── 정답(복수 선택 가능) ──
-/** 보기 A·B는 필수라 항상 선택 가능, C·D는 내용이 있을 때만 정답으로 지정할 수 있다. */
+/** 보기 A·B는 필수라 항상 선택 가능, C~E는 내용이 있을 때만 정답으로 지정할 수 있다. */
 function answerSelectable(q, letter) {
   return letter === 'A' || letter === 'B' ? true : !!q['option' + letter]?.trim()
 }
@@ -474,6 +480,7 @@ function addFromBank() {
       optionB: q.optionB,
       optionC: q.optionC || '',
       optionD: q.optionD || '',
+      optionE: q.optionE || '',
       correctAnswer: q.correctAnswer || 'A',
       difficulty: q.difficulty || '중',
       explanation: q.explanation || '',
@@ -501,6 +508,7 @@ async function handleSubmit() {
         optionB: q.optionB,
         optionC: q.optionC || null,
         optionD: q.optionD || null,
+        optionE: q.optionE || null,
         correctAnswer: q.correctAnswer,
         difficulty: q.difficulty || '중',
         explanation: q.explanation || null,

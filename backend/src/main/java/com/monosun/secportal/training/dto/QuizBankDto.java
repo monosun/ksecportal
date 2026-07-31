@@ -21,7 +21,8 @@ public class QuizBankDto {
         @NotBlank private String optionB;
         private String optionC;
         private String optionD;
-        @NotBlank private String correctAnswer;   // A/B/C/D
+        private String optionE;
+        @NotBlank private String correctAnswer;   // A~E, 복수는 "A,C"
         private String explanation;
     }
 
@@ -36,6 +37,7 @@ public class QuizBankDto {
         private String optionB;
         private String optionC;
         private String optionD;
+        private String optionE;
         private String correctAnswer;
         private String explanation;
         private LocalDateTime createdAt;
@@ -51,6 +53,7 @@ public class QuizBankDto {
                     .optionB(q.getOptionB())
                     .optionC(q.getOptionC())
                     .optionD(q.getOptionD())
+                    .optionE(q.getOptionE())
                     .correctAnswer(q.getCorrectAnswer())
                     .explanation(q.getExplanation())
                     .createdAt(q.getCreatedAt())

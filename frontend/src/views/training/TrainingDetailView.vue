@@ -227,6 +227,7 @@ function options(q) {
   const opts = [{ key: 'A', text: q.optionA }, { key: 'B', text: q.optionB }]
   if (q.optionC) opts.push({ key: 'C', text: q.optionC })
   if (q.optionD) opts.push({ key: 'D', text: q.optionD })
+  if (q.optionE) opts.push({ key: 'E', text: q.optionE })
   return opts
 }
 

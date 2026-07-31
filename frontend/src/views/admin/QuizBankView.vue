@@ -163,11 +163,12 @@
                     <p v-if="isMultiAnswer(q.correctAnswer)" class="text-[11px] text-indigo-600 font-medium mb-1">
                       복수 정답 문항 — 정답 보기를 모두 선택해야 정답 처리됩니다.
                     </p>
-                    <p v-for="letter in ['A','B','C','D']" :key="letter" v-show="optionOf(q, letter)"
+                    <p v-for="letter in OPTION_LETTERS" :key="letter"
                       class="flex gap-2"
-                      :class="isCorrectOption(q.correctAnswer, letter) ? 'text-green-700 font-semibold' : 'text-gray-600'">
+                      :class="isCorrectOption(q.correctAnswer, letter) ? 'text-green-700 font-semibold'
+                        : (optionOf(q, letter) ? 'text-gray-600' : 'text-gray-400')">
                       <span class="font-mono w-4 flex-shrink-0">{{ letter }}.</span>
-                      <span>{{ optionOf(q, letter) }}</span>
+                      <span>{{ optionOf(q, letter) || '-' }}</span>
                       <span v-if="isCorrectOption(q.correctAnswer, letter)" class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold self-center">정답</span>
                     </p>
                     <p v-if="q.explanation" class="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
@@ -215,7 +216,7 @@
             <div>
               <label class="text-sm font-medium text-gray-700">정답 * <span class="text-xs font-normal text-gray-400">(복수 선택 가능)</span></label>
               <div class="flex gap-1.5 mt-1">
-                <label v-for="l in ['A','B','C','D']" :key="l"
+                <label v-for="l in OPTION_LETTERS" :key="l"
                   class="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border text-sm font-medium select-none"
                   :class="[
                     answerLetters.includes(l) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500',
@@ -232,7 +233,7 @@
             <label class="text-sm font-medium text-gray-700">문제 *</label>
             <textarea v-model="form.question" rows="2" class="input w-full mt-1" placeholder="문제를 입력하세요"></textarea>
           </div>
-          <div v-for="l in ['A','B','C','D']" :key="l">
+          <div v-for="l in OPTION_LETTERS" :key="l">
             <label class="text-sm font-medium text-gray-700">보기 {{ l }}{{ l === 'A' || l === 'B' ? ' *' : '' }}</label>
             <input v-model="form['option' + l]" class="input w-full mt-1" :placeholder="`보기 ${l}`" />
           </div>
@@ -255,7 +256,7 @@
       v-if="showBulkModal"
       ref="bulkModalRef"
       title="문제은행 Excel 일괄 등록"
-      desc="엑셀 템플릿을 다운로드하여 문항을 작성한 후 업로드하세요. 분류·문제·보기A/B·정답(A~D)은 필수이며, 복수 정답은 'A,C'처럼 콤마로 구분해 입력합니다."
+      desc="엑셀 템플릿을 다운로드하여 문항을 작성한 후 업로드하세요. 분류·문제·보기A/B·정답(A~E)은 필수이며, 복수 정답은 'A,B'처럼 콤마로 구분하거나 'AB'처럼 붙여 써도 됩니다."
       :template-loading="templateLoading"
       @close="showBulkModal = false; bulkModalRef?.reset()"
       @download-template="downloadTemplate"
@@ -272,7 +273,7 @@ import * as XLSX from 'xlsx-js-style'
 import { quizBankApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
 import { useDebounceFn } from '@vueuse/core'
-import { answerLetters as parseAnswer, toAnswerString, formatAnswer, isMultiAnswer, isCorrectOption } from '@/utils/quizAnswer'
+import { answerLetters as parseAnswer, toAnswerString, formatAnswer, isMultiAnswer, isCorrectOption, OPTION_LETTERS } from '@/utils/quizAnswer'
 
 const questions = ref([])
 const categories = ref([])
@@ -307,7 +308,7 @@ const bulkModalRef = ref(null)
 const templateLoading = ref(false)
 
 function emptyForm() {
-  return { id: null, category: '', difficulty: '중', question: '', optionA: '', optionB: '', optionC: '', optionD: '', correctAnswer: 'A', explanation: '' }
+  return { id: null, category: '', difficulty: '중', question: '', optionA: '', optionB: '', optionC: '', optionD: '', optionE: '', correctAnswer: 'A', explanation: '' }
 }
 
 function optionOf(q, letter) { return q['option' + letter] }
@@ -315,7 +316,7 @@ function optionOf(q, letter) { return q['option' + letter] }
 // ── 정답(복수 선택 가능) ──
 const answerLetters = computed(() => parseAnswer(form.value.correctAnswer))
 
-/** 보기 A·B는 필수라 항상 선택 가능, C·D는 내용이 있을 때만 정답으로 지정할 수 있다. */
+/** 보기 A·B는 필수라 항상 선택 가능, C~E는 내용이 있을 때만 정답으로 지정할 수 있다. */
 function optionFilled(letter) {
   return letter === 'A' || letter === 'B' ? true : !!form.value['option' + letter]?.trim()
 }
@@ -354,10 +355,12 @@ function togglePageAll(checked) {
 
 // 문항 배열을 일괄등록 양식과 동일한 형식의 Excel로 저장
 function exportQuestions(items, scopeLabel) {
-  const HEADERS = ['분류', '난이도(상/중/하)*', '문제*', '보기A*', '보기B*', '보기C', '보기D', '정답(A~D, 복수는 A,C)*', '해설']
+  const HEADERS = ['분류', '난이도(상/중/하)*', '문제*', '보기A*', '보기B*', '보기C', '보기D', '보기E',
+    '정답(A~E, 복수는 A,B 또는 AB)*', '해설']
   const rows = items.map(q => [
     q.category ?? '', q.difficulty ?? '중', q.question, q.optionA, q.optionB,
-    q.optionC ?? '', q.optionD ?? '', toAnswerString(parseAnswer(q.correctAnswer)), q.explanation ?? '',
+    q.optionC ?? '', q.optionD ?? '', q.optionE ?? '',
+    toAnswerString(parseAnswer(q.correctAnswer)), q.explanation ?? '',
   ])
   const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
   // 헤더 스타일 (일괄등록 템플릿과 동일한 느낌)
@@ -365,7 +368,7 @@ function exportQuestions(items, scopeLabel) {
     const addr = XLSX.utils.encode_cell({ r: 0, c })
     ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E5E7EB' } } }
   }
-  ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 60 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 22 }, { wch: 40 }]
+  ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 60 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 24 }, { wch: 40 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, '문제은행')
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -460,7 +463,8 @@ async function deleteCategory(stat) {
 function openCreate() { form.value = emptyForm(); showForm.value = true }
 function openEdit(q) {
   form.value = { id: q.id, category: q.category ?? '', difficulty: q.difficulty || '중', question: q.question, optionA: q.optionA, optionB: q.optionB,
-    optionC: q.optionC ?? '', optionD: q.optionD ?? '', correctAnswer: q.correctAnswer, explanation: q.explanation ?? '' }
+    optionC: q.optionC ?? '', optionD: q.optionD ?? '', optionE: q.optionE ?? '',
+    correctAnswer: q.correctAnswer, explanation: q.explanation ?? '' }
   showForm.value = true
 }
 

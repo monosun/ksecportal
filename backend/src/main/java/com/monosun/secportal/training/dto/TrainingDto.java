@@ -48,6 +48,7 @@ public class TrainingDto {
         @NotBlank private String optionB;
         private String optionC;
         private String optionD;
+        private String optionE;
         @NotBlank private String correctAnswer;
         private String difficulty;   // 상 / 중 / 하
         private String explanation;
@@ -131,6 +132,7 @@ public class TrainingDto {
         private String optionB;
         private String optionC;
         private String optionD;
+        private String optionE;
         private String correctAnswer;
         private String difficulty;
         private String explanation;
@@ -144,6 +146,7 @@ public class TrainingDto {
                     .optionB(q.getOptionB())
                     .optionC(q.getOptionC())
                     .optionD(q.getOptionD())
+                    .optionE(q.getOptionE())
                     .correctAnswer(q.getCorrectAnswer())
                     .difficulty(q.getDifficulty())
                     .explanation(q.getExplanation())

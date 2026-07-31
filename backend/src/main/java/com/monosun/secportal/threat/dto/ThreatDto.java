@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ThreatDto {
 
@@ -23,10 +25,32 @@ public class ThreatDto {
 
         private String category;
         private String assetDetail;
+        /** 대상 자산유형(복수) — 코드관리 ASSET_TYPE 값 목록 */
+        private List<String> assetTypes;
         private String description;
         private int likelihood = 3;
         private int impact = 3;
         private String remark;
+    }
+
+    /** 저장 형식("서버,네트워크") → 목록 */
+    public static List<String> splitAssetTypes(String stored) {
+        if (stored == null || stored.isBlank()) return List.of();
+        return Arrays.stream(stored.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    /** 목록 → 저장 형식. 비어 있으면 null 로 저장한다. */
+    public static String joinAssetTypes(List<String> values) {
+        if (values == null || values.isEmpty()) return null;
+        String joined = values.stream()
+                .filter(v -> v != null && !v.isBlank())
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.joining(","));
+        return joined.isEmpty() ? null : joined;
     }
 
     @Getter
@@ -37,6 +61,7 @@ public class ThreatDto {
         private String type;
         private String category;
         private String assetDetail;
+        private List<String> assetTypes;
         private String description;
         private int likelihood;
         private int impact;
@@ -52,6 +77,7 @@ public class ThreatDto {
                     .type(t.getType())
                     .category(t.getCategory())
                     .assetDetail(t.getAssetDetail())
+                    .assetTypes(splitAssetTypes(t.getAssetTypes()))
                     .description(t.getDescription())
                     .likelihood(t.getLikelihood())
                     .impact(t.getImpact())
@@ -81,6 +107,7 @@ public class ThreatDto {
         private String type;
         private String category;
         private String assetDetail;
+        private List<String> assetTypes;
         private String description;
         private int likelihood = 3;
         private int impact = 3;
@@ -95,6 +122,7 @@ public class ThreatDto {
         private String type;
         private String category;
         private String assetDetail;
+        private List<String> assetTypes;
         private String description;
         private int likelihood;
         private int impact;
@@ -107,6 +135,7 @@ public class ThreatDto {
                     .type(d.getType())
                     .category(d.getCategory())
                     .assetDetail(d.getAssetDetail())
+                    .assetTypes(splitAssetTypes(d.getAssetTypes()))
                     .description(d.getDescription())
                     .likelihood(d.getLikelihood())
                     .impact(d.getImpact())

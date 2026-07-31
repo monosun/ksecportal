@@ -690,6 +690,7 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
       "optionB": "계약서",
       "optionC": "영수증",
       "optionD": "명함",
+      "optionE": null,
       "correctAnswer": "A",
       "difficulty": "중",
       "explanation": "개인정보 수집 시 정보주체의 동의가 필요합니다.",
@@ -765,12 +766,13 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
   "optionB": "계약서",
   "optionC": "영수증",
   "optionD": "명함",
+  "optionE": null,
   "correctAnswer": "A",
   "explanation": "개인정보 수집 시 정보주체의 동의가 필요합니다."
 }
 ```
 
-`correctAnswer` 는 **복수 정답**을 지원합니다. 단일은 `"A"`, 복수는 `"A,C"` 형식으로 저장되며, 입력은 `"AC"` · `"a c"` · `"A/C"` 처럼 보내도 `"A,C"` 로 정규화됩니다. A~D 외의 문자가 있거나 정답이 하나도 없으면 400(BusinessException)이고, 정답으로 지정한 보기가 비어 있어도 거부됩니다.
+`correctAnswer` 는 **복수 정답**을 지원합니다. 단일은 `"A"`, 복수는 `"A,C"` 형식으로 저장되며, 입력은 `"AC"` · `"a c"` · `"A/C"` 처럼 보내도 `"A,C"` 로 정규화됩니다. A~E 외의 문자가 있거나 정답이 하나도 없으면 400(BusinessException)이고, 정답으로 지정한 보기가 비어 있어도 거부됩니다. 보기는 `optionA`~`optionE`(A·B 필수, C~E 선택)까지 지원합니다.
 
 ### PATCH /quiz-bank/:id
 

@@ -50,6 +50,7 @@ public class ThreatService {
                 .type(req.getType())
                 .category(req.getCategory())
                 .assetDetail(req.getAssetDetail())
+                .assetTypes(ThreatDto.joinAssetTypes(req.getAssetTypes()))
                 .description(req.getDescription())
                 .likelihood(req.getLikelihood())
                 .impact(req.getImpact())
@@ -66,6 +67,8 @@ public class ThreatService {
         if (req.getType() != null) threat.setType(req.getType());
         if (req.getCategory() != null) threat.setCategory(req.getCategory());
         if (req.getAssetDetail() != null) threat.setAssetDetail(req.getAssetDetail());
+        // 자산유형은 선택 해제(빈 목록)도 반영해야 하므로 목록이 오면 그대로 덮어쓴다.
+        if (req.getAssetTypes() != null) threat.setAssetTypes(ThreatDto.joinAssetTypes(req.getAssetTypes()));
         if (req.getDescription() != null) threat.setDescription(req.getDescription());
         threat.setLikelihood(req.getLikelihood());
         threat.setImpact(req.getImpact());
@@ -111,6 +114,7 @@ public class ThreatService {
                         .type(d.getType())
                         .category(d.getCategory())
                         .assetDetail(d.getAssetDetail())
+                        .assetTypes(d.getAssetTypes())
                         .description(d.getDescription())
                         .likelihood(d.getLikelihood())
                         .impact(d.getImpact())
@@ -154,6 +158,7 @@ public class ThreatService {
                 .type(type)
                 .category(category)
                 .assetDetail(req.getAssetDetail())
+                .assetTypes(ThreatDto.joinAssetTypes(req.getAssetTypes()))
                 .description(req.getDescription())
                 .likelihood(req.getLikelihood())
                 .impact(req.getImpact())
@@ -178,6 +183,7 @@ public class ThreatService {
         d.setType(newType);
         d.setCategory(newCat);
         if (req.getAssetDetail() != null) d.setAssetDetail(req.getAssetDetail());
+        if (req.getAssetTypes() != null) d.setAssetTypes(ThreatDto.joinAssetTypes(req.getAssetTypes()));
         if (req.getDescription() != null) d.setDescription(req.getDescription());
         d.setLikelihood(req.getLikelihood());
         d.setImpact(req.getImpact());
@@ -202,6 +208,7 @@ public class ThreatService {
                         .type(d.getType())
                         .category(d.getCategory())
                         .assetDetail(d.getAssetDetail())
+                        .assetTypes(d.getAssetTypes())
                         .description(d.getDescription())
                         .likelihood(d.getLikelihood())
                         .impact(d.getImpact())

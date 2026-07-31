@@ -1,7 +1,10 @@
 // 퀴즈 정답 문자열 유틸 — 정답은 단일 "A" 또는 복수 "A,C" 형태로 저장된다.
-// 백엔드(QuizAnswers.java)와 동일한 규칙: A~D만 유효, 오름차순 정렬, 콤마 구분.
+// 백엔드(QuizAnswers.java)와 동일한 규칙: A~E만 유효, 오름차순 정렬, 콤마 구분.
 
-const VALID = ['A', 'B', 'C', 'D']
+const VALID = ['A', 'B', 'C', 'D', 'E']
+
+/** 보기 식별자 목록 — 화면에서 보기 A~E를 순회할 때 사용한다. */
+export const OPTION_LETTERS = VALID
 
 /** 정답 문자열 → 정렬된 보기 배열. "a c", "AC", "A,C" 모두 ['A','C']로 해석한다. */
 export function answerLetters(value) {

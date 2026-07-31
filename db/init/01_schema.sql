@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
     option_b VARCHAR(500) NOT NULL,
     option_c VARCHAR(500),
     option_d VARCHAR(500),
-    correct_answer VARCHAR(7) NOT NULL,   -- 단일 'A' 또는 복수 'A,C'
+    option_e VARCHAR(500),
+    correct_answer VARCHAR(9) NOT NULL,   -- 단일 'A' 또는 복수 'A,C'
     sort_order INT NOT NULL DEFAULT 0,
     FOREIGN KEY (course_id) REFERENCES training_courses(id) ON DELETE CASCADE
 );
