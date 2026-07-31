@@ -398,10 +398,11 @@
             </select>
           </div>
           <!-- 신규 차수일 때만: 자산 자동 불러오기 옵션 -->
-          <div v-if="!editRound" class="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
-            <input id="auto-pop" v-model="autoPopOnCreate" type="checkbox" class="w-4 h-4 text-primary-600"/>
+          <div v-if="!editRound" class="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+            <input id="auto-pop" v-model="autoPopOnCreate" type="checkbox" class="w-4 h-4 mt-0.5 text-primary-600"/>
             <label for="auto-pop" class="text-sm text-blue-800 cursor-pointer select-none">
               차수 생성 후 모든 자산 자동 불러오기
+              <span class="block text-xs text-blue-600 mt-0.5">자산유형이 위협의 대상 자산유형과 일치하는 조합만 평가 항목으로 생성됩니다.</span>
             </label>
           </div>
         </div>
@@ -553,7 +554,8 @@
       <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-2">자산 자동 불러오기</h2>
         <p class="text-sm text-gray-600">현재 등록된 <strong>모든 활성 자산</strong>을 이 차수에 평가 항목으로 추가합니다.<br/>
-        이미 등록된 자산은 건너뜁니다. 계속하시겠습니까?</p>
+        자산의 <strong>자산유형</strong>이 위협의 <strong>대상 자산유형</strong> 중 하나와 일치하는 조합만 생성됩니다.<br/>
+        이미 등록된 조합은 건너뜁니다. 계속하시겠습니까?</p>
         <div class="flex justify-end gap-3 mt-6">
           <button @click="showAutoPopModal = false" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
           <button @click="doAutoPopulate" :disabled="autoPopulating" class="btn-primary disabled:opacity-50">
@@ -911,7 +913,7 @@ async function saveRound() {
           try {
             const popRes = await riskApi.autoPopulate(newId)
             await loadAssessments()
-            alert(`자산 ${popRes.data}개가 추가되었습니다.`)
+            alert(`평가 항목 ${popRes.data}건이 추가되었습니다. (자산유형이 일치하는 자산×위협 조합)`)
           } catch (e) {
             alert(e || '자산 불러오기에 실패했습니다.')
           } finally {
@@ -976,7 +978,7 @@ async function doAutoPopulate() {
     const res = await riskApi.autoPopulate(selectedRoundId.value)
     showAutoPopModal.value = false
     await loadAssessments()
-    alert(`자산 ${res.data}개가 추가되었습니다.`)
+    alert(`평가 항목 ${res.data}건이 추가되었습니다. (자산유형이 일치하는 자산×위협 조합)`)
   } catch (e) {
     alert(e || '자산 불러오기에 실패했습니다.')
   } finally {

@@ -8,6 +8,7 @@ import com.monosun.secportal.risk.entity.RiskAssessment;
 import com.monosun.secportal.risk.entity.RiskAssessmentRound;
 import com.monosun.secportal.risk.repository.RiskAssessmentRepository;
 import com.monosun.secportal.risk.repository.RiskAssessmentRoundRepository;
+import com.monosun.secportal.threat.dto.ThreatDto;
 import com.monosun.secportal.threat.entity.Threat;
 import com.monosun.secportal.threat.repository.ThreatRepository;
 import lombok.RequiredArgsConstructor;
@@ -125,6 +126,7 @@ public class RiskAssessmentService {
         List<RiskAssessment> toSave = new ArrayList<>();
         for (Asset asset : assets) {
             for (Threat threat : threats) {
+                if (!appliesTo(threat, asset)) continue;
                 if (existingPairs.contains(asset.getId() + "-" + threat.getId())) continue;
                 int score = threat.getLikelihood() * threat.getImpact();
                 // assetName/assetType/threatName/threatType 스냅샷 저장 → 이후 변경에 영향 없음
@@ -149,6 +151,18 @@ public class RiskAssessmentService {
             assessmentRepository.saveAll(toSave);
         }
         return toSave.size();
+    }
+
+    /**
+     * 자산의 자산유형이 위협의 대상 자산유형 중 하나와 일치할 때만 평가 대상으로 본다.
+     * 위협에 대상 자산유형이 지정되지 않았다면 자산유형을 가리지 않는 위협으로 보고 전 자산에 적용한다.
+     */
+    private boolean appliesTo(Threat threat, Asset asset) {
+        List<String> targetTypes = ThreatDto.splitAssetTypes(threat.getAssetTypes());
+        if (targetTypes.isEmpty()) return true;
+        String assetType = asset.getType();
+        if (assetType == null || assetType.isBlank()) return false;
+        return targetTypes.stream().anyMatch(t -> t.equalsIgnoreCase(assetType.trim()));
     }
 
     @Transactional
