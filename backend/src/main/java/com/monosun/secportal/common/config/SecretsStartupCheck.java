@@ -73,6 +73,15 @@ public class SecretsStartupCheck {
             issues.add("JWT_SECRET 이 32자 미만입니다.");
         }
 
+        // 4) 개인정보 컬럼 암호화 키 — 잃으면 데이터를 복구할 수 없으므로 별도 키 사용을 권한다
+        boolean piEncryptionEnabled = env.getProperty("app.privacy.column-encryption.enabled", Boolean.class, true);
+        if (!piEncryptionEnabled) {
+            issues.add("개인정보 컬럼 암호화가 꺼져 있습니다(PI_COLUMN_ENCRYPTION_ENABLED). 개인정보가 평문으로 저장됩니다.");
+        } else if (isBlank(rawEnv("PI_ENCRYPTION_KEY")) && isBlank(env.getProperty("app.privacy.column-encryption.key"))) {
+            log.info("[보안점검] 개인정보 컬럼 암호화가 Jasypt 마스터 키를 사용합니다. "
+                    + "PI_ENCRYPTION_KEY 로 전용 키를 두면 마스터 키 교체와 분리할 수 있습니다.");
+        }
+
         if (issues.isEmpty()) {
             log.info("[보안점검] 비밀 값 보호 설정 정상 (DB 비밀번호 암호화 주입 확인)");
             return;

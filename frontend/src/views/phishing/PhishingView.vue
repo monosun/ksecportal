@@ -5,6 +5,7 @@
         <h1 class="page-title">{{ $t('phishing.title') }}</h1>
         <p class="text-sm text-gray-400 mt-0.5">{{ $t('phishing.subtitle') }}</p>
       </div>
+      <PiMaskToggle screen="모의 피싱훈련" />
     </div>
 
     <div class="page-body">
@@ -89,8 +90,8 @@
                 <td colspan="6" class="py-12 text-center text-gray-400 text-sm">등록된 대상이 없습니다.</td>
               </tr>
               <tr v-for="t in targets" :key="t.id" class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 font-medium text-gray-900">{{ t.name }}</td>
-                <td class="px-4 py-3 text-gray-600">{{ t.email }}</td>
+                <td class="px-4 py-3 font-medium text-gray-900">{{ pi.mask('name', t.name) }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ pi.mask('email', t.email) }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ t.department || '—' }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ t.position || '—' }}</td>
                 <td class="px-4 py-3 text-center">
@@ -205,10 +206,10 @@
               <tr v-for="log in sendLogs" :key="log.id" class="hover:bg-gray-50 transition-colors">
                 <td class="px-4 py-3 text-gray-700">{{ log.campaignName }}</td>
                 <td class="px-4 py-3 font-medium text-gray-900">
-                  {{ log.targetName }}
+                  {{ pi.mask('name', log.targetName) }}
                   <span v-if="log.department" class="text-gray-400 text-xs ml-1">({{ log.department }})</span>
                 </td>
-                <td class="px-4 py-3 text-gray-600 text-xs">{{ log.targetEmail }}</td>
+                <td class="px-4 py-3 text-gray-600 text-xs">{{ pi.mask('email', log.targetEmail) }}</td>
                 <td class="px-4 py-3 text-center">
                   <span v-if="log.sendStatus === 'SUCCESS'" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">성공</span>
                   <span v-else-if="log.sendStatus === 'FAILED'" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">실패</span>
@@ -411,6 +412,7 @@
                   <input type="checkbox" :value="t.id" v-model="campaignModal.form.targetIds"
                     class="w-4 h-4 text-primary-600 rounded" />
                   <span class="text-sm">
+                    <!-- 발송 대상을 고르는 입력 위젯이므로 동명이인 구분을 위해 원문을 그대로 둔다 -->
                     <span class="font-medium text-gray-900">{{ t.name }}</span>
                     <span class="text-gray-400 ml-2">{{ t.email }}</span>
                     <span v-if="t.department" class="text-gray-400 text-xs ml-1">({{ t.department }})</span>
@@ -482,8 +484,8 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                   <tr v-for="r in resultModal.detail?.results" :key="r.id" class="hover:bg-gray-50">
-                    <td class="px-3 py-2 font-medium text-gray-900">{{ r.targetName }}</td>
-                    <td class="px-3 py-2 text-gray-600 text-xs">{{ r.targetEmail }}</td>
+                    <td class="px-3 py-2 font-medium text-gray-900">{{ pi.mask('name', r.targetName) }}</td>
+                    <td class="px-3 py-2 text-gray-600 text-xs">{{ pi.mask('email', r.targetEmail) }}</td>
                     <td class="px-3 py-2 text-gray-500 text-xs">{{ r.department || '—' }}</td>
                     <td class="px-3 py-2 text-center">
                       <span v-if="r.sendStatus === 'FAILED'" class="text-red-500 font-bold cursor-help" :title="r.sendError || '발송 실패'">✕</span>
@@ -516,6 +518,11 @@
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { phishingApi } from '@/api'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import { usePiMaskingStore } from '@/stores/piMasking'
+
+// 대상자 이름·이메일은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
 
 const TEMPLATE_CATEGORIES = ['IT', 'HR', 'DELIVERY', 'FINANCE', 'SECURITY', 'MARKETING', '기타']
 

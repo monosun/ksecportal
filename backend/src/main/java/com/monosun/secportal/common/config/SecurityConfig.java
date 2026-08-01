@@ -71,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 .requestMatchers("/actuator/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/admin/approve/**", "/admin/reject/**").permitAll()
+                // 개인정보 마스킹 기준은 내부 처리 기준이므로 로그인한 사용자에게만 제공한다
+                .requestMatchers(HttpMethod.GET, "/codes/pi-masking").authenticated()
                 .requestMatchers(HttpMethod.GET, "/codes/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
                 .anyRequest().authenticated()

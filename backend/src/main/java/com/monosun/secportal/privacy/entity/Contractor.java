@@ -1,5 +1,6 @@
 package com.monosun.secportal.privacy.entity;
 
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import com.monosun.secportal.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +29,9 @@ public class Contractor extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String name;
 
-    @Column(name = "business_number", length = 20)
+    /** 사업자등록번호 — 저장 시 암호화(AES-256-GCM) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "business_number", length = 255)
     private String businessNumber;
 
     @Column(length = 100)
@@ -46,13 +49,19 @@ public class Contractor extends BaseEntity {
     @Column(name = "contract_end")
     private LocalDate contractEnd;
 
-    @Column(name = "contact_person", length = 100)
+    /** 담당자명 — 저장 시 암호화 */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "contact_person", length = 512)
     private String contactPerson;
 
-    @Column(name = "contact_email", length = 200)
+    /** 담당자 이메일 — 저장 시 암호화 */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "contact_email", length = 512)
     private String contactEmail;
 
-    @Column(name = "contact_phone", length = 50)
+    /** 담당자 연락처 — 저장 시 암호화 */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "contact_phone", length = 512)
     private String contactPhone;
 
     @Enumerated(EnumType.STRING)

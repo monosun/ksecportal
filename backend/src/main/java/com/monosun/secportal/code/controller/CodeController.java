@@ -1,5 +1,6 @@
 package com.monosun.secportal.code.controller;
 
+import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.code.dto.CodeDto;
 import com.monosun.secportal.code.service.CodeService;
 import com.monosun.secportal.common.response.ApiResponse;
@@ -16,6 +17,7 @@ import java.util.List;
 public class CodeController {
 
     private final CodeService codeService;
+    private final AuditLogService auditLogService;
 
     // ── 공개 API (인증된 모든 사용자) ──────────────────────────────────────
 
@@ -23,6 +25,25 @@ public class CodeController {
     public ApiResponse<List<CodeDto.SimpleValue>> getActiveValues(@PathVariable String groupCode) {
         return ApiResponse.ok(codeService.listActiveValues(groupCode));
     }
+
+    /** 화면 목록의 개인정보 마스킹에 사용할 항목별 기준 */
+    @GetMapping("/codes/pi-masking")
+    public ApiResponse<List<CodeDto.MaskingRule>> getPiMaskingRules() {
+        return ApiResponse.ok(codeService.listPiMaskingRules());
+    }
+
+    /** 목록 화면의 마스킹 해제(원문 열람) 이력 — 관리자만 가능하며 감사로그로 남긴다 */
+    @PostMapping("/codes/pi-masking/reveal")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void logPiUnmask(@RequestBody(required = false) PiUnmaskRequest req) {
+        String screen = req != null && req.screen() != null && !req.screen().isBlank() ? req.screen() : "알 수 없는 화면";
+        String reason = req != null && req.reason() != null && !req.reason().isBlank() ? req.reason() : "사유 미입력";
+        auditLogService.log("PI_UNMASK", "PrivacyMasking", null,
+                "개인정보 마스킹 해제 — 화면: " + screen + ", 사유: " + reason);
+    }
+
+    public record PiUnmaskRequest(String screen, String reason) {}
 
     // ── 관리자 API ──────────────────────────────────────────────────────────
 

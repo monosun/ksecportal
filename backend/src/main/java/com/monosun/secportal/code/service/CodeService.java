@@ -78,6 +78,21 @@ public class CodeService {
                 .stream().map(CodeDto.SimpleValue::from).toList();
     }
 
+    /**
+     * 개인정보 항목(PI_*)에 등록된 마스킹 기준 목록.
+     * 화면 목록의 개인정보 표시를 마스킹하는 데 쓰이므로 인증된 모든 사용자가 조회한다.
+     */
+    @Transactional(readOnly = true)
+    public List<CodeDto.MaskingRule> listPiMaskingRules() {
+        return valueRepo.findByGroupCodeStartingWithAndActiveTrueOrderByGroupCodeAscSortOrderAsc(PI_GROUP_PREFIX)
+                .stream()
+                .filter(v -> v.getMaskingType() != null && !v.getMaskingType().isBlank())
+                .map(CodeDto.MaskingRule::from)
+                .toList();
+    }
+
+    private static final String PI_GROUP_PREFIX = "PI_";
+
     @Transactional
     public CodeDto.ValueResponse createValue(String groupCode, CodeDto.ValueRequest req) {
         if (!groupRepo.existsById(groupCode)) {

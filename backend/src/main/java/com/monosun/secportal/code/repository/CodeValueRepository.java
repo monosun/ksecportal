@@ -8,5 +8,6 @@ import java.util.List;
 public interface CodeValueRepository extends JpaRepository<CodeValue, Long> {
     List<CodeValue> findByGroupCodeOrderBySortOrderAscLabelAsc(String groupCode);
     List<CodeValue> findByGroupCodeAndActiveTrueOrderBySortOrderAscLabelAsc(String groupCode);
+    List<CodeValue> findByGroupCodeStartingWithAndActiveTrueOrderByGroupCodeAscSortOrderAsc(String prefix);
     void deleteByGroupCode(String groupCode);
 }

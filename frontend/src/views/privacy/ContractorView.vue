@@ -7,6 +7,7 @@
         <p class="text-sm text-gray-500 mt-1">개인정보 처리 수탁사 정보 및 점검 이력 관리</p>
       </div>
       <div class="flex items-center gap-2">
+        <PiMaskToggle screen="수탁사 관리" />
         <button @click="openImportModal()"
           class="flex items-center gap-2 px-4 py-2 bg-white border border-primary-200 text-primary-600 rounded-xl text-sm font-semibold hover:bg-primary-50 transition-all">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +107,9 @@
             <div class="flex items-start justify-between mb-4">
               <div>
                 <h2 class="text-lg font-bold text-gray-900">{{ selected.name }}</h2>
-                <p class="text-sm text-gray-500">{{ selected.businessNumber || '사업자번호 미등록' }}</p>
+                <p class="text-sm text-gray-500">
+                  {{ selected.businessNumber ? pi.mask('bizNo', selected.businessNumber) : '사업자번호 미등록' }}
+                </p>
               </div>
               <div class="flex gap-2">
                 <button @click="openContractorModal(selected)"
@@ -130,7 +133,9 @@
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">대표자</p>
-                <p class="text-gray-800">{{ selected.representative || '—' }}</p>
+                <p class="text-gray-800" :title="piTitle('name')">
+                  {{ selected.representative ? pi.mask('name', selected.representative) : '—' }}
+                </p>
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">계약기간</p>
@@ -138,15 +143,21 @@
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">담당자</p>
-                <p class="text-gray-800">{{ selected.contactPerson || '—' }}</p>
+                <p class="text-gray-800" :title="piTitle('name')">
+                  {{ selected.contactPerson ? pi.mask('name', selected.contactPerson) : '—' }}
+                </p>
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">이메일</p>
-                <p class="text-gray-800">{{ selected.contactEmail || '—' }}</p>
+                <p class="text-gray-800" :title="piTitle('email')">
+                  {{ selected.contactEmail ? pi.mask('email', selected.contactEmail) : '—' }}
+                </p>
               </div>
               <div>
                 <p class="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1">연락처</p>
-                <p class="text-gray-800">{{ selected.contactPhone || '—' }}</p>
+                <p class="text-gray-800" :title="piTitle('phone')">
+                  {{ selected.contactPhone ? pi.mask('phone', selected.contactPhone) : '—' }}
+                </p>
               </div>
             </div>
             <div v-if="selected.notes" class="mt-4 pt-4 border-t border-gray-100">
@@ -623,8 +634,14 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { contractorApi, contractorCheckApi } from '@/api'
+import { usePiMaskingStore } from '@/stores/piMasking'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
 
 const router = useRouter()
+
+// 담당자·연락처 등은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
+const piTitle = (alias) => (pi.isMasked(alias) ? pi.ruleText(alias) : null)
 
 const contractors = ref([])
 const loading = ref(false)

@@ -2,6 +2,7 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">{{ $t('admin.auditLogs') }}</h1>
+      <PiMaskToggle screen="감사 로그" />
     </div>
 
     <div class="page-body">
@@ -104,14 +105,14 @@
           <tbody>
             <tr v-for="log in logs" :key="log.id" class="border-b hover:bg-gray-50">
               <td class="py-3 px-4 text-gray-500 whitespace-nowrap">{{ formatDate(log.createdAt) }}</td>
-              <td class="py-3 px-4 font-medium">{{ log.userName }}</td>
+              <td class="py-3 px-4 font-medium">{{ pi.mask('name', log.userName) }}</td>
               <td class="py-3 px-4">
                 <span :class="actionBadgeClass(log.action)"
                   class="text-xs font-medium px-2 py-0.5 rounded">{{ log.action }}</span>
               </td>
               <td class="py-3 px-4 text-gray-600">{{ log.resourceType }} #{{ log.resourceId }}</td>
               <td class="py-3 px-4 text-gray-500 max-w-xs truncate" :title="log.detail">{{ log.detail }}</td>
-              <td class="py-3 px-4 text-gray-400">{{ log.ipAddress || '-' }}</td>
+              <td class="py-3 px-4 text-gray-400">{{ log.ipAddress ? pi.mask('ip', log.ipAddress) : '-' }}</td>
             </tr>
           </tbody>
         </table></div>
@@ -162,6 +163,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { adminApi } from '@/api'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import { usePiMaskingStore } from '@/stores/piMasking'
+
+// 사용자명·접속 IP는 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
 
 // ─── 정의된 액션 목록 ────────────────────────────────────────────────────────
 const ACTION_GROUPS = {

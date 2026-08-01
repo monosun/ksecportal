@@ -24,6 +24,7 @@ load_secret_file() {
 }
 
 load_secret_file JASYPT_ENCRYPTOR_PASSWORD
+load_secret_file PI_ENCRYPTION_KEY
 load_secret_file SPRING_DATASOURCE_PASSWORD
 load_secret_file JWT_SECRET
 load_secret_file MAIL_PASSWORD

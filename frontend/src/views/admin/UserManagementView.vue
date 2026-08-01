@@ -2,7 +2,8 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">{{ $t('admin.users') }}</h1>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
+        <PiMaskToggle screen="사용자 관리" />
         <button @click="downloadCsv" :disabled="csvLoading" class="btn-secondary text-sm flex items-center gap-1.5">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -64,8 +65,8 @@
         </thead>
         <tbody>
           <tr v-for="user in users" :key="user.id" class="border-b hover:bg-gray-50">
-            <td class="py-3 px-4 font-medium">{{ user.name }}</td>
-            <td class="py-3 px-4 text-gray-600">{{ user.email }}</td>
+            <td class="py-3 px-4 font-medium" :title="piTitle('name')">{{ pi.mask('name', user.name) }}</td>
+            <td class="py-3 px-4 text-gray-600" :title="piTitle('email')">{{ pi.mask('email', user.email) }}</td>
             <td class="py-3 px-4 text-gray-600">{{ user.department || '-' }}</td>
             <td class="py-3 px-4">
               <select
@@ -278,6 +279,12 @@
 import { ref, onMounted } from 'vue'
 import { adminApi, exportApi, userBulkApi, codeApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import { usePiMaskingStore } from '@/stores/piMasking'
+
+// 이름·이메일은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
+const piTitle = (alias) => (pi.isMasked(alias) ? pi.ruleText(alias) : null)
 
 const users = ref([])
 const loading = ref(true)

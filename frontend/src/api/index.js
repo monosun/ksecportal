@@ -135,7 +135,10 @@ export const adminApi = {
 }
 
 export const codeApi = {
-  getValues: (groupCode) => api.get(`/codes/${groupCode}`)
+  getValues: (groupCode) => api.get(`/codes/${groupCode}`),
+  // 목록 화면의 개인정보 마스킹 기준(관리 > 코드관리 > 개인정보 유형별 항목관리)
+  piMaskingRules: () => api.get('/codes/pi-masking'),
+  logPiUnmask: (data) => api.post('/codes/pi-masking/reveal', data)
 }
 
 export const reportApi = {

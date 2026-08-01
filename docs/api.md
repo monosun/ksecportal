@@ -1216,6 +1216,31 @@ HTTP 403 Forbidden
 
 ---
 
+## 개인정보 마스킹 기준 (PI Masking, v1.28.0)
+
+관리 > 코드관리 > 개인정보 유형별 항목관리에 등록된 항목별 마스킹 기준입니다. 목록 화면의 개인정보 표시를 가리는 데 사용합니다.
+
+### GET /codes/pi-masking
+
+활성 상태이고 마스킹 방식이 등록된 개인정보 항목(`PI_*` 그룹)의 기준을 반환합니다. 인증된 모든 사용자가 조회할 수 있습니다.
+
+```json
+[
+  { "groupCode": "PI_CONTACT", "label": "이메일 주소", "maskingType": "부분 마스킹",
+    "maskingRule": "아이디 앞 3자리만 표시하고 나머지는 * 로 대체, 도메인은 표시", "maskingExample": "abc****@test.com" }
+]
+```
+
+### POST /codes/pi-masking/reveal *(ADMIN)*
+
+목록 화면의 마스킹 해제(원문 열람)를 감사 로그(`PI_UNMASK`)에 기록합니다. 응답은 `204 No Content`.
+
+```json
+{ "screen": "수탁사 관리", "reason": "목록 화면 원문 열람" }
+```
+
+---
+
 ## 모의 악성메일 훈련 (Phishing)
 
 ### GET /phishing/send-logs *(v1.8.0)*

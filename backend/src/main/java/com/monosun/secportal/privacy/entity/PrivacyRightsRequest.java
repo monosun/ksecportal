@@ -1,5 +1,6 @@
 package com.monosun.secportal.privacy.entity;
 
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import com.monosun.secportal.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,12 +32,14 @@ public class PrivacyRightsRequest extends BaseEntity {
     @Builder.Default
     private RequestType requestType = RequestType.ACCESS;
 
-    /** 정보주체명 */
-    @Column(name = "subject_name", nullable = false, length = 100)
+    /** 정보주체명 — 저장 시 암호화(AES-256-GCM) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "subject_name", nullable = false, length = 512)
     private String subjectName;
 
-    /** 연락처 */
-    @Column(length = 100)
+    /** 연락처 — 저장 시 암호화 */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(length = 512)
     private String contact;
 
     /** 접수 채널 */

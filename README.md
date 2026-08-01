@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.27.0** — 개인정보 항목별 마스킹 기준, 백업 파일 비밀번호 확인 다운로드(암호 해제 선택), 기동 시 비밀 값 암호화·보안점검 ([릴리즈 노트](release/v1.27.0/RELEASE_NOTES.md))
+> **최신 버전: v1.28.0** — 코드관리 마스킹 기준을 목록 화면에 실제 적용(ADMIN 마스킹 해제·감사로그), 정보주체·수탁사 담당자 정보 DB 컬럼 암호화(AES-256-GCM) ([릴리즈 노트](release/v1.28.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -826,6 +826,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.28.0](release/v1.28.0/RELEASE_NOTES.md) | **목록 화면 개인정보 마스킹 적용** — 관리>코드관리>개인정보 유형별 항목관리에 등록한 **항목별 마스킹 방식**을 각 메뉴 목록 화면 표시에 실제로 적용. 정보주체 권리행사(정보주체명·연락처), 수탁사 관리(사업자등록번호·대표자·담당자·이메일·연락처), 사용자 관리(이름·이메일), 감사 로그(사용자명·접속 IP), 성능 관리(요청 IP), 교육·훈련 결과(이수자), 모의 피싱훈련(대상자·발송 이력·훈련 결과)에 적용. 마스킹 방식별 표시 규칙(부분/암호화=자리별 부분 마스킹, 전체·미수집=`(비노출)`, 해시=앞 4자리, 불필요=원문)과 항목 종류별 알고리즘 20종을 `utils/piMasking.js` 에 구현하고 기준은 `stores/piMasking.js` 가 `GET /api/codes/pi-masking` 으로 1회 로드·캐시. 기준 미등록 항목은 안전하게 부분 마스킹. **마스킹 해제는 ADMIN 전용**이며 해제 시 감사 로그 `PI_UNMASK` 기록(`POST /api/codes/pi-masking/reveal`), 등록·수정 모달과 담당자 선택 목록은 원문 유지. **개인정보 저장 컬럼 암호화** — `privacy_rights_requests`(정보주체명·연락처)와 `privacy_contractors`(사업자등록번호·담당자·이메일·연락처) 6개 컬럼을 **AES-256-GCM**(`PIENC1:` + Base64(IV‖암호문‖태그))으로 저장. JPA `AttributeConverter` 적용, 키는 `PI_ENCRYPTION_KEY`(미설정 시 Jasypt 마스터 키), 기동 시 남은 평문을 멱등 백필로 자동 암호화. 검색·정렬·로그인 키에 쓰이지 않는 컬럼만 골라 기능 영향 없음. 컬럼 길이 확대 마이그레이션 `v1.28.0_pi_column_encryption.sql` **필수** |
 | [v1.27.0](release/v1.27.0/RELEASE_NOTES.md) | **개인정보 항목별 마스킹 기준** — 관리>코드관리>개인정보 유형별 관리에서 항목마다 마스킹 방식(부분/전체/암호화/해시/미수집/불필요)·마스킹 규칙(300자)·표시 예시를 등록. 목록에 배지·규칙·예시 열과 유형별 지정 현황(n/전체) 표시, 모달의 **권장 기준 불러오기**로 항목명 매칭 21종 권장값 자동 입력. 기본 개인정보 **86개 항목**에 법령 기준 마스킹 기본값을 `PiMaskingDefaultInitializer`(비어 있는 항목만 채움)로 자동 적용. `code_values` 에 `masking_type`·`masking_rule`·`masking_example` 추가. **백업 파일 비밀번호 확인 다운로드** — 서버 저장 백업을 받을 때 생성 비밀번호를 검증하고, **암호화 원본(.bak)** 또는 **암호 해제(.json)** 형식을 선택. 다운로드 시도는 백업 이력에 `DOWNLOAD` 로 기록(`POST /api/admin/backup/files/:filename/download`). **기동 시 비밀 값 보호** — 설정관리>보안 설정의 **설정값 암호화** 도구로 `ENC(...)` 생성, `.env` 의 `DB_PASSWORD_ENC`·`MAIL_PASSWORD_ENC`·`JWT_SECRET_ENC` 로 주입, 마스터 키 파일 주입(`*_FILE`), 기동 시 자동 보안점검(`SECURITY_FAIL_ON_INSECURE_SECRETS=true` 시 기동 중단) |
 | [v1.26.0](release/v1.26.0/RELEASE_NOTES.md) | **성능관리 신설**(관리 메뉴, ADMIN) — 지연 기준(**기본 3초**, 화면에서 변경)을 넘긴 **화면 요청**과 **SQL**을 감사 로그처럼 기록·조회. 요약 카드·유형/검색어/최소 소요시간/기간 필터·페이징·행 펼침(전체 SQL 구문), 전체/7·30·90일 이전 삭제, 보관기간(기본 30일) 초과분 매일 03:20 자동 정리. 기록은 메모리 큐에 모아 5초 간격 일괄 저장하고, SQL 계측은 외부 라이브러리 없이 JDK 동적 프록시로 DataSource를 감싸 `execute*` 만 계측. 신규 테이블 `slow_logs`(ddl-auto), 설정은 `app_settings`의 `perf.*` 키, `/api/admin/performance/*` 추가 |
 | [v1.25.1](release/v1.25.1/RELEASE_NOTES.md) | **위험평가 자산 자동 불러오기 — 자산유형 매칭** — 자산×위협 전조합 생성에서, **자산의 자산유형이 위협의 대상 자산유형 중 하나와 일치하는 조합만** 평가 항목으로 생성하도록 변경. 대상 자산유형이 없는 위협은 종전처럼 전 자산 적용(호환), 자산유형이 없는 자산은 대상 자산유형이 지정된 위협과 매칭 제외. 안내 문구·완료 메시지에 매칭 규칙 반영 |
@@ -879,6 +880,7 @@ ksecportal/
 | [docs/menu-list.md](docs/menu-list.md) | 전체 메뉴 구조 목록 |
 | [docs/faq.md](docs/faq.md) | 자주 묻는 질문 |
 | [docs/security-guide.md](docs/security-guide.md) | nginx·Spring Boot·Docker 보안 설정 상세 설명, HTTPS 적용 방법 |
+| [docs/pi-db-encryption-impact.md](docs/pi-db-encryption-impact.md) | DB 개인정보 암호화 영향도 검토 (저장 컬럼 현황·방식별 영향·권장안) |
 | [docs/security-solution-integration-guide.md](docs/security-solution-integration-guide.md) | 보안솔루션 연동 개발 가이드 |
 | [docs/okta-integration.md](docs/okta-integration.md) | Okta SSO 연동 가이드 |
 | [docs/slack-integration.md](docs/slack-integration.md) | Slack 알림 연동 가이드 |

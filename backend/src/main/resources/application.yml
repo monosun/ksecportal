@@ -63,6 +63,12 @@ app:
     dir: ${APP_UPLOAD_DIR:uploads}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost,http://localhost:80,http://localhost:5173}
+  privacy:
+    # 개인정보 컬럼 암호화(AES-256-GCM) — 정보주체·수탁사 담당자 정보에 적용된다.
+    # 키를 비워 두면 Jasypt 마스터 키를 사용한다. 키를 잃으면 암호문은 복구할 수 없다.
+    column-encryption:
+      enabled: ${PI_COLUMN_ENCRYPTION_ENABLED:true}
+      key: ${PI_ENCRYPTION_KEY:}
 
 backup:
   directory: ${BACKUP_DIR:./backups}

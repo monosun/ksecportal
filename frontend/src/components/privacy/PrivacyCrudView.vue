@@ -7,6 +7,7 @@
         <p v-if="description" class="text-sm text-gray-500 mt-1">{{ description }}</p>
       </div>
       <div class="flex items-center gap-2">
+        <PiMaskToggle v-if="hasPiColumn" :screen="title" />
         <slot name="header-actions" :items="items" />
         <button v-if="canWrite" @click="openCreate" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,8 +65,9 @@
                   <span v-if="row[c.key]" class="badge-orange">예</span>
                   <span v-else class="text-gray-400">—</span>
                 </span>
-                <span v-else-if="c.render">{{ c.render(row) }}</span>
-                <span v-else>{{ display(row[c.key]) }}</span>
+                <span v-else :title="c.pi && pi.isMasked(c.pi) ? pi.ruleText(c.pi) : null">
+                  {{ display(cellValue(c, row)) }}
+                </span>
               </td>
               <td v-if="canWrite || $slots['row-actions']" class="px-5 py-3.5 text-right whitespace-nowrap" @click.stop>
                 <slot name="row-actions" :row="row" />
@@ -161,6 +163,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { usePiMaskingStore } from '@/stores/piMasking'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -183,6 +187,10 @@ const props = defineProps({
 
 const auth = useAuthStore()
 const canWrite = computed(() => !props.menuKey || auth.canWrite(props.menuKey))
+
+// 개인정보 컬럼(pi)이 있으면 코드관리의 항목별 마스킹 기준을 적용한다
+const pi = usePiMaskingStore()
+const hasPiColumn = computed(() => props.columns.some(c => c.pi))
 
 const items = ref([])
 const loading = ref(false)
@@ -342,6 +350,15 @@ function display(v) {
   return v
 }
 
-onMounted(load)
+/** 셀에 표시할 값 — 개인정보 컬럼(pi)은 코드관리 기준으로 마스킹한다 */
+function cellValue(col, row) {
+  const v = col.render ? col.render(row) : row[col.key]
+  return col.pi ? pi.mask(col.pi, v) : v
+}
+
+onMounted(() => {
+  load()
+  if (hasPiColumn.value) pi.load()
+})
 defineExpose({ reload: load })
 </script>

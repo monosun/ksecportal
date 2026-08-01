@@ -90,6 +90,30 @@ public class CodeDto {
         }
     }
 
+    /**
+     * 화면 목록의 개인정보 마스킹에 사용되는 항목별 기준.
+     * 관리 &gt; 코드관리 &gt; 개인정보 유형별 항목관리에서 등록한 값을 그대로 내려준다.
+     */
+    @Getter
+    @Builder
+    public static class MaskingRule {
+        private String groupCode;
+        private String label;
+        private String maskingType;
+        private String maskingRule;
+        private String maskingExample;
+
+        public static MaskingRule from(CodeValue v) {
+            return MaskingRule.builder()
+                    .groupCode(v.getGroupCode())
+                    .label(v.getLabel())
+                    .maskingType(v.getMaskingType())
+                    .maskingRule(v.getMaskingRule())
+                    .maskingExample(v.getMaskingExample())
+                    .build();
+        }
+    }
+
     @Getter
     @Builder
     public static class SimpleValue {

@@ -5,6 +5,7 @@
         <h1 class="page-title">교육·훈련 결과</h1>
         <p class="text-sm text-gray-400 mt-0.5">IT 및 정보보호 교육 이수 현황과 모의 악성메일 훈련 결과를 조회합니다</p>
       </div>
+      <PiMaskToggle screen="교육·훈련 결과" />
     </div>
 
     <div class="page-body">
@@ -104,7 +105,7 @@
           </thead>
           <tbody>
             <tr v-for="r in filteredCompletions" :key="r.id" class="border-b hover:bg-gray-50">
-              <td class="py-2.5 px-3 text-gray-800">{{ r.userName || '-' }}</td>
+              <td class="py-2.5 px-3 text-gray-800">{{ r.userName ? pi.mask('name', r.userName) : '-' }}</td>
               <td class="py-2.5 px-3 text-gray-500">{{ r.userDepartment || '-' }}</td>
               <td class="py-2.5 px-3 text-gray-600">{{ r.courseTitle }}</td>
               <td class="py-2.5 px-3 text-center font-mono">{{ r.score ?? '-' }}</td>
@@ -229,6 +230,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { trainingApi, phishingApi } from '@/api'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import { usePiMaskingStore } from '@/stores/piMasking'
+
+// 이수자 이름은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
 
 const activeTab = ref('training')
 const loading = ref(true)

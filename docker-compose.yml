@@ -50,6 +50,11 @@ services:
       JASYPT_ENCRYPTOR_PASSWORD_FILE: ${JASYPT_ENCRYPTOR_PASSWORD_FILE:-}
       # true 로 두면 기본값·평문 비밀이 남아 있을 때 기동을 중단한다 (운영 권장)
       SECURITY_FAIL_ON_INSECURE_SECRETS: ${SECURITY_FAIL_ON_INSECURE_SECRETS:-false}
+      # 개인정보 컬럼 암호화 키 — 비워 두면 Jasypt 마스터 키를 사용한다.
+      # 이 키를 잃으면 암호화된 개인정보는 복구할 수 없다. 백업본과 분리해 보관할 것.
+      PI_ENCRYPTION_KEY: ${PI_ENCRYPTION_KEY:-}
+      PI_ENCRYPTION_KEY_FILE: ${PI_ENCRYPTION_KEY_FILE:-}
+      PI_COLUMN_ENCRYPTION_ENABLED: ${PI_COLUMN_ENCRYPTION_ENABLED:-true}
       JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
       # JMX 모니터링이 필요한 경우: docker exec -it secportal-backend sh 후 로컬에서 접속
     volumes:

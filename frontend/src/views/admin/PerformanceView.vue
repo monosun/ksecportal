@@ -2,6 +2,7 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">{{ $t('admin.performance') }}</h1>
+      <PiMaskToggle screen="성능 관리" />
     </div>
 
     <div class="page-body">
@@ -153,7 +154,7 @@
                       <span class="font-mono break-all ml-2">{{ log.detail }}</span></p>
                     <p class="text-gray-400">
                       기록 시점 기준 {{ (log.thresholdMs / 1000).toFixed(1) }}초 ·
-                      {{ log.httpMethod || '-' }} · IP {{ log.ipAddress || '-' }}
+                      {{ log.httpMethod || '-' }} · IP {{ log.ipAddress ? pi.mask('ip', log.ipAddress) : '-' }}
                     </p>
                   </div>
                 </td>
@@ -205,6 +206,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { performanceApi } from '@/api'
+import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import { usePiMaskingStore } from '@/stores/piMasking'
+
+// 요청 IP는 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
+const pi = usePiMaskingStore()
 
 const logs = ref([])
 const loading = ref(true)
