@@ -24,7 +24,7 @@ public class SecretsStartupCheck {
 
     /** 배포본에 그대로 남아 있으면 안 되는 기본값들 */
     private static final List<String> DEFAULT_JASYPT_KEYS = List.of("dev-local-key", "your-master-key", "changeme");
-    private static final String DEFAULT_DB_PASSWORD = "secportal123";
+    private static final String DEFAULT_DB_PASSWORD = "secportal123";   // sast:ignore 인증에 쓰는 비밀이 아니라, 샘플 비밀번호가 남아 있는지 비교하는 탐지용 상수다
     private static final int MIN_JASYPT_KEY_LENGTH = 16;
 
     private final Environment env;

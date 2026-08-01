@@ -50,7 +50,7 @@ export const CWE_INFO = {
     summary: 'TLS 인증서·호스트명 검증을 끄면 통신 상대가 진짜인지 확인하지 못합니다.',
     impact: '중간자 공격으로 자격증명·개인정보가 평문처럼 노출되고 응답이 위조될 수 있습니다.',
     fix: [
-      '인증서·호스트명 검증을 절대 비활성화하지 않습니다(TrustAllCerts, rejectUnauthorized:false 등 금지).',
+      '인증서·호스트명 검증을 절대 비활성화하지 않습니다(TrustAllCerts, rejectUnauthorized:false 등 금지).',   // sast:ignore TLS 설정이 아니라 화면에 보여 주는 조치 안내 문구다
       '사설 CA 를 쓰면 해당 CA 를 신뢰 저장소에 등록합니다.',
       '테스트용 우회 코드가 운영 빌드에 포함되지 않도록 분리합니다.',
     ],
