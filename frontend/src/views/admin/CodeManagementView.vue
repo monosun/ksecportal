@@ -409,8 +409,13 @@
 
     <!-- ─── 탭 5: 개인정보 유형별 관리 ─── -->
     <div v-else-if="activeTab === 'piByType'">
-      <div class="mb-5 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">개인정보 유형별 항목 관리</h2>
+      <div class="mb-5 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800">개인정보 유형별 항목 관리</h2>
+          <p class="text-xs text-gray-400 mt-0.5">
+            항목별 <strong>마스킹 기준</strong>(마스킹 방식·규칙·표시 예시)을 등록하면 화면 표시·출력물·로그의 개인정보 비식별 처리 기준으로 사용됩니다.
+          </p>
+        </div>
         <button v-if="selectedPiGroup" @click="openValueModal()" class="btn-primary flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -450,10 +455,14 @@
         <!-- 선택된 유형의 개인정보 항목 목록 -->
         <div class="flex-1">
           <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
               <h3 class="text-sm font-semibold text-gray-700">
                 {{ selectedPiGroup ? `${selectedPiGroup.groupName} 항목 목록` : '유형을 선택하세요' }}
               </h3>
+              <span v-if="selectedPiGroup && values.length" class="text-xs"
+                :class="piMaskingMissingCount ? 'text-amber-600 font-medium' : 'text-gray-400'">
+                마스킹 기준 {{ values.length - piMaskingMissingCount }}/{{ values.length }} 지정
+              </span>
             </div>
             <div v-if="!selectedPiGroup" class="p-12 text-center text-gray-400">
               <p class="text-sm">왼쪽에서 개인정보 유형을 선택하세요</p>
@@ -468,6 +477,9 @@
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-16">순서</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-44">항목명</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-28">마스킹 방식</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-64">마스킹 기준</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-36">표시 예시</th>
                   <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-20">상태</th>
                   <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-24">관리</th>
                 </tr>
@@ -477,6 +489,15 @@
                   <td class="px-4 py-3 text-center text-gray-400 text-sm">{{ val.sortOrder }}</td>
                   <td class="px-4 py-3 font-medium text-gray-900">{{ val.label }}</td>
                   <td class="px-4 py-3 text-gray-500 text-xs">{{ val.description || '' }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <span v-if="val.maskingType" :class="maskingTypeClass(val.maskingType)"
+                      class="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                      {{ val.maskingType }}
+                    </span>
+                    <span v-else class="text-xs text-gray-300">미지정</span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-600 text-xs" :title="val.maskingRule">{{ val.maskingRule || '-' }}</td>
+                  <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ val.maskingExample || '-' }}</td>
                   <td class="px-4 py-3 text-center">
                     <span :class="val.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
                       class="text-xs px-2 py-0.5 rounded-full font-medium">
@@ -1122,9 +1143,12 @@
     <!-- ─── 코드값 모달 ─── -->
     <div v-if="valueModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/40" @click="valueModal.show = false"/>
-      <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+      <div class="relative bg-white rounded-xl shadow-xl w-full mx-4 p-6 max-h-[92vh] overflow-y-auto"
+        :class="isPiValueModal ? 'max-w-2xl' : 'max-w-md'">
         <h3 class="text-lg font-semibold text-gray-900 mb-5">
-          {{ valueModal.editing ? '코드값 수정' : '코드값 추가' }}
+          {{ isPiValueModal
+            ? (valueModal.editing ? '개인정보 항목 수정' : '개인정보 항목 추가')
+            : (valueModal.editing ? '코드값 수정' : '코드값 추가') }}
         </h3>
         <div class="space-y-4">
           <div>
@@ -1139,6 +1163,38 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">설명</label>
             <input v-model="valueModal.form.description" type="text" placeholder="항목에 대한 설명 (선택)" class="input"/>
           </div>
+
+          <!-- 개인정보 항목: 마스킹 기준 -->
+          <div v-if="isPiValueModal" class="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-gray-800">마스킹 기준</h4>
+              <button type="button" @click="applyMaskingPreset"
+                class="text-xs text-primary-600 hover:text-primary-800 font-medium">
+                권장 기준 불러오기
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">마스킹 방식</label>
+                <select v-model="valueModal.form.maskingType" class="input w-full">
+                  <option value="">미지정</option>
+                  <option v-for="t in MASKING_TYPES" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">표시 예시</label>
+                <input v-model="valueModal.form.maskingExample" type="text" maxlength="100"
+                  placeholder="예: 홍*동, 010-****-1234" class="input w-full"/>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">마스킹 규칙</label>
+              <textarea v-model="valueModal.form.maskingRule" rows="2" maxlength="300"
+                placeholder="예: 생년월일 6자리는 표시하고 뒤 7자리는 전부 * 로 대체" class="input w-full"></textarea>
+              <p class="text-xs text-gray-400 mt-1">화면 표시·출력물·로그에 적용할 비식별 처리 기준을 구체적으로 적습니다. (최대 300자)</p>
+            </div>
+          </div>
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
             <input v-model.number="valueModal.form.sortOrder" type="number" min="0" class="input w-28"/>
@@ -1337,8 +1393,67 @@ const groupModal = reactive({
 const valueModal = reactive({
   show: false, editing: false, saving: false, error: '',
   editId: null,
-  form: { value: '', label: '', description: '', sortOrder: 0, active: true }
+  form: { value: '', label: '', description: '', maskingType: '', maskingRule: '', maskingExample: '', sortOrder: 0, active: true }
 })
+
+// ─── 개인정보 항목 마스킹 기준 ───
+const MASKING_TYPES = [
+  '부분 마스킹', '전체 마스킹', '암호화 저장', '일방향 암호화(해시)', '미수집/즉시 파기', '마스킹 불필요'
+]
+
+// 항목명 키워드 → 권장 마스킹 기준 (모달의 '권장 기준 불러오기'에서 사용)
+const MASKING_PRESETS = [
+  { kw: ['주민등록번호', '외국인등록번호'], type: '암호화 저장', rule: '생년월일 6자리만 표시하고 뒤 7자리는 전부 * 로 대체. 저장 시 암호화 필수', example: '900101-*******' },
+  { kw: ['여권번호'], type: '암호화 저장', rule: '앞 2자리만 표시하고 나머지는 * 로 대체. 저장 시 암호화 필수', example: 'M1*******' },
+  { kw: ['운전면허번호'], type: '암호화 저장', rule: '지역코드 2자리만 표시하고 나머지는 * 로 대체. 저장 시 암호화 필수', example: '11-**-******-**' },
+  { kw: ['연계정보', 'CI', 'DI'], type: '일방향 암호화(해시)', rule: '원문 노출 금지, 앞 4자리만 표시', example: 'A1B2****…' },
+  { kw: ['성명', '이름', '예금주', '납부자'], type: '부분 마스킹', rule: '가운데 글자를 * 로 대체(2자리는 마지막 글자 마스킹)', example: '홍*동' },
+  { kw: ['생년월일'], type: '부분 마스킹', rule: '연도만 표시하고 월·일은 * 로 대체', example: '1990-**-**' },
+  { kw: ['전화번호', '연락처', '회선번호', '발신번호', '수신번호', '휴대전화'], type: '부분 마스킹', rule: '국번 4자리를 * 로 대체', example: '010-****-1234' },
+  { kw: ['이메일'], type: '부분 마스킹', rule: '아이디 앞 3자리만 표시하고 나머지는 * 로 대체, 도메인은 표시', example: 'abc****@test.com' },
+  { kw: ['주소', '우편번호'], type: '부분 마스킹', rule: '읍·면·동까지만 표시하고 상세주소는 * 로 대체', example: '서울시 강남구 역삼동 ***' },
+  { kw: ['계좌번호'], type: '암호화 저장', rule: '앞 3자리와 뒤 3자리만 표시하고 나머지는 * 로 대체. 저장 시 암호화 필수', example: '110-***-***456' },
+  { kw: ['카드번호'], type: '암호화 저장', rule: '앞 6자리·뒤 4자리만 표시하고 나머지는 * 로 대체(PCI-DSS 기준). 저장 시 암호화 필수', example: '123456******1234' },
+  { kw: ['비밀번호'], type: '일방향 암호화(해시)', rule: '평문 저장·조회·화면 표시 금지, 일방향 암호화하여 저장', example: '********' },
+  { kw: ['사업자등록번호'], type: '부분 마스킹', rule: '앞 3자리만 표시하고 나머지는 * 로 대체', example: '123-**-*****' },
+  { kw: ['신분증', '얼굴사진', '이미지'], type: '전체 마스킹', rule: '원본 비노출, 권한자만 열람하며 열람 시 사유 기록', example: '(비노출)' },
+  { kw: ['특징정보', '안면', '생체'], type: '암호화 저장', rule: '민감정보로 별도 동의 후 암호화 저장, 화면 표시 금지', example: '(비노출)' },
+  { kw: ['IMEI', 'USIM', 'eSIM', 'MAC', 'Device ID', '단말식별번호', 'PUSH 토큰'], type: '부분 마스킹', rule: '뒤 4자리만 표시하고 나머지는 * 로 대체', example: '***********1234' },
+  { kw: ['IP 주소'], type: '부분 마스킹', rule: '뒤 2옥텟을 * 로 대체', example: '192.168.*.*' },
+  { kw: ['위치', 'GPS', '기지국', 'AP 정보', 'RFID'], type: '부분 마스킹', rule: '좌표는 소수점 2자리까지만 표시하고 이후는 절삭', example: '37.49, 127.03' },
+  { kw: ['장애인', '수급자', '차상위', '국가유공자', '복지할인', '신용', '연체', '채무'], type: '전체 마스킹', rule: '자격 보유 여부만 표시하고 상세 증빙 내용은 비노출, 권한자만 열람', example: '해당 / 비해당' },
+  { kw: ['녹음', '상담 내용'], type: '전체 마스킹', rule: '권한자만 열람하며 열람 이력 기록, 보유기간 경과 시 파기', example: '(비노출)' },
+  { kw: ['가족관계', '법정대리인'], type: '부분 마스킹', rule: '성명은 가운데 글자, 연락처는 국번을 * 로 대체', example: '김*수 / 010-****-1234' },
+]
+
+const isPiValueModal = computed(() =>
+  !!selectedGroup.value && selectedGroup.value.groupCode.startsWith('PI_') && selectedGroup.value.groupCode !== 'PI_TYPE'
+)
+
+function maskingTypeClass(type) {
+  if (type === '암호화 저장' || type === '일방향 암호화(해시)') return 'bg-red-100 text-red-700'
+  if (type === '전체 마스킹') return 'bg-orange-100 text-orange-700'
+  if (type === '부분 마스킹') return 'bg-blue-100 text-blue-700'
+  if (type === '미수집/즉시 파기') return 'bg-purple-100 text-purple-700'
+  return 'bg-gray-100 text-gray-600'
+}
+
+function applyMaskingPreset() {
+  const label = (valueModal.form.label || '').toLowerCase()
+  if (!label) {
+    valueModal.error = '항목명을 먼저 입력하세요'
+    return
+  }
+  const preset = MASKING_PRESETS.find(p => p.kw.some(k => label.includes(k.toLowerCase())))
+  if (!preset) {
+    valueModal.error = '항목명에 맞는 권장 기준을 찾지 못했습니다. 직접 입력해 주세요.'
+    return
+  }
+  valueModal.error = ''
+  valueModal.form.maskingType = preset.type
+  valueModal.form.maskingRule = preset.rule
+  valueModal.form.maskingExample = preset.example
+}
 
 const deleteConfirm = reactive({ show: false, message: '', warning: '', action: null })
 
@@ -1422,9 +1537,17 @@ function openValueModal(val = null) {
   valueModal.error = ''
   valueModal.saving = false
   if (val) {
-    valueModal.form = { value: val.value, label: val.label, description: val.description || '', sortOrder: val.sortOrder, active: val.active }
+    valueModal.form = {
+      value: val.value, label: val.label, description: val.description || '',
+      maskingType: val.maskingType || '', maskingRule: val.maskingRule || '', maskingExample: val.maskingExample || '',
+      sortOrder: val.sortOrder, active: val.active
+    }
   } else {
-    valueModal.form = { value: '', label: '', description: '', sortOrder: values.value.length + 1, active: true }
+    valueModal.form = {
+      value: '', label: '', description: '',
+      maskingType: '', maskingRule: '', maskingExample: '',
+      sortOrder: values.value.length + 1, active: true
+    }
   }
   valueModal.show = true
 }
@@ -1437,10 +1560,16 @@ async function saveValue() {
   valueModal.saving = true
   valueModal.error = ''
   try {
+    const payload = {
+      ...valueModal.form,
+      maskingType: valueModal.form.maskingType || null,
+      maskingRule: valueModal.form.maskingRule?.trim() || null,
+      maskingExample: valueModal.form.maskingExample?.trim() || null,
+    }
     if (valueModal.editing) {
-      await adminApi.updateCodeValue(selectedGroup.value.groupCode, valueModal.editId, valueModal.form)
+      await adminApi.updateCodeValue(selectedGroup.value.groupCode, valueModal.editId, payload)
     } else {
-      await adminApi.createCodeValue(selectedGroup.value.groupCode, valueModal.form)
+      await adminApi.createCodeValue(selectedGroup.value.groupCode, payload)
     }
     valueModal.show = false
     await selectGroup(selectedGroup.value)
@@ -1752,6 +1881,8 @@ async function selectPiGroup(group) {
   selectedPiGroup.value = group
   await selectGroup(group)
 }
+
+const piMaskingMissingCount = computed(() => values.value.filter(v => !v.maskingType).length)
 
 // ─── 수탁사 기본점검항목 ───
 const contractorDefaults = ref([])

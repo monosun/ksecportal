@@ -88,6 +88,9 @@ public class CodeService {
                 .value(req.getValue())
                 .label(req.getLabel())
                 .description(req.getDescription())
+                .maskingType(req.getMaskingType())
+                .maskingRule(req.getMaskingRule())
+                .maskingExample(req.getMaskingExample())
                 .sortOrder(req.getSortOrder())
                 .active(req.getActive() == null || req.getActive())
                 .build());
@@ -104,6 +107,9 @@ public class CodeService {
         value.setValue(req.getValue());
         value.setLabel(req.getLabel());
         value.setDescription(req.getDescription());
+        value.setMaskingType(req.getMaskingType());
+        value.setMaskingRule(req.getMaskingRule());
+        value.setMaskingExample(req.getMaskingExample());
         value.setSortOrder(req.getSortOrder());
         if (req.getActive() != null) value.setActive(req.getActive());
         return CodeDto.ValueResponse.from(value);

@@ -144,6 +144,53 @@
           </div>
         </div>
 
+        <!-- 설정값 암호화 도구 -->
+        <div class="card lg:col-span-2">
+          <h2 class="text-base font-bold text-gray-800 mb-1">설정값 암호화 (DB 비밀번호 등)</h2>
+          <p class="text-sm text-gray-400 mb-5">
+            DB 비밀번호·메일 비밀번호·JWT 시크릿 같은 비밀 값을 <code class="font-mono text-xs">ENC(...)</code> 형태로 암호화합니다.
+            결과를 서버의 <code class="font-mono text-xs">.env</code> 에 넣으면 기동 시 마스터 키로 복호화되어 사용되며, 설정 파일에는 평문이 남지 않습니다.
+          </p>
+          <div class="space-y-4 max-w-3xl">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">암호화할 값</label>
+              <div class="flex gap-2">
+                <input v-model="encryptInput" :type="showEncryptInput ? 'text' : 'password'"
+                  class="input flex-1 text-sm" placeholder="예: 실제 DB 비밀번호" @keyup.enter="doEncrypt"/>
+                <button type="button" @click="showEncryptInput = !showEncryptInput"
+                  class="px-3 py-2 text-xs rounded-xl border-2 border-gray-200 bg-white text-gray-500 hover:border-gray-300">
+                  {{ showEncryptInput ? '숨김' : '보기' }}
+                </button>
+                <button @click="doEncrypt" :disabled="!encryptInput || encrypting"
+                  class="btn-primary px-6 py-2 text-sm rounded-xl disabled:opacity-50">
+                  {{ encrypting ? '암호화 중...' : '암호화' }}
+                </button>
+              </div>
+            </div>
+            <div v-if="encryptResult">
+              <label class="block text-sm font-semibold text-gray-700 mb-1">결과</label>
+              <div class="flex gap-2">
+                <input :value="encryptResult" readonly class="input flex-1 text-sm font-mono bg-gray-50"/>
+                <button @click="copyEncryptResult"
+                  class="px-4 py-2 text-sm rounded-xl border-2 border-gray-200 bg-white text-gray-600 hover:border-gray-300">
+                  {{ encryptCopied ? '복사됨' : '복사' }}
+                </button>
+              </div>
+              <div class="mt-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
+                <p class="font-semibold text-gray-700">.env 적용 예시</p>
+                <p class="font-mono">DB_PASSWORD_ENC={{ encryptResult }}</p>
+                <p>변수명: DB 비밀번호 <code class="font-mono">DB_PASSWORD_ENC</code> / 메일 <code class="font-mono">MAIL_PASSWORD_ENC</code> / JWT <code class="font-mono">JWT_SECRET_ENC</code></p>
+                <p>적용 후 <code class="font-mono">docker compose up -d backend</code> 로 재기동하세요.</p>
+              </div>
+            </div>
+            <p v-if="encryptError" class="text-sm text-red-500">{{ encryptError }}</p>
+            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              마스터 키(<code class="font-mono">JASYPT_ENCRYPTOR_PASSWORD</code>)가 바뀌면 기존 ENC 값은 복호화되지 않습니다.
+              마스터 키는 <code class="font-mono">JASYPT_ENCRYPTOR_PASSWORD_FILE</code> 로 파일 주입하는 것을 권장합니다.
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -864,7 +911,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUiSettingsStore } from '@/stores/uiSettings'
-import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi } from '@/api/index.js'
+import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi, adminToolsApi } from '@/api/index.js'
 import { INDUSTRIES, CATEGORIES } from '@/data/legalIndustries.js'
 import { setLawApiKeySet, searchLaws } from '@/services/legalApiService.js'
 
@@ -880,6 +927,41 @@ const tabs = [
   { key: 'api',      label: 'API 연동' },
 ]
 const activeTab = ref('security')
+
+// ── 설정값 암호화 도구 ─────────────────────────────
+const encryptInput = ref('')
+const showEncryptInput = ref(false)
+const encryptResult = ref('')
+const encryptError = ref('')
+const encrypting = ref(false)
+const encryptCopied = ref(false)
+
+async function doEncrypt() {
+  if (!encryptInput.value || encrypting.value) return
+  encrypting.value = true
+  encryptError.value = ''
+  encryptCopied.value = false
+  try {
+    const res = await adminToolsApi.encrypt(encryptInput.value)
+    encryptResult.value = res.data?.encrypted || ''
+    if (!encryptResult.value) encryptError.value = '암호화에 실패했습니다.'
+    encryptInput.value = ''
+  } catch (e) {
+    encryptError.value = e || '암호화에 실패했습니다.'
+  } finally {
+    encrypting.value = false
+  }
+}
+
+async function copyEncryptResult() {
+  try {
+    await navigator.clipboard.writeText(encryptResult.value)
+    encryptCopied.value = true
+    setTimeout(() => { encryptCopied.value = false }, 2000)
+  } catch {
+    encryptError.value = '클립보드 복사에 실패했습니다. 직접 선택해 복사하세요.'
+  }
+}
 
 // ── API 연동 ──────────────────────────────────────
 const lawApiKeyInput  = ref('')

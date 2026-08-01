@@ -225,6 +225,30 @@ public class BackupService {
         return Files.readAllBytes(file);
     }
 
+    /**
+     * 서버 저장 백업 파일을 비밀번호 검증 후 반환한다.
+     * 비밀번호는 두 경우 모두 검증하며, {@code plain} 이 true 면 복호화·압축해제된 JSON 을 반환한다.
+     *
+     * @throws IllegalArgumentException 비밀번호가 틀리거나 파일이 손상된 경우
+     */
+    public byte[] readBackupFileWithPassword(String filename, String password, boolean plain) throws IOException {
+        byte[] data = readBackupFile(filename);
+        byte[] compressed;
+        try {
+            compressed = decrypt(data, password);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("비밀번호가 올바르지 않거나 파일이 손상되었습니다.");
+        }
+        if (!plain) return data;
+        try {
+            return ungzip(compressed);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("백업 파일의 압축을 풀 수 없습니다. 파일이 손상되었을 수 있습니다.");
+        }
+    }
+
     public void deleteBackupFile(String filename) throws IOException {
         Path file = resolveBackupFile(filename);
         Files.deleteIfExists(file);

@@ -15,6 +15,18 @@ public class BackupDto {
         private String password;
     }
 
+    /** 서버 저장 백업 파일 다운로드 요청 */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FileDownloadRequest {
+        /** 백업 파일 생성 시 사용한 비밀번호 (항상 검증) */
+        private String password;
+        /** true 면 복호화된 JSON 으로, false 면 암호화된 원본(.bak)으로 내려받는다 */
+        private boolean decrypt;
+    }
+
     @Getter
     @Setter
     @NoArgsConstructor

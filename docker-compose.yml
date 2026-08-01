@@ -33,16 +33,23 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/secportal?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
       TZ: Asia/Seoul
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-secportal}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-secportal123}
-      JWT_SECRET: ${JWT_SECRET:-your-256-bit-secret-key-change-in-production}
+      # 비밀 값은 *_ENC(=ENC(...) 암호문)가 있으면 우선 사용하고, 없으면 평문 값을 쓴다.
+      # ENC(...) 는 기동 시 JASYPT_ENCRYPTOR_PASSWORD(마스터 키)로 복호화된다.
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD_ENC:-${DB_PASSWORD:-secportal123}}
+      JWT_SECRET: ${JWT_SECRET_ENC:-${JWT_SECRET:-your-256-bit-secret-key-change-in-production}}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD_ENC:-${MAIL_PASSWORD:-}}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080/api}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
+      # 마스터 키는 파일로 주입하는 것을 권장한다 (docker secret / 마운트 파일).
+      # JASYPT_ENCRYPTOR_PASSWORD_FILE 이 지정되면 엔트리포인트가 파일 내용을 읽어 사용한다.
       JASYPT_ENCRYPTOR_PASSWORD: ${JASYPT_ENCRYPTOR_PASSWORD:-dev-local-key}
+      JASYPT_ENCRYPTOR_PASSWORD_FILE: ${JASYPT_ENCRYPTOR_PASSWORD_FILE:-}
+      # true 로 두면 기본값·평문 비밀이 남아 있을 때 기동을 중단한다 (운영 권장)
+      SECURITY_FAIL_ON_INSECURE_SECRETS: ${SECURITY_FAIL_ON_INSECURE_SECRETS:-false}
       JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
       # JMX 모니터링이 필요한 경우: docker exec -it secportal-backend sh 후 로컬에서 접속
     volumes:

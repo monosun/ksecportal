@@ -291,6 +291,61 @@
       </div>
     </div>
 
+    <!-- 서버 저장 백업 다운로드 모달 -->
+    <div v-if="downloadModal.show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h3 class="font-semibold text-gray-900 mb-1">백업 파일 다운로드</h3>
+        <p class="text-xs text-gray-500 font-mono mb-5">{{ downloadModal.filename }}</p>
+
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          백업 비밀번호 <span class="text-red-500">*</span>
+        </label>
+        <div class="relative mb-4">
+          <input v-model="downloadModal.password" :type="downloadModal.showPw ? 'text' : 'password'"
+            class="input w-full pr-10" placeholder="백업 생성 시 사용한 비밀번호"
+            @keyup.enter="doDownloadServerFile"/>
+          <button type="button" @click="downloadModal.showPw = !downloadModal.showPw"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
+            {{ downloadModal.showPw ? '숨김' : '보기' }}
+          </button>
+        </div>
+
+        <label class="block text-sm font-medium text-gray-700 mb-2">받는 형식</label>
+        <div class="space-y-2 mb-4">
+          <label class="flex items-start gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="!downloadModal.decrypt ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'">
+            <input type="radio" :value="false" v-model="downloadModal.decrypt" class="mt-0.5"/>
+            <span>
+              <span class="block text-sm font-medium text-gray-800">암호화된 원본(.bak)</span>
+              <span class="block text-xs text-gray-500">비밀번호만 확인하고 암호화된 파일 그대로 받습니다. 복원 시 사용합니다.</span>
+            </span>
+          </label>
+          <label class="flex items-start gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="downloadModal.decrypt ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:bg-gray-50'">
+            <input type="radio" :value="true" v-model="downloadModal.decrypt" class="mt-0.5"/>
+            <span>
+              <span class="block text-sm font-medium text-gray-800">암호 해제(.json)</span>
+              <span class="block text-xs text-gray-500">비밀번호로 복호화한 원본 데이터(JSON)를 받습니다.</span>
+            </span>
+          </label>
+        </div>
+
+        <p v-if="downloadModal.decrypt" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-4">
+          복호화된 파일에는 개인정보를 포함한 전체 데이터가 평문으로 담깁니다. 보관·전달에 주의하세요.
+        </p>
+        <p v-if="downloadModal.error" class="text-sm text-red-600 mb-3">{{ downloadModal.error }}</p>
+
+        <div class="flex justify-end gap-3">
+          <button @click="downloadModal.show = false"
+            class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">취소</button>
+          <button @click="doDownloadServerFile" :disabled="!downloadModal.password || downloadModal.loading"
+            class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
+            {{ downloadModal.loading ? '준비 중...' : '다운로드' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 복원 확인 모달 -->
     <div v-if="showRestoreConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
@@ -335,6 +390,12 @@ const restoreFileInput = ref(null)
 const backupPassword = ref('')
 const showBackupPw = ref(false)
 const downloading = ref(false)
+
+// 서버 저장 백업 다운로드 모달
+const downloadModal = ref({
+  show: false, filename: '', password: '', decrypt: false,
+  showPw: false, loading: false, error: ''
+})
 const saving = ref(false)
 const backupMsg = ref('')
 const backupMsgType = ref('ok')
@@ -496,7 +557,37 @@ async function loadHistory() {
 }
 
 function downloadServerFile(filename) {
-  backupApi.downloadFile(filename)
+  downloadModal.value = {
+    show: true, filename, password: '', decrypt: false,
+    showPw: false, loading: false, error: ''
+  }
+}
+
+async function doDownloadServerFile() {
+  const m = downloadModal.value
+  if (!m.password || m.loading) return
+  m.loading = true
+  m.error = ''
+  try {
+    const blob = await backupApi.downloadFile(m.filename, m.password, m.decrypt)
+    const name = m.decrypt ? m.filename.replace(/\.bak$/, '') + '.json' : m.filename
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    }, 100)
+    m.show = false
+    await loadHistory()
+  } catch (e) {
+    m.error = e || '다운로드에 실패했습니다.'
+  } finally {
+    m.loading = false
+  }
 }
 
 async function confirmDeleteFile(filename) {

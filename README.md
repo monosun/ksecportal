@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.26.0** — 성능관리 신설(지연 기준 초과 화면·SQL 기록/조회, 기본 3초) ([릴리즈 노트](release/v1.26.0/RELEASE_NOTES.md))
+> **최신 버전: v1.27.0** — 개인정보 항목별 마스킹 기준, 백업 파일 비밀번호 확인 다운로드(암호 해제 선택), 기동 시 비밀 값 암호화·보안점검 ([릴리즈 노트](release/v1.27.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -147,8 +147,11 @@ docker compose up -d --build
 |------|--------|------|
 | `DB_ROOT_PASSWORD` | `rootpassword` | MySQL root 비밀번호 |
 | `DB_USER` | `secportal` | 앱 DB 사용자 |
-| `DB_PASSWORD` | `secportal123` | 앱 DB 비밀번호 |
+| `DB_PASSWORD` | `secportal123` | 앱 DB 비밀번호 (MySQL 컨테이너 초기화용 — 평문) |
+| `DB_PASSWORD_ENC` | — | 백엔드가 쓸 DB 비밀번호의 `ENC(...)` 암호문 (설정 시 `DB_PASSWORD` 보다 우선) |
 | `JWT_SECRET` | (내장) | 최소 32자 비밀키 |
+| `JWT_SECRET_ENC` | — | JWT 시크릿 `ENC(...)` 암호문 (설정 시 우선) |
+| `MAIL_PASSWORD_ENC` | — | 메일 비밀번호 `ENC(...)` 암호문 (설정 시 우선) |
 | `JWT_EXPIRATION` | `86400000` | 토큰 유효시간 (ms) |
 | `MAIL_HOST` | `smtp.gmail.com` | SMTP 서버 |
 | `MAIL_PORT` | `587` | SMTP 포트 |
@@ -156,7 +159,9 @@ docker compose up -d --build
 | `MAIL_PASSWORD` | — | Gmail 앱 비밀번호 (비어 있으면 발송 생략) |
 | `APP_BASE_URL` | `http://localhost:8080/api` | 이메일 링크 기준 URL (설정관리 > 시스템 설정의 "이메일 발송 링크 도메인 주소"가 등록되어 있으면 그 값이 우선) |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost,http://localhost:80` | CORS 허용 출처 |
-| `JASYPT_ENCRYPTOR_PASSWORD` | `dev-local-key` | 설정값 암호화 마스터 키 |
+| `JASYPT_ENCRYPTOR_PASSWORD` | `dev-local-key` | 설정값 암호화 마스터 키 (모든 `ENC(...)` 복호화, 16자 이상 권장) |
+| `JASYPT_ENCRYPTOR_PASSWORD_FILE` | — | 마스터 키를 담은 파일 경로 (docker secret 등, 지정 시 파일 값 사용 — 권장) |
+| `SECURITY_FAIL_ON_INSECURE_SECRETS` | `false` | `true` 면 기본값·평문 비밀이 남아 있을 때 백엔드 기동 중단 |
 | `OKTA_ENABLED` | `false` | Okta SSO 활성화 여부 (DB 설정 없을 때 폴백) |
 | `OKTA_CLIENT_ID` | — | Okta 애플리케이션 Client ID |
 | `OKTA_ISSUER` | — | Okta 도메인 (예: `https://dev-xxx.okta.com/oauth2/default`) |
@@ -334,7 +339,7 @@ POST   /api/admin/backup/download         # 즉시 백업 후 암호화 파일 �
 POST   /api/admin/backup/save             # 서버 저장 방식 백업
 POST   /api/admin/backup/restore          # 암호화 백업 복원 (비밀번호 검증)
 GET    /api/admin/backup/files            # 저장된 백업 파일 목록
-GET    /api/admin/backup/files/:filename/download
+POST   /api/admin/backup/files/:filename/download  # 비밀번호 검증 후 다운로드 (decrypt=true 면 복호화 JSON)
 DELETE /api/admin/backup/files/:filename
 GET    /api/admin/backup/history          # 백업 이력
 GET    /api/admin/backup/config           # 정기 백업 Cron 설정 조회
@@ -821,6 +826,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.27.0](release/v1.27.0/RELEASE_NOTES.md) | **개인정보 항목별 마스킹 기준** — 관리>코드관리>개인정보 유형별 관리에서 항목마다 마스킹 방식(부분/전체/암호화/해시/미수집/불필요)·마스킹 규칙(300자)·표시 예시를 등록. 목록에 배지·규칙·예시 열과 유형별 지정 현황(n/전체) 표시, 모달의 **권장 기준 불러오기**로 항목명 매칭 21종 권장값 자동 입력. 기본 개인정보 **86개 항목**에 법령 기준 마스킹 기본값을 `PiMaskingDefaultInitializer`(비어 있는 항목만 채움)로 자동 적용. `code_values` 에 `masking_type`·`masking_rule`·`masking_example` 추가. **백업 파일 비밀번호 확인 다운로드** — 서버 저장 백업을 받을 때 생성 비밀번호를 검증하고, **암호화 원본(.bak)** 또는 **암호 해제(.json)** 형식을 선택. 다운로드 시도는 백업 이력에 `DOWNLOAD` 로 기록(`POST /api/admin/backup/files/:filename/download`). **기동 시 비밀 값 보호** — 설정관리>보안 설정의 **설정값 암호화** 도구로 `ENC(...)` 생성, `.env` 의 `DB_PASSWORD_ENC`·`MAIL_PASSWORD_ENC`·`JWT_SECRET_ENC` 로 주입, 마스터 키 파일 주입(`*_FILE`), 기동 시 자동 보안점검(`SECURITY_FAIL_ON_INSECURE_SECRETS=true` 시 기동 중단) |
 | [v1.26.0](release/v1.26.0/RELEASE_NOTES.md) | **성능관리 신설**(관리 메뉴, ADMIN) — 지연 기준(**기본 3초**, 화면에서 변경)을 넘긴 **화면 요청**과 **SQL**을 감사 로그처럼 기록·조회. 요약 카드·유형/검색어/최소 소요시간/기간 필터·페이징·행 펼침(전체 SQL 구문), 전체/7·30·90일 이전 삭제, 보관기간(기본 30일) 초과분 매일 03:20 자동 정리. 기록은 메모리 큐에 모아 5초 간격 일괄 저장하고, SQL 계측은 외부 라이브러리 없이 JDK 동적 프록시로 DataSource를 감싸 `execute*` 만 계측. 신규 테이블 `slow_logs`(ddl-auto), 설정은 `app_settings`의 `perf.*` 키, `/api/admin/performance/*` 추가 |
 | [v1.25.1](release/v1.25.1/RELEASE_NOTES.md) | **위험평가 자산 자동 불러오기 — 자산유형 매칭** — 자산×위협 전조합 생성에서, **자산의 자산유형이 위협의 대상 자산유형 중 하나와 일치하는 조합만** 평가 항목으로 생성하도록 변경. 대상 자산유형이 없는 위협은 종전처럼 전 자산 적용(호환), 자산유형이 없는 자산은 대상 자산유형이 지정된 위협과 매칭 제외. 안내 문구·완료 메시지에 매칭 규칙 반영 |
 | [v1.25.0](release/v1.25.0/RELEASE_NOTES.md) | **퀴즈 보기 E 추가(5지선다 지원)** — 문제은행·교육 문항의 보기를 A~E까지 입력 가능(A·B 필수, C~E 선택). 정답 지정 버튼도 A~E로 확장되고, 복수 정답·채점 규칙(정답 보기를 모두 정확히 선택)은 동일. 엑셀 일괄등록·다운로드 양식에 **보기E 열 추가(10열)** 및 정답 헤더를 `정답(A~E, 복수는 A,B 또는 AB)*` 로 변경하되, **보기E 열이 없는 예전 9열 양식도 헤더 자동 판별로 그대로 업로드** 가능. 문제은행 상세는 보기 A~E를 항상 표시하고 **내용 없는 보기는 `-` 로 표기**. `option_e` 컬럼 추가·`correct_answer` `VARCHAR(9)` 확장(마이그레이션 `v1.25.0_quiz_option_e.sql` 필요). **위협 카탈로그 대상 자산유형(복수 선택)** 신설 — 코드관리 `ASSET_TYPE` 값을 칩으로 복수 지정하고 목록 열·인라인 필터 제공, 기본 560개 위협에 자산분류 기준 사전 할당(`threats`·`threat_defaults`의 `asset_types`, 백필 `v1.25.0_threat_asset_types.sql`). **위협 카탈로그 Excel 다운로드**(전체/검색결과, 13개 항목) 신설 |

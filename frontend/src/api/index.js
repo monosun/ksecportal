@@ -15,7 +15,7 @@ api.interceptors.request.use(config => {
 
 api.interceptors.response.use(
   res => res.data,
-  err => {
+  async err => {
     const status = err.response?.status
     if (status === 401) {
       const auth = useAuthStore()
@@ -25,7 +25,12 @@ api.interceptors.response.use(
     if (status >= 500) {
       return Promise.reject(null)
     }
-    return Promise.reject(err.response?.data?.message || null)
+    // blob 응답(다운로드) 실패 시 본문이 Blob 이므로 텍스트로 읽어 메시지를 꺼낸다
+    let data = err.response?.data
+    if (data instanceof Blob) {
+      try { data = JSON.parse(await data.text()) } catch { data = null }
+    }
+    return Promise.reject(data?.message || null)
   }
 )
 
@@ -851,6 +856,11 @@ export const sourceScanApi = {
   delete: (id) => api.delete(`/source-scan/scans/${id}`),
 }
 
+export const adminToolsApi = {
+  // 설정값(DB 비밀번호 등)을 ENC(...) 형태로 암호화
+  encrypt: (value) => api.post('/admin/tools/encrypt', { value }),
+}
+
 export const backupApi = {
   download: (password) =>
     api.post('/admin/backup/download', { password }, { responseType: 'blob' }),
@@ -862,7 +872,9 @@ export const backupApi = {
     return api.post('/admin/backup/restore', fd)
   },
   listFiles: () => api.get('/admin/backup/files'),
-  downloadFile: (filename) => downloadBlob(`/admin/backup/files/${encodeURIComponent(filename)}/download`, filename),
+  downloadFile: (filename, password, decrypt = false) =>
+    api.post(`/admin/backup/files/${encodeURIComponent(filename)}/download`,
+      { password, decrypt }, { responseType: 'blob' }),
   deleteFile: (filename) => api.delete(`/admin/backup/files/${encodeURIComponent(filename)}`),
   listHistory: () => api.get('/admin/backup/history'),
   getConfig: () => api.get('/admin/backup/config'),

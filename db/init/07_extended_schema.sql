@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS code_values (
     group_code VARCHAR(50)  NOT NULL,
     value      VARCHAR(100) NOT NULL,
     label      VARCHAR(100) NOT NULL,
+    description     VARCHAR(500) NULL,
+    masking_type    VARCHAR(30)  NULL,
+    masking_rule    VARCHAR(300) NULL,
+    masking_example VARCHAR(100) NULL,
     sort_order INT NOT NULL DEFAULT 0,
     active     BIT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

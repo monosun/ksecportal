@@ -89,18 +89,34 @@ public class BackupController {
         return ApiResponse.ok(backupService.listBackupFiles());
     }
 
-    /** 서버 저장 백업 파일 다운로드 */
-    @GetMapping("/files/{filename}/download")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable String filename) {
+    /**
+     * 서버 저장 백업 파일 다운로드.
+     * 비밀번호를 검증한 뒤, decrypt=true 면 복호화된 JSON 으로, false 면 암호화된 원본(.bak)으로 내려준다.
+     */
+    @PostMapping("/files/{filename}/download")
+    public ResponseEntity<?> downloadFile(@PathVariable String filename,
+                                          @RequestBody BackupDto.FileDownloadRequest request) {
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("비밀번호를 입력해주세요."));
+        }
+        boolean decrypt = request.isDecrypt();
         try {
-            byte[] data = backupService.readBackupFile(filename);
-            String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8);
+            byte[] data = backupService.readBackupFileWithPassword(filename, request.getPassword(), decrypt);
+            String downloadName = decrypt ? filename.replaceAll("\\.bak$", "") + ".json" : filename;
+            backupService.recordHistory(filename, data.length, "DOWNLOAD", "SUCCESS",
+                    (decrypt ? "복호화 다운로드" : "암호화 파일 다운로드") + " (" + formatSize(data.length) + ")");
+            String encoded = URLEncoder.encode(downloadName, StandardCharsets.UTF_8);
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentType(decrypt ? MediaType.APPLICATION_JSON : MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(data.length))
                     .body(data);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            backupService.recordHistory(filename, 0, "DOWNLOAD", "FAILED", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest(e.getMessage()));
+        } catch (java.io.IOException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.badRequest("백업 파일을 찾을 수 없습니다."));
         }
     }
 

@@ -50,6 +50,12 @@ public class CodeDto {
         private String label;
         @Size(max = 500)
         private String description;
+        @Size(max = 30)
+        private String maskingType;
+        @Size(max = 300)
+        private String maskingRule;
+        @Size(max = 100)
+        private String maskingExample;
         private int sortOrder;
         private Boolean active;
     }
@@ -62,6 +68,9 @@ public class CodeDto {
         private String value;
         private String label;
         private String description;
+        private String maskingType;
+        private String maskingRule;
+        private String maskingExample;
         private int sortOrder;
         private boolean active;
 
@@ -72,6 +81,9 @@ public class CodeDto {
                     .value(v.getValue())
                     .label(v.getLabel())
                     .description(v.getDescription())
+                    .maskingType(v.getMaskingType())
+                    .maskingRule(v.getMaskingRule())
+                    .maskingExample(v.getMaskingExample())
                     .sortOrder(v.getSortOrder())
                     .active(v.isActive())
                     .build();

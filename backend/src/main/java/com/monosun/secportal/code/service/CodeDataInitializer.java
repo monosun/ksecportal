@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Order(0)   // PiMaskingDefaultInitializer(@Order(10))보다 먼저 코드값을 생성해야 한다
 public class CodeDataInitializer implements ApplicationRunner {
 
     private final CodeGroupRepository groupRepo;
