@@ -111,7 +111,7 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
 
   // 실제 표시 로고 — localStorage 우선, 없으면 DB 기본값
   const effectiveLogoUrl = () => logoUrl.value || dbLogoUrl.value || null
-  const effectiveLogoText = () => logoText.value || dbLogoText.value || 'SecPortal'
+  const effectiveLogoText = () => logoText.value || dbLogoText.value || 'KSecPortal'
 
   async function init() {
     applyTheme(theme.value)

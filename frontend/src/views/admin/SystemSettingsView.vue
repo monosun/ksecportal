@@ -261,7 +261,7 @@
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">발신자 표시 이름</label>
-            <input v-model="mailCfg.fromName" type="text" class="input w-full text-sm" placeholder="SecPortal 보안팀 (선택)" />
+            <input v-model="mailCfg.fromName" type="text" class="input w-full text-sm" placeholder="KSecPortal 보안팀 (선택)" />
           </div>
         </div>
 

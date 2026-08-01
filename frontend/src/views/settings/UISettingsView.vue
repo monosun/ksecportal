@@ -383,7 +383,7 @@
         <div class="card">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="text-lg font-bold text-gray-900">SecPortal — 오픈소스 정보보호 포탈</h2>
+              <h2 class="text-lg font-bold text-gray-900">KSecPortal — 오픈소스 정보보호 포탈</h2>
               <p class="text-sm text-gray-500 mt-1 leading-relaxed">
                 스타트업·중소기업을 위한 <strong>올인원 정보보안 관리 시스템</strong>입니다.
                 보안 정책, 취약점, 인시던트, 자산, 보안이벤트, 교육, ISMS-P 증적, 법령준수까지

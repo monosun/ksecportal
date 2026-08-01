@@ -137,7 +137,7 @@
     "password": "Password",
     "name": "Name",
     "department": "Department",
-    "loginTitle": "SecPortal",
+    "loginTitle": "KSecPortal",
     "loginSubtitle": "Security management for a safer organization",
     "loginFailed": "Login Failed",
     "noAccount": "Don't have an account?",

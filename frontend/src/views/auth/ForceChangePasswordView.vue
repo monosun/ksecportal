@@ -6,7 +6,7 @@
           <img
             v-if="ui.effectiveLogoUrl()"
             :src="ui.effectiveLogoUrl()"
-            alt="SecPortal"
+            alt="KSecPortal"
             style="height:36px; width:auto;"
           />
           <span class="text-2xl font-bold tracking-tight text-white">{{ ui.effectiveLogoText() }}</span>

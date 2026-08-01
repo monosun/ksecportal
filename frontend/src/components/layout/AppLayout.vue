@@ -18,7 +18,7 @@
           <img
             v-if="ui.effectiveLogoUrl()"
             :src="ui.effectiveLogoUrl()"
-            alt="SecPortal"
+            alt="KSecPortal"
             :style="{ height: '22px', width: 'auto' }"
           />
           <span class="text-[15px] font-bold tracking-tight"
@@ -215,6 +215,15 @@
               :class="isDark ? 'text-gray-500' : 'text-gray-400'">{{ auth.user?.role }}</p>
           </div>
           <div class="flex gap-1">
+            <button @click="refreshView" :disabled="refreshing"
+              class="p-1.5 rounded-lg transition-colors disabled:opacity-60"
+              :class="isDark ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'"
+              title="현재 화면 새로고침">
+              <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': refreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </button>
             <button @click="toggleLocale"
               class="text-[11px] font-semibold px-1.5 py-1 rounded-lg transition-colors"
               :class="isDark ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-200'">
@@ -248,12 +257,21 @@
           </svg>
         </button>
         <div class="flex items-center gap-2 min-w-0">
-          <img v-if="ui.effectiveLogoUrl()" :src="ui.effectiveLogoUrl()" alt="SecPortal" :style="{ height: '20px', width: 'auto' }"/>
+          <img v-if="ui.effectiveLogoUrl()" :src="ui.effectiveLogoUrl()" alt="KSecPortal" :style="{ height: '20px', width: 'auto' }"/>
           <span class="text-[15px] font-bold tracking-tight truncate"
             :class="isDark ? 'text-white' : 'text-gray-900'">{{ ui.effectiveLogoText() }}</span>
         </div>
+        <button @click="refreshView" :disabled="refreshing"
+          class="ml-auto p-1.5 rounded-lg disabled:opacity-60"
+          :class="isDark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'"
+          title="현재 화면 새로고침">
+          <svg class="w-5 h-5" :class="{ 'animate-spin': refreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
       </div>
-      <RouterView />
+      <RouterView :key="refreshTick" />
     </main>
   </div>
 
@@ -321,6 +339,17 @@ const isDark = computed(() => ui.sidebarStyle === 'dark')
 
 // 모바일 사이드바(오프캔버스) 열림 상태 — 라우트 이동 시 자동으로 닫는다
 const mobileNavOpen = ref(false)
+
+// 전역 새로고침 — 키를 바꿔 현재 라우트 컴포넌트를 재마운트(데이터 재로딩)한다
+const refreshTick = ref(0)
+const refreshing = ref(false)
+function refreshView() {
+  if (refreshing.value) return
+  refreshing.value = true
+  refreshTick.value++
+  // 재마운트 시 자식의 onMounted 로딩이 돌아가므로, 스피너는 짧게 노출 후 해제
+  setTimeout(() => { refreshing.value = false }, 600)
+}
 watch(() => route.path, () => { mobileNavOpen.value = false })
 
 // ── 메뉴 그룹 정의 (config/navMenu.js 공유) + 저장된 커스터마이즈 적용 ─────

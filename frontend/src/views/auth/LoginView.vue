@@ -6,7 +6,7 @@
           <img
             v-if="ui.effectiveLogoUrl()"
             :src="ui.effectiveLogoUrl()"
-            alt="SecPortal"
+            alt="KSecPortal"
             style="height:36px; width:auto;"
           />
           <span class="text-2xl font-bold tracking-tight text-white">{{ ui.effectiveLogoText() }}</span>
@@ -116,7 +116,7 @@
 
       <!-- 버전 정보 -->
       <p class="text-center mt-5 text-xs text-primary-300/50 select-none tracking-wide">
-        SecPortal v{{ appVersion }}
+        KSecPortal v{{ appVersion }}
       </p>
     </div>
 

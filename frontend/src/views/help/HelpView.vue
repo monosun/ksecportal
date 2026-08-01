@@ -4,7 +4,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">도움말</h1>
-        <p class="text-sm text-gray-400 mt-1">SecPortal 사용자 매뉴얼 {{ manualVersion }}</p>
+        <p class="text-sm text-gray-400 mt-1">KSecPortal 사용자 매뉴얼 {{ manualVersion }}</p>
       </div>
       <div class="flex items-center gap-2">
         <div class="relative">

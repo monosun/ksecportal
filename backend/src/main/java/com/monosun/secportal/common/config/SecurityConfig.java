@@ -71,6 +71,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 .requestMatchers("/actuator/**").denyAll()
                 .requestMatchers(HttpMethod.GET, "/admin/approve/**", "/admin/reject/**").permitAll()
+                // 모의훈련 열람/클릭 추적은 수신자가 인증 없이 접근하므로 공개(대상자 식별은 고유 토큰으로만)
+                .requestMatchers(HttpMethod.GET, "/phishing/track/**").permitAll()
                 // 개인정보 마스킹 기준은 내부 처리 기준이므로 로그인한 사용자에게만 제공한다
                 .requestMatchers(HttpMethod.GET, "/codes/pi-masking").authenticated()
                 .requestMatchers(HttpMethod.GET, "/codes/**").permitAll()
