@@ -24,11 +24,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
 
 const props = defineProps({
-  /** 감사로그에 남길 화면 이름 */
+  /** 감사로그에 남길 화면 이름 — MANAGER 해제 허용 여부 판단에도 쓰인다 */
   screen: { type: String, default: '' },
 })
 
@@ -44,5 +44,9 @@ async function toggle() {
   }
 }
 
+// 화면을 등록해 두면 스토어가 이 화면에서 해제가 가능한지·유효한지 판단한다
+watch(() => props.screen, s => pi.setScreen(s), { immediate: true })
+
 onMounted(() => pi.load())
+onUnmounted(() => pi.clearScreen(props.screen))
 </script>

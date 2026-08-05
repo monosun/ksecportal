@@ -358,6 +358,16 @@ const routes = [
         component: () => import('@/views/phishing/PhishingView.vue')
       },
       {
+        path: 'emergency-contacts',
+        name: 'EmergencyContacts',
+        component: () => import('@/views/emergency/EmergencyContactView.vue')
+      },
+      {
+        path: 'bcp-training',
+        name: 'BcpTraining',
+        component: () => import('@/views/bcp/BcpTrainingView.vue')
+      },
+      {
         path: 'training-results',
         name: 'TrainingResults',
         component: () => import('@/views/training/TrainingResultsView.vue')

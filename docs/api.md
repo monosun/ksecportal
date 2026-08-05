@@ -1251,6 +1251,77 @@ HTTP 403 Forbidden
 
 ---
 
+## 비상연락망 (Emergency Contacts)
+
+상황별 연락 계통과 연락처. 조회는 인증 사용자, 그룹·연락처 쓰기는 `MANAGER` 이상, 그룹 삭제는 `ADMIN`입니다.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/emergency-contacts/groups` | 연락 그룹 목록 — 연락처를 `contactOrder` 순으로 포함 |
+| GET | `/emergency-contacts/groups/{id}` | 그룹 상세 |
+| POST | `/emergency-contacts/groups` | 그룹 등록 *(MANAGER+)* |
+| PATCH | `/emergency-contacts/groups/{id}` | 그룹 수정 *(MANAGER+)* |
+| PATCH | `/emergency-contacts/groups/{id}/toggle` | 활성/비활성 전환 *(MANAGER+)* |
+| DELETE | `/emergency-contacts/groups/{id}` | 그룹 삭제 *(ADMIN)* — 연락처가 남아 있으면 거부 |
+| POST | `/emergency-contacts/contacts` | 연락처 등록 *(MANAGER+)* |
+| PATCH | `/emergency-contacts/contacts/{id}` | 연락처 수정 — `groupId` 변경 시 그룹 이동 *(MANAGER+)* |
+| PATCH | `/emergency-contacts/contacts/{id}/toggle` | 활성/비활성 전환 *(MANAGER+)* |
+| DELETE | `/emergency-contacts/contacts/{id}` | 연락처 삭제 *(MANAGER+)* |
+
+**그룹 본문**: `name`, `contactType`(`INTERNAL`/`EXTERNAL`/`PARTNER`), `description`, `sortOrder`(생략 시 마지막 순서)
+**연락처 본문**: `groupId`, `name`, `organization`, `department`, `position`, `roleName`, `contactOrder`(생략 시 그룹 내 마지막), `mobile`, `officePhone`, `email`, `available24h`, `note`
+
+> 목록 화면의 휴대전화·이메일 마스킹 해제는 다른 화면과 달리 **MANAGER 도 가능**합니다(해제한 화면에서만 유효, `POST /codes/pi-masking/reveal` 로 감사 기록). 마스킹은 화면 표시 통제이며, API 응답 자체는 읽기 권한이 있는 사용자에게 복호화된 값을 반환합니다.
+>
+> `mobile`·`email` 은 `EncryptedStringConverter`(AES-256-GCM)로 저장·복호화됩니다. `officePhone` 은 기관·부서 대표번호로 쓰여 평문으로 둡니다. 감사 로그에는 그룹명·이름만 남고 연락처 값은 기록하지 않습니다.
+>
+> 기본 연락 계통 6종과 외부 신고기관 연락처 4건(KISA 118, 경찰청 182, 국정원 111)은 `EmergencyContactInitializer` 가 테이블이 비어 있을 때만 시드합니다.
+
+---
+
+## 재해복구·BCP 훈련 (BCP)
+
+재해 시나리오 기반의 재해복구(DR)·업무연속성(BCP) 훈련. 조회는 인증 사용자, 쓰기는 `MANAGER` 이상, 삭제는 `ADMIN`입니다.
+
+### 훈련 시나리오
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/bcp/scenarios` | 시나리오 목록 (대응 단계 포함) |
+| GET | `/bcp/scenarios/{id}` | 시나리오 상세 |
+| POST | `/bcp/scenarios` | 시나리오 등록 *(MANAGER+)* |
+| PATCH | `/bcp/scenarios/{id}` | 시나리오 수정 — `steps`는 전량 교체 *(MANAGER+)* |
+| PATCH | `/bcp/scenarios/{id}/toggle` | 활성/비활성 전환 *(MANAGER+)* |
+| DELETE | `/bcp/scenarios/{id}` | 삭제 *(ADMIN)* — 실시 이력이 있으면 거부 |
+
+**요청 본문**: `name`, `category`, `difficulty`(`EASY`/`MEDIUM`/`HARD`), `targetSystem`, `rtoMinutes`, `rpoMinutes`, `situation`, `objective`, `description`, `steps[]`
+**단계(step)**: `stepOrder`, `title`, `roleName`, `action`, `targetMinutes`, `successCriteria`
+
+> 시나리오 예제 7종은 `BcpScenarioInitializer`가 테이블이 비어 있을 때만 시드합니다.
+
+### 훈련 실시
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/bcp/exercises` | 훈련 목록 (단계 집계 포함) |
+| GET | `/bcp/exercises/{id}` | 훈련 상세 + 단계별 수행 결과 |
+| POST | `/bcp/exercises` | 훈련 등록 — 시나리오 단계를 복사 *(MANAGER+)* |
+| POST | `/bcp/exercises/{id}/start` | 훈련 시작 (`DRAFT` → `RUNNING`) *(MANAGER+)* |
+| PATCH | `/bcp/exercises/{id}/steps/{stepId}` | 단계 수행 결과 기록 *(MANAGER+)* |
+| POST | `/bcp/exercises/{id}/complete` | 완료 처리 — 달성률·판정 산출 *(MANAGER+)* |
+| POST | `/bcp/exercises/{id}/cancel` | 취소 *(MANAGER+)* — 완료된 훈련은 불가 |
+| DELETE | `/bcp/exercises/{id}` | 삭제 *(ADMIN)* |
+
+**등록 본문**: `name`, `scenarioId`, `method`(`TABLETOP`/`SIMULATION`/`FAILOVER`), `plannedAt`, `leaderName`, `participants`, `participantCount`, `description`
+**단계 기록 본문**: `result`(`PASS`/`PARTIAL`/`FAIL`/`PENDING`), `actualMinutes`, `note`
+**완료 본문**: `actualRtoMinutes`, `actualRpoMinutes`, `summary`, `improvement`
+
+완료 시 단계 결과를 가중 평균(`PASS` 1.0 · `PARTIAL` 0.5 · `FAIL` 0)하여 `score`(0~100)를 산출하고, 80% 이상 `PASS` · 60% 이상 `PARTIAL` · 그 미만 `FAIL`로 `result`를 판정합니다. 미기록(`PENDING`) 단계가 남아 있으면 완료 처리가 거부됩니다.
+
+**목록 응답 항목**: `scenarioName`, `category`, `method`, `status`, `score`, `result`, `rtoMinutes`/`actualRtoMinutes`/`rtoMet`, `rpoMinutes`/`actualRpoMinutes`, `totalSteps`, `passedSteps`, `partialSteps`, `failedSteps`, `pendingSteps`, `summary`, `improvement`
+
+---
+
 ## 메일서버 설정 (Mail Config) *(ADMIN, v1.8.0)*
 
 발송 메일서버(SMTP) 설정. 활성화 시 이 설정으로 발송하고, 비활성/미설정 시 `application.yml`의 `spring.mail.*`로 폴백합니다.

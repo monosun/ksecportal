@@ -306,6 +306,7 @@ const MENUS = [
   { key: 'source_scan',       label: '소스 취약점 점검 (SAST)' },
   { key: 'security_reviews',  label: '보안성 심의' },
   { key: 'operation_status',  label: '운영현황관리' },
+  { key: 'emergency_contacts', label: '비상연락망' },
   // 로그 통합관리
   { key: 'log_personal_info', label: '개인정보처리시스템 로그' },
   { key: 'log_ad',            label: 'AD 로그' },
@@ -318,6 +319,7 @@ const MENUS = [
   // 교육 및 훈련 / 보안 가이드 및 자료
   { key: 'training',          label: 'IT 및 정보보호 교육' },
   { key: 'phishing',          label: '모의 악성메일 훈련' },
+  { key: 'bcp_training',      label: '재해복구·BCP 훈련' },
   { key: 'sec_docs',          label: '보안 가이드 및 자료' },
   { key: 'glossary',          label: '보안용어집' },
   { key: 'related_sites',     label: '관련 사이트' },

@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">교육·훈련 결과</h1>
-        <p class="text-sm text-gray-400 mt-0.5">IT 및 정보보호 교육 이수 현황과 모의 악성메일 훈련 결과를 조회합니다</p>
+        <p class="text-sm text-gray-400 mt-0.5">IT 및 정보보호 교육 이수 현황과 모의 악성메일 훈련·재해복구 BCP 훈련 결과를 조회합니다</p>
       </div>
       <PiMaskToggle screen="교육·훈련 결과" />
     </div>
@@ -21,6 +21,11 @@
         class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
         :class="activeTab === 'phishing' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
         모의훈련 결과
+      </button>
+      <button @click="activeTab = 'bcp'"
+        class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
+        :class="activeTab === 'bcp' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'">
+        재해복구·BCP 훈련 결과
       </button>
     </div>
 
@@ -123,7 +128,7 @@
     </template>
 
     <!-- ── 탭: 모의훈련 결과 ── -->
-    <template v-else>
+    <template v-else-if="activeTab === 'phishing'">
       <!-- Stat Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div class="card">
@@ -223,13 +228,146 @@
       </div>
     </template>
 
+    <!-- ── 탭: 재해복구·BCP 훈련 결과 ── -->
+    <template v-else>
+      <!-- Stat Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="card">
+          <p class="text-xs text-gray-400 mb-1">실시 훈련</p>
+          <p class="text-2xl font-bold text-gray-900">{{ exercises.length }}<span class="text-sm font-normal text-gray-400 ml-1">건</span></p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-gray-400 mb-1">완료</p>
+          <p class="text-2xl font-bold text-blue-600">{{ completedExercises.length }}<span class="text-sm font-normal text-gray-400 ml-1">건</span></p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-gray-400 mb-1">적합 판정</p>
+          <p class="text-2xl font-bold text-green-600">{{ bcpPassCount }}<span class="text-sm font-normal text-gray-400 ml-1">건</span></p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-gray-400 mb-1">평균 달성률</p>
+          <p class="text-2xl font-bold text-indigo-600">{{ bcpAvgScore }}<span class="text-sm font-normal text-gray-400 ml-1">%</span></p>
+        </div>
+        <div class="card">
+          <p class="text-xs text-gray-400 mb-1">목표 RTO 달성률</p>
+          <p class="text-2xl font-bold text-amber-500">{{ bcpRtoMetRate }}<span class="text-sm font-normal text-gray-400 ml-1">%</span></p>
+        </div>
+      </div>
+
+      <!-- 훈련별 단계 수행 결과 -->
+      <div class="card mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold text-gray-800">훈련별 단계 수행 결과</h2>
+          <div class="flex items-center gap-3 text-[11px] text-gray-500">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block"></span>성공</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>부분</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block"></span>실패</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-gray-200 inline-block"></span>미수행</span>
+          </div>
+        </div>
+        <div v-if="completedExercises.length === 0" class="text-center py-8 text-gray-400 text-sm">완료된 훈련이 없습니다.</div>
+        <div v-else class="space-y-4">
+          <div v-for="e in completedExercises" :key="e.id">
+            <div class="flex items-center justify-between text-sm mb-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="font-medium text-gray-800 truncate">{{ e.name }}</span>
+                <span class="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded" :class="bcpResultClass(e.result)">
+                  {{ bcpResultLabel(e.result) }}
+                </span>
+              </div>
+              <span class="text-xs text-gray-500 flex-shrink-0 ml-3">
+                {{ bcpMethodLabel(e.method) }} · 단계 {{ e.totalSteps }} · 달성률 {{ e.score }}%
+                <template v-if="e.actualRtoMinutes != null"> · 실제 RTO {{ e.actualRtoMinutes }}분</template>
+              </span>
+            </div>
+            <div class="h-3 rounded-full bg-gray-200 overflow-hidden flex">
+              <div class="h-full bg-green-500 transition-all" :style="{ width: rate(e.passedSteps, e.totalSteps) + '%' }"></div>
+              <div class="h-full bg-amber-400 transition-all" :style="{ width: rate(e.partialSteps, e.totalSteps) + '%' }"></div>
+              <div class="h-full bg-red-500 transition-all" :style="{ width: rate(e.failedSteps, e.totalSteps) + '%' }"></div>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-0.5 text-right">
+              성공 {{ e.passedSteps }} · 부분 {{ e.partialSteps }} · 실패 {{ e.failedSteps }}
+              <template v-if="e.pendingSteps"> · 미수행 {{ e.pendingSteps }}</template>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 훈련 목록 -->
+      <div class="card mb-6">
+        <h2 class="text-sm font-bold text-gray-800 mb-4">훈련 실시 이력 ({{ exercises.length }}건)</h2>
+        <div v-if="exercises.length === 0" class="text-center py-8 text-gray-400 text-sm">실시된 훈련이 없습니다.</div>
+        <div v-else class="overflow-x-auto"><table class="w-full text-sm">
+          <thead>
+            <tr class="border-b text-left text-gray-500">
+              <th class="py-2.5 px-3 font-semibold">훈련명</th>
+              <th class="py-2.5 px-3 font-semibold">시나리오</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-24">방식</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-16">참가</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-28">RTO 목표/실제</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-20">달성률</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-20">판정</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-20">상태</th>
+              <th class="py-2.5 px-3 font-semibold w-40">실시 일시</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in exercises" :key="e.id" class="border-b hover:bg-gray-50">
+              <td class="py-2.5 px-3 text-gray-800 font-medium">{{ e.name }}</td>
+              <td class="py-2.5 px-3 text-gray-500 text-xs">{{ e.scenarioName }}</td>
+              <td class="py-2.5 px-3 text-center text-xs text-gray-600">{{ bcpMethodLabel(e.method) }}</td>
+              <td class="py-2.5 px-3 text-center text-gray-600">{{ e.participantCount ?? '-' }}</td>
+              <td class="py-2.5 px-3 text-center text-xs">
+                <span class="text-gray-500">{{ e.rtoMinutes ?? '-' }}</span>
+                <span class="text-gray-300 mx-1">/</span>
+                <span :class="e.rtoMet === false ? 'text-red-600 font-semibold' : e.rtoMet === true ? 'text-green-600 font-semibold' : 'text-gray-400'">
+                  {{ e.actualRtoMinutes ?? '-' }}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-center font-mono">{{ e.score != null ? e.score + '%' : '-' }}</td>
+              <td class="py-2.5 px-3 text-center">
+                <span v-if="e.result" class="text-[11px] font-bold px-2 py-0.5 rounded-full" :class="bcpResultClass(e.result)">
+                  {{ bcpResultLabel(e.result) }}
+                </span>
+                <span v-else class="text-gray-300">-</span>
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded" :class="bcpStatusClass(e.status)">
+                  {{ bcpStatusLabel(e.status) }}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-gray-400 text-xs">{{ formatDt(e.startedAt || e.plannedAt) }}</td>
+            </tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- 도출된 개선사항 -->
+      <div class="card">
+        <h2 class="text-sm font-bold text-gray-800 mb-4">훈련 총평 및 개선사항</h2>
+        <div v-if="!exercisesWithFindings.length" class="text-center py-8 text-gray-400 text-sm">기록된 총평·개선사항이 없습니다.</div>
+        <div v-else class="space-y-4">
+          <div v-for="e in exercisesWithFindings" :key="e.id" class="border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm font-semibold text-gray-800">{{ e.name }}</p>
+              <span class="text-xs text-gray-400">{{ formatDt(e.endedAt) }}</span>
+            </div>
+            <p v-if="e.summary" class="text-xs text-gray-600 whitespace-pre-line mb-2">{{ e.summary }}</p>
+            <p v-if="e.improvement" class="text-xs text-gray-700 whitespace-pre-line bg-amber-50 border border-amber-100 rounded-lg p-3">
+              개선사항: {{ e.improvement }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </template>
+
     </div><!-- /page-body -->
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { trainingApi, phishingApi } from '@/api'
+import { trainingApi, phishingApi, bcpApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
 
@@ -244,6 +382,7 @@ const courses = ref([])          // 코스별 이수 요약
 const completions = ref([])      // 이수 이력
 const completionFilter = ref(null)
 const campaigns = ref([])        // 모의훈련 캠페인
+const exercises = ref([])        // 재해복구·BCP 훈련
 
 const totalCompleted = computed(() => courses.value.reduce((s, c) => s + c.completedCount, 0))
 const overallPassRate = computed(() => {
@@ -276,6 +415,35 @@ function campaignBars(c) {
   ]
 }
 
+// ── 재해복구·BCP 훈련 ──────────────────────────────────────────────────────
+const completedExercises = computed(() => exercises.value.filter(e => e.status === 'COMPLETED'))
+const exercisesWithFindings = computed(() => exercises.value.filter(e => e.summary || e.improvement))
+const bcpPassCount = computed(() => exercises.value.filter(e => e.result === 'PASS').length)
+const bcpAvgScore = computed(() => {
+  const scored = exercises.value.filter(e => e.score != null)
+  if (!scored.length) return 0
+  return Math.round(scored.reduce((s, e) => s + e.score, 0) / scored.length)
+})
+const bcpRtoMetRate = computed(() => {
+  // 목표·실제 RTO가 모두 기록된 훈련만 모수로 삼는다
+  const measured = exercises.value.filter(e => e.rtoMet != null)
+  return rate(measured.filter(e => e.rtoMet).length, measured.length)
+})
+
+function bcpMethodLabel(m) { return { TABLETOP: '도상훈련', SIMULATION: '시뮬레이션', FAILOVER: '실제 전환' }[m] || m || '-' }
+function bcpResultLabel(r) { return { PASS: '적합', PARTIAL: '보완필요', FAIL: '부적합' }[r] || r }
+function bcpResultClass(r) {
+  return { PASS: 'bg-green-100 text-green-700', PARTIAL: 'bg-amber-100 text-amber-700', FAIL: 'bg-red-100 text-red-600' }[r] || 'bg-gray-100 text-gray-500'
+}
+function bcpStatusLabel(s) { return { DRAFT: '계획', RUNNING: '진행중', COMPLETED: '완료', CANCELLED: '취소' }[s] || s }
+function bcpStatusClass(s) {
+  return {
+    RUNNING: 'bg-blue-100 text-blue-700',
+    COMPLETED: 'bg-green-100 text-green-700',
+    CANCELLED: 'bg-gray-100 text-gray-500',
+  }[s] || 'bg-gray-100 text-gray-600'
+}
+
 function campaignStatusLabel(s) {
   return { DRAFT: '대기', SCHEDULED: '예약', RUNNING: '진행중', SENT: '발송됨', COMPLETED: '완료', CANCELLED: '취소' }[s] || s
 }
@@ -296,14 +464,16 @@ function formatDt(dt) {
 onMounted(async () => {
   loading.value = true
   try {
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       trainingApi.results(),
       trainingApi.resultCompletions(),
       phishingApi.listCampaigns(),
+      bcpApi.listExercises(),
     ])
     courses.value = r1.data ?? []
     completions.value = r2.data ?? []
     campaigns.value = r3.data ?? []
+    exercises.value = r4.data ?? []
   } catch (e) {
     if (String(e).includes('403') || e?.response?.status === 403) forbidden.value = true
     else console.error(e)

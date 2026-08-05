@@ -21,13 +21,13 @@ public final class MenuKeys {
             "risk_assessment", "risk_treatment", "isms_mapping", "isms",
             // 보안 운영
             "security_events", "incidents", "sec_findings", "monthly_checks",
-            "source_scan", "security_reviews", "operation_status",
+            "source_scan", "security_reviews", "operation_status", "emergency_contacts",
             // 로그 통합관리
             "log_personal_info", "log_ad", "log_nac", "log_network_link", "log_search",
             // 보안 거버넌스
             "committee", "internal_audit",
             // 교육 및 훈련
-            "training", "phishing",
+            "training", "phishing", "bcp_training",
             // 보안 가이드 및 자료
             "sec_docs", "glossary", "related_sites",
             // 개인정보보호

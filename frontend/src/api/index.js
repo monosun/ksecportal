@@ -655,6 +655,40 @@ export const phishingApi = {
   listSendLogs:     ()   => api.get('/phishing/send-logs'),
 }
 
+// 비상연락망
+export const emergencyContactApi = {
+  listGroups:  ()         => api.get('/emergency-contacts/groups'),
+  getGroup:    (id)       => api.get(`/emergency-contacts/groups/${id}`),
+  createGroup: (data)     => api.post('/emergency-contacts/groups', data),
+  updateGroup: (id, data) => api.patch(`/emergency-contacts/groups/${id}`, data),
+  toggleGroup: (id)       => api.patch(`/emergency-contacts/groups/${id}/toggle`),
+  deleteGroup: (id)       => api.delete(`/emergency-contacts/groups/${id}`),
+
+  createContact: (data)     => api.post('/emergency-contacts/contacts', data),
+  updateContact: (id, data) => api.patch(`/emergency-contacts/contacts/${id}`, data),
+  toggleContact: (id)       => api.patch(`/emergency-contacts/contacts/${id}/toggle`),
+  deleteContact: (id)       => api.delete(`/emergency-contacts/contacts/${id}`),
+}
+
+// 재해복구(DR)·업무연속성(BCP) 훈련
+export const bcpApi = {
+  listScenarios:  ()         => api.get('/bcp/scenarios'),
+  getScenario:    (id)       => api.get(`/bcp/scenarios/${id}`),
+  createScenario: (data)     => api.post('/bcp/scenarios', data),
+  updateScenario: (id, data) => api.patch(`/bcp/scenarios/${id}`, data),
+  toggleScenario: (id)       => api.patch(`/bcp/scenarios/${id}/toggle`),
+  deleteScenario: (id)       => api.delete(`/bcp/scenarios/${id}`),
+
+  listExercises:  ()         => api.get('/bcp/exercises'),
+  getExercise:    (id)       => api.get(`/bcp/exercises/${id}`),
+  createExercise: (data)     => api.post('/bcp/exercises', data),
+  startExercise:  (id)       => api.post(`/bcp/exercises/${id}/start`),
+  recordStep:     (id, stepId, data) => api.patch(`/bcp/exercises/${id}/steps/${stepId}`, data),
+  completeExercise: (id, data) => api.post(`/bcp/exercises/${id}/complete`, data),
+  cancelExercise: (id)       => api.post(`/bcp/exercises/${id}/cancel`),
+  deleteExercise: (id)       => api.delete(`/bcp/exercises/${id}`),
+}
+
 export const mailConfigApi = {
   get:  () => api.get('/admin/mail-config'),
   save: (data) => api.put('/admin/mail-config', data),

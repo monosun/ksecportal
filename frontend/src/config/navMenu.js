@@ -45,6 +45,7 @@ export const navGroups = [
       { to: '/source-scan',        label: 'nav.sourceScan',      icon: ShieldExclamationIcon, menuKey: 'source_scan' },
       { to: '/security-reviews',   label: 'nav.securityReviews', icon: ClipboardCheckIcon,    menuKey: 'security_reviews' },
       { to: '/operation-status',   label: 'nav.operationStatus', icon: ClipboardCheckIcon,    menuKey: 'operation_status' },
+      { to: '/emergency-contacts', label: 'nav.emergencyContacts', icon: ShieldExclamationIcon, menuKey: 'emergency_contacts' },
     ]
   },
   {
@@ -75,6 +76,7 @@ export const navGroups = [
     items: [
       { to: '/training',         label: 'nav.training',        icon: AcademicCapIcon,       menuKey: 'training' },
       { to: '/phishing',         label: 'nav.phishing',        icon: ShieldExclamationIcon, menuKey: 'phishing' },
+      { to: '/bcp-training',     label: 'nav.bcpTraining',     icon: ShieldExclamationIcon, menuKey: 'bcp_training' },
       { to: '/training-results', label: 'nav.trainingResults', icon: ClipboardCheckIcon,    menuKey: 'training' },
     ]
   },

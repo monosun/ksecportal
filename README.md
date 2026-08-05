@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.29.0** — 모의 악성메일 훈련 보강(기본 템플릿 예제 10종·열람/클릭 추적 401 오류 수정·설정관리 SMTP 설정·전역 새로고침 버튼·KSecPortal 브랜딩 통일) ([릴리즈 노트](release/v1.29.0/RELEASE_NOTES.md)) · v1.28.1 SAST 오탐 2건 억제 주석 처리 ([릴리즈 노트](release/v1.28.1/RELEASE_NOTES.md))
+> **최신 버전: v1.30.0** — 재해복구·BCP 훈련 신설(시나리오 예제 7종·단계별 평가·달성률 자동 판정·교육훈련 결과 탭)과 비상연락망 신설(연락 계통 6종·외부 신고기관 4건·연락처 암호화), 비상연락망 한정 MANAGER 마스킹 해제 허용 ([릴리즈 노트](release/v1.30.0/RELEASE_NOTES.md) · [변경 요청 이력](release/v1.30.0/CHANGE_REQUESTS.html)) · v1.29.0 모의 악성메일 훈련 보강 ([릴리즈 노트](release/v1.29.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -33,8 +33,10 @@ docker compose up -d --build
 | **SBOM 관리** | **CycloneDX 1.5 표준 기준** 소프트웨어(SW명+버전)별 구성요소 관리(type·group·name·version·PURL·SPDX 라이선스), **CycloneDX JSON 내보내기/가져오기(syft·cdxgen·trivy 등 SCA 도구 산출물 호환)**, 엑셀 템플릿 일괄등록(동일 SW 자동 병합·재업로드 시 중복 없이 갱신), SW 자산 등록 시 SBOM 맵핑(자산유형 SW 선택 시 등록된 SW 선택), 자산 상세에 맵핑 SW·라이브러리 수 표시 |
 | **보안이벤트 관리** | 방화벽·IDS/IPS·WAF·SIEM·EDR 등 10종 보안솔루션 연동, 이벤트 실시간 모니터링, 심각도 필터, 30초 자동 새로고침 |
 | **로그 통합관리** | 개인정보처리시스템·AD·NAC·망연계 로그 조회(연동 준비), 날짜·결과 필터, 통합검색 UI |
-| **IT 및 정보보호 교육** | 코스 관리, 객관식 퀴즈(한 문항씩 풀이·진행률 바·문항 번호 점프·미답변 안내), **퀴즈 오답 리뷰(내가 선택한 답·정답·해설 표시)**, **문제은행(분류·난이도·키워드 검색, 엑셀 일괄 업로드, 난이도별 랜덤 출제, 기본 샘플 문항)**, **교육·훈련 결과 화면(교육 이수 현황·모의훈련 결과 탭)**, 이수율·점수 추적 |
+| **IT 및 정보보호 교육** | 코스 관리, 객관식 퀴즈(한 문항씩 풀이·진행률 바·문항 번호 점프·미답변 안내), **퀴즈 오답 리뷰(내가 선택한 답·정답·해설 표시)**, **문제은행(분류·난이도·키워드 검색, 엑셀 일괄 업로드, 난이도별 랜덤 출제, 기본 샘플 문항)**, **교육·훈련 결과 화면(교육 이수 현황·모의훈련 결과·재해복구 BCP 훈련 결과 탭)**, 이수율·점수 추적 |
 | **모의 악성메일 훈련** | 피싱 이메일 템플릿 CRUD(HTML 편집·변수 치환), 발송대상 관리, 캠페인 생성·실시·완료·취소, 클릭/열람/신고 실시간 추적, **발송 처리 결과 로그(대상별 성공/실패·실패 사유·발송/열람/클릭 시각)**, 결과 통계 대시보드 |
+| **비상연락망** | 상황별 연락 계통 관리 — 연락 그룹(내부 조직·외부 기관·협력사) + 연락 순서(1차·2차…)·비상 시 역할·24시간 연락 가능 여부, **기본 연락 계통 6종**(침해사고/개인정보 유출/재해복구/경영진 보고/외부 기관/협력사)과 **외부 신고기관 연락처 4건**(KISA 118·경찰청 182·국정원 111) 자동 시드, 이름·소속·역할 통합 검색, 휴대전화·이메일 **저장 시 암호화 + 목록 마스킹**(비상 대응 목적상 **MANAGER도 마스킹 해제 가능**·해당 화면에서만 유효·감사로그 기록), 사무실 대표번호는 원문 표시로 즉시 전화 연결 |
+| **재해복구·BCP 훈련** | 재해 시나리오 관리(재해 유형·난이도·상황 설정·목표 RTO/RPO·대응 단계), **기본 시나리오 예제 7종**(정전·랜섬웨어·DB 장애 DR 전환·클라우드 리전 장애·사옥 화재·ISP 장애·개인정보 유출), 훈련 등록·시작·단계별 수행 결과 기록(성공/부분/실패·실제 소요시간)·완료 처리, 달성률 자동 산출 및 적합/보완필요/부적합 판정, 목표 대비 실제 RTO 달성 여부, 총평·개선사항 관리 |
 | **ISMS-P 증적관리** | 101개 인증항목(관리체계·보호대책·개인정보 3개 섹션), 연도별 증적 CRUD, 준수 상태 4단계, CSV 다운로드, PDF 다운로드, 엑셀 일괄 등록, **다른 항목 증적 파일 참조 등록(파일 중복 업로드 없이 재사용)** |
 | **월간 보안점검** | 정보보호의 날 기준 32개 표준 점검 항목, 년월 네비게이션(←→), 우선순위(상·중·하)·구분 필터, 완료율 프로그레스바, 결과 원클릭 토글, 항목 CRUD, **담당자 지정(사용자 검색·직접입력)**, **증적 파일 관리(파일 첨부·다운로드)**, **기본 항목 불러오기 초기화 경고·중복 체크**, **이전 월 항목 복사(결과는 미완료로 초기화·담당자 승계)** |
 | **소스 취약점 점검 (SAST)** | GitHub 저장소 대상 4개 카테고리 통합 점검 — 의존성(Dependabot)·코드(Code scanning)·시크릿(Secret scanning) 알림 + **내장 OWASP Top 10:2021 정적분석**(저장소 tarball 직접 분석, 별도 활성화 불필요), 심각도·OWASP/CWE 분류·파일·라인 위치·GitHub 링크, 점검 이력 저장, **PDF 보고서(가로 A4·심각도/카테고리 분포·전체 발견 목록)**, **CWE 설명 팝업**(무엇인가/위험/조치·MITRE 링크), **오탐 억제 주석 `// sast:ignore 사유`** |
@@ -563,6 +565,32 @@ POST   /api/privacy/contractors/bulk                     # 수탁사 일괄 등�
 # 피싱 모의훈련
 GET    /api/phishing/send-logs                           # 발송 처리 결과 로그 (v1.8.0+)
 
+# 비상연락망
+GET    /api/emergency-contacts/groups                    # 연락 그룹 목록 (연락처 포함, 연락 순서대로)
+POST   /api/emergency-contacts/groups                    # 연락 그룹 등록 (MANAGER+)
+PATCH  /api/emergency-contacts/groups/:id                # 그룹 수정 (MANAGER+)
+PATCH  /api/emergency-contacts/groups/:id/toggle         # 활성/비활성 전환
+DELETE /api/emergency-contacts/groups/:id                # 그룹 삭제 (ADMIN, 연락처 남아 있으면 거부)
+POST   /api/emergency-contacts/contacts                  # 연락처 등록 (MANAGER+)
+PATCH  /api/emergency-contacts/contacts/:id              # 연락처 수정 (MANAGER+, 그룹 이동 가능)
+PATCH  /api/emergency-contacts/contacts/:id/toggle       # 활성/비활성 전환
+DELETE /api/emergency-contacts/contacts/:id              # 연락처 삭제 (MANAGER+)
+
+# 재해복구·BCP 훈련
+GET    /api/bcp/scenarios                                # 훈련 시나리오 목록 (대응 단계 포함)
+POST   /api/bcp/scenarios                                # 시나리오 등록 (MANAGER+)
+PATCH  /api/bcp/scenarios/:id                            # 시나리오 수정 (단계 전량 교체)
+PATCH  /api/bcp/scenarios/:id/toggle                     # 활성/비활성 전환
+DELETE /api/bcp/scenarios/:id                            # 시나리오 삭제 (ADMIN, 실시 이력 있으면 거부)
+GET    /api/bcp/exercises                                # 훈련 목록 (단계 집계·달성률·판정)
+GET    /api/bcp/exercises/:id                            # 훈련 상세 + 단계별 수행 결과
+POST   /api/bcp/exercises                                # 훈련 등록 (시나리오 단계 복사)
+POST   /api/bcp/exercises/:id/start                      # 훈련 시작
+PATCH  /api/bcp/exercises/:id/steps/:stepId              # 단계 수행 결과 기록 (성공/부분/실패)
+POST   /api/bcp/exercises/:id/complete                   # 완료 처리 (달성률·판정 자동 산출)
+POST   /api/bcp/exercises/:id/cancel                     # 훈련 취소
+DELETE /api/bcp/exercises/:id                            # 훈련 삭제 (ADMIN)
+
 # 메일서버(SMTP) 설정 (ADMIN, v1.8.0+)
 GET    /api/admin/mail-config                            # 설정 조회 (비밀번호 마스킹)
 PUT    /api/admin/mail-config                            # 설정 저장
@@ -651,6 +679,7 @@ ksecportal/
 │       ├── vulnerability/           # 취약점 관리 + 댓글
 │       ├── training/                # 교육 코스 + 퀴즈 + 문제은행
 │       ├── phishing/                # 모의 악성메일 훈련 (템플릿·대상·캠페인)
+│       ├── bcp/                     # 재해복구·BCP 훈련 (시나리오·훈련 실시·단계 평가)
 │       ├── incident/                # 보안 인시던트
 │       ├── asset/                   # IT 자산 관리 + 시점(스냅샷) 이력
 │       ├── sbom/                    # SBOM 관리 (SW·라이브러리 구성)
@@ -660,6 +689,7 @@ ksecportal/
 │       ├── sourcescan/              # 소스 취약점 점검(SAST) + GitHub 연동
 │       ├── secreview/               # 보안성 심의 (요청·체크리스트·결과)
 │       ├── opstatus/               # 운영현황관리 (연도별 연간 운영 점검표)
+│       ├── emergency/              # 비상연락망 (연락 그룹·연락처, 휴대전화·이메일 암호화)
 │       ├── admin/                   # 사용자 관리 (ADMIN), 설정 암호화 도구
 │       ├── audit/                   # 감사 로그
 │       ├── isms/                    # ISMS-P 증적관리 (의견·가이드·전년도 가져오기)
@@ -713,9 +743,11 @@ ksecportal/
             ├── sourcescan/          # 소스 취약점 점검 (SAST)
             ├── secreview/           # 보안성 심의
             ├── opstatus/            # 운영현황관리
+            ├── emergency/           # 비상연락망
             ├── log/                 # 로그 통합관리 (개인정보·AD·NAC·망연계·통합검색)
             ├── training/            # 교육 목록·상세(퀴즈)·교육훈련 결과
             ├── phishing/            # 모의 악성메일 훈련
+            ├── bcp/                 # 재해복구·BCP 훈련
             ├── isms/                # ISMS-P 증적관리, 통제항목 매핑
             ├── monthlycheck/        # 월간 보안점검
             ├── privacy/             # 개인정보보호 14개 메뉴 + 법령준수관리·현황보고서
@@ -750,6 +782,12 @@ ksecportal/
 | `phishing_targets` | 모의훈련 발송대상 |
 | `phishing_campaigns` | 모의훈련 캠페인 (생성·실시·완료·취소) |
 | `phishing_campaign_targets` | 캠페인별 대상 발송·열람·클릭·신고 추적 및 발송 결과 로그 |
+| `emergency_contact_groups` | 비상연락망 연락 그룹 (내부 조직·외부 기관·협력사 구분, 표시 순서) |
+| `emergency_contacts` | 비상연락망 연락처 (연락 순서·역할·24시간 여부, 휴대전화·이메일 AES-256-GCM 암호화) |
+| `bcp_scenarios` | 재해복구·BCP 훈련 시나리오 (재해 유형·상황 설정·목표 RTO/RPO) |
+| `bcp_scenario_steps` | 시나리오 대응 단계 (담당 역할·수행 절차·목표 소요시간·판정 기준) |
+| `bcp_exercises` | 훈련 실시 기록 (방식·참가자·실제 RTO/RPO·달성률·판정·총평·개선사항) |
+| `bcp_exercise_steps` | 훈련 단계별 수행 결과 (실시 시점 시나리오 단계 복사본) |
 | `audit_logs` | 감사 로그 |
 | `slow_logs` | 성능관리 — 지연 기준 초과 화면 요청·SQL 기록 |
 | `assets` | IT 자산 (sbom_software_id로 SBOM SW 맵핑) |
@@ -826,6 +864,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.30.0](release/v1.30.0/RELEASE_NOTES.md) | **재해복구·BCP 훈련 신설** — 교육 및 훈련 > 재해복구·BCP 훈련 메뉴 추가. 재해 유형·난이도·**목표 RTO/RPO**·상황 설정과 **대응 단계**(담당 역할·수행 절차·목표 소요시간·판정 기준)로 구성된 훈련 시나리오 관리, **기본 시나리오 예제 7종**(정전·랜섬웨어·DB 장애 DR 전환·클라우드 리전 장애·사옥 화재·ISP 장애·개인정보 유출)을 seed-when-empty 초기화기(`BcpScenarioInitializer`)로 제공. 훈련 등록 시 시나리오 단계를 **훈련 시점 값으로 복사**해 이후 시나리오 수정이 과거 기록에 영향을 주지 않음. 도상훈련/시뮬레이션/실제 전환 방식, 계획→진행중→완료 전이, 단계별 성공/부분/실패·실제 소요시간 기록, 완료 시 **달성률 자동 산출**(성공 1.0·부분 0.5·실패 0)과 80%↑ 적합·60%↑ 보완필요·미만 부적합 판정, 목표 대비 실제 RTO 달성 여부. **교육·훈련 결과에 재해복구·BCP 훈련 결과 탭** 추가(요약 카드·단계 수행 누적 막대·실시 이력·총평/개선사항). **비상연락망 신설** — 보안 운영 > 비상연락망 메뉴 추가. 연락 그룹(내부 조직·외부 기관·협력사)과 **연락 순서(1차·2차…)**·비상 시 역할·24시간 연락 가능 여부 관리, **기본 연락 계통 6종**과 **외부 신고기관 4건**(KISA 118·경찰청 182·국정원 111) 자동 시드, 휴대전화·이메일 **AES-256-GCM 암호화 저장 + 목록 마스킹**, 사무실·대표번호는 원문 표시로 즉시 전화 연결. **마스킹 해제 권한의 화면 단위 예외** — `MANAGER_REVEALABLE_SCREENS`(현재 비상연락망)에 등록된 화면은 MANAGER도 해제 가능하되 **해제한 화면에서만 유효**하고 ADMIN 기존 동작은 불변, 감사로그 `PI_UNMASK` 기록 유지. 신규 테이블 6개(`bcp_*` 4개·`emergency_*` 2개, `ddl-auto` 자동 생성) + 마이그레이션 `v1.55.0_bcp_training.sql`·`v1.56.0_emergency_contacts.sql`. 사용자매뉴얼 8.8·14.1절 신설 |
 | [v1.29.0](release/v1.29.0/RELEASE_NOTES.md) | **모의 악성메일 훈련 보강** — 훈련용 **기본 템플릿 예제 10종**(카테고리·난이도별)을 seed-when-empty 초기화기(`PhishingTemplateInitializer`+`PhishingTemplateDefaults`)로 제공. **열람/클릭 추적 401 오류 수정(중요)** — 추적 엔드포인트(`/api/phishing/track/{token}/open`·`/click`)가 Security 화이트리스트에 없어 열람·클릭이 전혀 기록되지 않던 문제를 `SecurityConfig` 에 `/phishing/track/**` GET 공개 규칙 추가로 해결. **설정관리에서 발송 메일서버(SMTP) 설정** — 라우팅되지 않던 SMTP UI를 관리>설정관리>시스템 설정 탭으로 이식(호스트·포트·계정·비번·STARTTLS·인증·활성화·테스트 발송), 기본값 폴백으로 나던 `Authentication failed` 해결. **전역 새로고침 버튼** — 사이드바·모바일 상단바에서 현재 라우트 재마운트로 화면 데이터만 재로딩. **KSecPortal 브랜딩 통일** — `phishing-awareness.html`·프론트 UI 문구의 SecPortal→KSecPortal(코드 식별자 제외). 신규 문서 `docs/phishing-training-manual.md` 및 사용자매뉴얼 14장 보강. DB 스키마 변경 없음 |
 | [v1.28.1](release/v1.28.1/RELEASE_NOTES.md) | **SAST 오탐 억제** — 소스 취약점 점검이 취약점이 아닌 코드를 지적한 2건에 `// sast:ignore 사유` 주석 추가. `SecretsStartupCheck.DEFAULT_DB_PASSWORD`(CWE-798)는 인증용 비밀이 아니라 샘플 비밀번호 잔존 여부를 비교하는 탐지용 상수, `cweInfo.js` CWE-295 조치 안내 문구(CWE-295)는 TLS 설정이 아니라 화면 표시 텍스트. 규칙을 좁히는 대신 줄 단위 억제를 택해 실제 하드코딩·TLS 우회 탐지력을 유지. 동작 변화 없음 |
 | [v1.28.0](release/v1.28.0/RELEASE_NOTES.md) | **목록 화면 개인정보 마스킹 적용** — 관리>코드관리>개인정보 유형별 항목관리에 등록한 **항목별 마스킹 방식**을 각 메뉴 목록 화면 표시에 실제로 적용. 정보주체 권리행사(정보주체명·연락처), 수탁사 관리(사업자등록번호·대표자·담당자·이메일·연락처), 사용자 관리(이름·이메일), 감사 로그(사용자명·접속 IP), 성능 관리(요청 IP), 교육·훈련 결과(이수자), 모의 피싱훈련(대상자·발송 이력·훈련 결과)에 적용. 마스킹 방식별 표시 규칙(부분/암호화=자리별 부분 마스킹, 전체·미수집=`(비노출)`, 해시=앞 4자리, 불필요=원문)과 항목 종류별 알고리즘 20종을 `utils/piMasking.js` 에 구현하고 기준은 `stores/piMasking.js` 가 `GET /api/codes/pi-masking` 으로 1회 로드·캐시. 기준 미등록 항목은 안전하게 부분 마스킹. **마스킹 해제는 ADMIN 전용**이며 해제 시 감사 로그 `PI_UNMASK` 기록(`POST /api/codes/pi-masking/reveal`), 등록·수정 모달과 담당자 선택 목록은 원문 유지. **개인정보 저장 컬럼 암호화** — `privacy_rights_requests`(정보주체명·연락처)와 `privacy_contractors`(사업자등록번호·담당자·이메일·연락처) 6개 컬럼을 **AES-256-GCM**(`PIENC1:` + Base64(IV‖암호문‖태그))으로 저장. JPA `AttributeConverter` 적용, 키는 `PI_ENCRYPTION_KEY`(미설정 시 Jasypt 마스터 키), 기동 시 남은 평문을 멱등 백필로 자동 암호화. 검색·정렬·로그인 키에 쓰이지 않는 컬럼만 골라 기능 영향 없음. 컬럼 길이 확대 마이그레이션 `v1.28.0_pi_column_encryption.sql` **필수** |
