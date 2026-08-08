@@ -360,7 +360,8 @@ CREATE TABLE IF NOT EXISTS threat_defaults (
     likelihood   INT NOT NULL DEFAULT 3,
     impact       INT NOT NULL DEFAULT 3,
     description  TEXT,
-    UNIQUE KEY uq_threat_defaults_name_type_cat (name(191), type, category)
+    -- 같은 위협명이라도 위험도(발생가능성/잠재영향) 조합이 다르면 별도 항목으로 유지한다
+    UNIQUE KEY uq_threat_defaults_name_type_cat_risk (name(191), type, category, likelihood, impact)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 정보보호의 날 점검 기본 항목

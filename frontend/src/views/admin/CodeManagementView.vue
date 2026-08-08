@@ -229,19 +229,61 @@
         </button>
       </div>
 
-      <!-- 검색 필터 -->
-      <div class="mb-4 flex flex-wrap gap-3">
-        <input v-model="searchThreatKeyword" type="text" placeholder="위협명, Risk ID, 카테고리 검색..."
-          class="input flex-1 min-w-48 text-sm"/>
-        <select v-model="searchThreatTypeFilter" class="input w-44 text-sm">
-          <option value="">전체 유형</option>
-          <option v-for="t in allThreatTypeOptions" :key="t" :value="t">{{ t }}</option>
-        </select>
-        <button v-if="searchThreatKeyword || searchThreatTypeFilter" @click="searchThreatKeyword=''; searchThreatTypeFilter=''"
-          class="btn-secondary text-sm px-3">초기화</button>
-        <span class="flex items-center text-sm text-gray-500">
-          {{ filteredThreatDefaults.length }}건
-        </span>
+      <!-- 항목별 검색 필터 -->
+      <div class="card mb-4 p-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Risk ID</label>
+            <input v-model="threatFilters.riskId" type="text" placeholder="Risk ID 검색" class="input w-full text-sm"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">위협명</label>
+            <input v-model="threatFilters.name" type="text" placeholder="위협명 검색" class="input w-full text-sm"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">유형</label>
+            <select v-model="threatFilters.type" class="input w-full text-sm">
+              <option value="">전체</option>
+              <option v-for="t in allThreatTypeOptions" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">카테고리</label>
+            <select v-model="threatFilters.category" class="input w-full text-sm">
+              <option value="">전체</option>
+              <option v-for="c in threatCategoryOptions" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">발생가능성</label>
+            <select v-model="threatFilters.likelihood" class="input w-full text-sm">
+              <option value="">전체</option>
+              <option v-for="n in 5" :key="n" :value="String(n)">{{ n }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">잠재영향</label>
+            <select v-model="threatFilters.impact" class="input w-full text-sm">
+              <option value="">전체</option>
+              <option v-for="n in 5" :key="n" :value="String(n)">{{ n }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between">
+          <span class="text-sm text-gray-500">검색 결과 {{ filteredThreatDefaults.length }}건 / 전체 {{ allThreatDefaults.length }}건</span>
+          <button v-if="hasThreatFilter" @click="resetThreatFilters" class="btn-secondary text-sm px-3">필터 초기화</button>
+        </div>
+      </div>
+
+      <!-- 선택 삭제 바 -->
+      <div v-if="selectedThreatIds.size > 0"
+        class="mb-4 flex items-center justify-between rounded-lg border border-primary-100 bg-primary-50 px-4 py-2.5">
+        <span class="text-sm text-primary-700 font-medium">{{ selectedThreatIds.size }}건 선택됨</span>
+        <div class="flex items-center gap-2">
+          <button @click="clearThreatSelection" class="text-xs text-gray-500 hover:text-gray-700 font-medium">선택 해제</button>
+          <button @click="confirmDeleteSelectedThreatDefaults"
+            class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600">선택 삭제</button>
+        </div>
       </div>
 
       <div class="card p-0 overflow-hidden">
@@ -252,6 +294,13 @@
         <div v-else class="overflow-x-auto"><table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
+              <th class="px-4 py-3 w-10">
+                <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  :checked="allFilteredThreatsSelected"
+                  :indeterminate.prop="someFilteredThreatsSelected"
+                  @change="toggleSelectAllThreats"
+                  title="검색된 결과 전체 선택"/>
+              </th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk ID</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">위협명</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
@@ -262,7 +311,12 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
-            <tr v-for="d in pagedThreatDefaults" :key="d.id" class="hover:bg-gray-50">
+            <tr v-for="d in pagedThreatDefaults" :key="d.id" class="hover:bg-gray-50"
+              :class="selectedThreatIds.has(d.id) ? 'bg-primary-50/50' : ''">
+              <td class="px-4 py-3">
+                <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  :checked="selectedThreatIds.has(d.id)" @change="toggleThreatSelection(d.id)"/>
+              </td>
               <td class="px-4 py-3 text-gray-400 font-mono text-xs">{{ d.riskId || '-' }}</td>
               <td class="px-4 py-3 font-medium text-gray-900">{{ d.name }}</td>
               <td class="px-4 py-3 text-gray-600 text-xs">{{ d.type || '-' }}</td>
@@ -1748,6 +1802,7 @@ function confirmDeleteThreatDefault(d) {
   deleteConfirm.action = async () => {
     deleteConfirm.show = false
     await threatDefaultApi.delete(d.id)
+    if (selectedThreatIds.value.has(d.id)) toggleThreatSelection(d.id)
     await loadAllThreatDefaults()
   }
   deleteConfirm.show = true
@@ -1780,21 +1835,34 @@ const pagedMonthlyDefaults = computed(() => {
 
 watch([searchMonthlyKeyword, searchMonthlyPriority], () => { monthlyPage.value = 0 })
 
-// ─── 위협 기본 항목 검색 + 페이지네이션 ───
-const searchThreatKeyword = ref('')
-const searchThreatTypeFilter = ref('')
+// ─── 위협 기본 항목 항목별 검색 + 페이지네이션 ───
+const threatFilters = reactive({ riskId: '', name: '', type: '', category: '', likelihood: '', impact: '' })
 const threatPage = ref(0)
 const THREAT_PAGE_SIZE = 20
 
+const hasThreatFilter = computed(() => Object.values(threatFilters).some(v => v !== ''))
+
+function resetThreatFilters() {
+  Object.keys(threatFilters).forEach(k => { threatFilters[k] = '' })
+}
+
+// 카테고리 옵션은 선택된 유형에 종속된다
+const threatCategoryOptions = computed(() => {
+  const src = threatFilters.type
+    ? allThreatDefaults.value.filter(d => (d.type || '') === threatFilters.type)
+    : allThreatDefaults.value
+  return [...new Set(src.map(d => d.category).filter(Boolean))].sort()
+})
+
 const filteredThreatDefaults = computed(() => {
+  const inc = (val, kw) => (val || '').toLowerCase().includes(kw.toLowerCase())
   return allThreatDefaults.value.filter(d => {
-    if (searchThreatTypeFilter.value && (d.type || '') !== searchThreatTypeFilter.value) return false
-    if (searchThreatKeyword.value) {
-      const kw = searchThreatKeyword.value.toLowerCase()
-      return (d.name || '').toLowerCase().includes(kw) ||
-             (d.riskId || '').toLowerCase().includes(kw) ||
-             (d.category || '').toLowerCase().includes(kw)
-    }
+    if (threatFilters.riskId && !inc(d.riskId, threatFilters.riskId)) return false
+    if (threatFilters.name && !inc(d.name, threatFilters.name)) return false
+    if (threatFilters.type && (d.type || '') !== threatFilters.type) return false
+    if (threatFilters.category && (d.category || '') !== threatFilters.category) return false
+    if (threatFilters.likelihood && String(d.likelihood) !== threatFilters.likelihood) return false
+    if (threatFilters.impact && String(d.impact) !== threatFilters.impact) return false
     return true
   })
 })
@@ -1805,7 +1873,60 @@ const pagedThreatDefaults = computed(() => {
   return filteredThreatDefaults.value.slice(start, start + THREAT_PAGE_SIZE)
 })
 
-watch([searchThreatKeyword, searchThreatTypeFilter], () => { threatPage.value = 0 })
+// 유형 변경 시 하위 카테고리 선택이 유효하지 않으면 해제
+watch(() => threatFilters.type, () => {
+  if (threatFilters.category && !threatCategoryOptions.value.includes(threatFilters.category)) {
+    threatFilters.category = ''
+  }
+})
+
+// 필터가 바뀌면 보이지 않는 항목이 선택된 채 남지 않도록 선택을 해제한다
+watch(threatFilters, () => { threatPage.value = 0; clearThreatSelection() })
+
+// ─── 위협 기본 항목 선택 삭제 ───
+const selectedThreatIds = ref(new Set())
+
+function toggleThreatSelection(id) {
+  const next = new Set(selectedThreatIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedThreatIds.value = next
+}
+
+function clearThreatSelection() {
+  if (selectedThreatIds.value.size > 0) selectedThreatIds.value = new Set()
+}
+
+const allFilteredThreatsSelected = computed(() =>
+  filteredThreatDefaults.value.length > 0 &&
+  filteredThreatDefaults.value.every(d => selectedThreatIds.value.has(d.id))
+)
+
+const someFilteredThreatsSelected = computed(() =>
+  !allFilteredThreatsSelected.value &&
+  filteredThreatDefaults.value.some(d => selectedThreatIds.value.has(d.id))
+)
+
+// 제목줄 체크박스 — 현재 검색된 결과 전체(모든 페이지)를 선택/해제
+function toggleSelectAllThreats() {
+  selectedThreatIds.value = allFilteredThreatsSelected.value
+    ? new Set()
+    : new Set(filteredThreatDefaults.value.map(d => d.id))
+}
+
+function confirmDeleteSelectedThreatDefaults() {
+  const ids = [...selectedThreatIds.value]
+  if (ids.length === 0) return
+  deleteConfirm.message = `선택한 위협 기본 항목 ${ids.length}건을 삭제하시겠습니까?`
+  deleteConfirm.warning = '삭제된 항목은 복구할 수 없습니다.'
+  deleteConfirm.action = async () => {
+    deleteConfirm.show = false
+    await threatDefaultApi.bulkDelete(ids)
+    clearThreatSelection()
+    await loadAllThreatDefaults()
+  }
+  deleteConfirm.show = true
+}
 
 // ─── 위협 유형별 관리 ───
 const allThreatDefaults = ref([])

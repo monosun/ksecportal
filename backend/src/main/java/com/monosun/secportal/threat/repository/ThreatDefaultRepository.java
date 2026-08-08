@@ -10,7 +10,10 @@ public interface ThreatDefaultRepository extends JpaRepository<ThreatDefault, Lo
 
     List<ThreatDefault> findAllByOrderByIdAsc();
 
-    boolean existsByNameAndTypeAndCategory(String name, String type, String category);
+    /** 유니크 제약 uq_threat_defaults_name_type_cat_risk 와 동일한 키 조합 */
+    boolean existsByNameAndTypeAndCategoryAndLikelihoodAndImpact(
+            String name, String type, String category, int likelihood, int impact);
 
-    Optional<ThreatDefault> findByNameAndTypeAndCategory(String name, String type, String category);
+    Optional<ThreatDefault> findByNameAndTypeAndCategoryAndLikelihoodAndImpact(
+            String name, String type, String category, int likelihood, int impact);
 }

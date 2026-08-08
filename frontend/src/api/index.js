@@ -191,7 +191,8 @@ export const metricsApi = {
 
 export const notificationConfigApi = {
   get: () => api.get('/admin/notification-config'),
-  update: (data) => api.put('/admin/notification-config', data)
+  update: (data) => api.put('/admin/notification-config', data),
+  testSlack: () => api.post('/admin/notification-config/slack/test')
 }
 
 export const incidentApi = {
@@ -857,6 +858,7 @@ export const threatDefaultApi = {
   create: (data) => api.post('/threats/defaults/item', data),
   update: (id, data) => api.patch(`/threats/defaults/${id}`, data),
   delete: (id) => api.delete(`/threats/defaults/${id}`),
+  bulkDelete: (ids) => api.post('/threats/defaults/bulk-delete', { ids }),
 }
 
 export const performanceApi = {

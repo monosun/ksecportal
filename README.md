@@ -4,7 +4,7 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-> **최신 버전: v1.30.0** — 재해복구·BCP 훈련 신설(시나리오 예제 7종·단계별 평가·달성률 자동 판정·교육훈련 결과 탭)과 비상연락망 신설(연락 계통 6종·외부 신고기관 4건·연락처 암호화), 비상연락망 한정 MANAGER 마스킹 해제 허용 ([릴리즈 노트](release/v1.30.0/RELEASE_NOTES.md) · [변경 요청 이력](release/v1.30.0/CHANGE_REQUESTS.html)) · v1.29.0 모의 악성메일 훈련 보강 ([릴리즈 노트](release/v1.29.0/RELEASE_NOTES.md))
+> **최신 버전: v1.31.0** — 위협 기본 항목 항목별 필터·체크박스 선택 삭제, Slack **소켓 모드** 연동(봇 토큰·앱 레벨 토큰·연결 테스트), 내부감사 상세 팝업화, 위협 기본 항목 중복 정리(558→140건, 유니크 제약 확장 — 마이그레이션 필수) ([릴리즈 노트](release/v1.31.0/RELEASE_NOTES.md)) · v1.30.0 재해복구·BCP 훈련 신설(시나리오 예제 7종·단계별 평가·달성률 자동 판정·교육훈련 결과 탭)과 비상연락망 신설(연락 계통 6종·외부 신고기관 4건·연락처 암호화), 비상연락망 한정 MANAGER 마스킹 해제 허용 ([릴리즈 노트](release/v1.30.0/RELEASE_NOTES.md) · [변경 요청 이력](release/v1.30.0/CHANGE_REQUESTS.html)) · v1.29.0 모의 악성메일 훈련 보강 ([릴리즈 노트](release/v1.29.0/RELEASE_NOTES.md))
 
 ```bash
 # 빠른 시작
@@ -272,12 +272,13 @@ GET    /api/threats/:id
 POST   /api/threats                       # (MANAGER+)
 PATCH  /api/threats/:id                   # (MANAGER+)
 DELETE /api/threats/:id                   # (MANAGER+)
-GET    /api/threats/defaults              # 기본 위협항목 마스터 목록 (560개)
+GET    /api/threats/defaults              # 기본 위협항목 마스터 목록 (140개)
 GET    /api/threats/defaults/check        # 기본항목 로드 가능 여부·중복 확인
 POST   /api/threats/defaults              # 기본 위협항목 일괄 로드
 POST   /api/threats/defaults/item         # 기본항목 추가 (ADMIN)
 PATCH  /api/threats/defaults/:id          # 기본항목 수정 (ADMIN)
 DELETE /api/threats/defaults/:id          # 기본항목 삭제 (ADMIN)
+POST   /api/threats/defaults/bulk-delete  # 기본항목 선택 일괄 삭제 (ADMIN, {ids:[...]})
 POST   /api/threats/reset                 # 위협 카탈로그 초기화 (MANAGER+)
 
 # 위험평가 · 위험처리 계획
@@ -505,8 +506,9 @@ GET    /api/admin/performance/config      # 지연 기준·보관기간 조회
 PUT    /api/admin/performance/config      # 지연 기준·보관기간 저장
 DELETE /api/admin/performance/logs        # 기록 삭제 (?days= 미지정 시 전체)
 GET    /api/admin/users/simple            # 활성 사용자 목록 (담당자 선택용, MANAGER+)
-GET    /api/admin/notification-config
+GET    /api/admin/notification-config     # 알림 방식·Slack 연동 설정 (토큰은 마스킹)
 PUT    /api/admin/notification-config
+POST   /api/admin/notification-config/slack/test   # Slack 연동 테스트 (ADMIN)
 GET    /api/admin/security-config         # 로그인 실패 잠금 정책 조회
 PUT    /api/admin/security-config         # 로그인 실패 잠금 정책 저장
 POST   /api/admin/tools/encrypt           # 설정값 jasypt 암호화 도구
@@ -864,6 +866,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.31.0](release/v1.31.0/RELEASE_NOTES.md) | **위협 기본 항목 항목별 필터·선택 삭제** — 관리>코드관리>위협 기본 항목의 통합 키워드 검색을 **컬럼별 필터 6종**(Risk ID·위협명 부분일치, 유형·카테고리·발생가능성·잠재영향 셀렉트)으로 교체. 카테고리 옵션은 선택한 유형에 종속되고 조건은 AND 결합, `검색 결과 N건 / 전체 M건`과 필터 초기화 제공. **체크박스 선택 삭제** 신설 — 제목줄 체크박스가 **현재 검색된 결과 전체(모든 페이지)** 를 선택하며 일부 선택 시 indeterminate 표시, 선택 바에서 일괄 삭제(`POST /api/threats/defaults/bulk-delete`, ADMIN, `deleteAllInBatch` 1회 처리). 보이지 않는 행의 오삭제를 막기 위해 필터 변경 시 선택 해제. **Slack 소켓 모드 연동** — 관리>설정관리>시스템 설정의 승인 알림에서 Webhook 외에 **소켓 모드**(봇 토큰 `xoxb-`·앱 레벨 토큰 `xapp-`·발송 채널) 선택 가능. 토큰은 마스킹 조회·빈 값 유지·`-` 삭제 규칙(SMTP 비밀번호와 동일), **연결 테스트**(`auth.test`→`apps.connections.open`→채널 테스트 발송, `POST /api/admin/notification-config/slack/test`) 제공. 발송은 소켓 모드 앱도 Web API `chat.postMessage` 를 사용(상시 WebSocket 리스너는 두지 않음). **내부감사 상세 팝업화** — 오른쪽 드로어를 중앙 모달로 전환하고 **점검항목 클릭 시 항목 상세 팝업**(점검대상·결과·점검방법·발견사항·조치필요사항 전문) 추가. **위협 기본 항목 중복 정리(558→140건)** — 초기 시드의 `계정 탈취 #1` 식 전역 일련번호를 제외하면 동일 항목이 최대 6건씩 중복되던 문제를 정리(139개 중복 그룹, **418건 삭제**, 위협명 `#숫자` 제거). 유니크 제약을 `(name,type,category)`→**`(name,type,category,likelihood,impact)`** 로 확장하고 `loadDefaults` 판별 기준도 5개 키로 변경(이름만 비교하면 140건 중 14건만 복사되던 문제). 마이그레이션 `v1.31.0_threat_defaults_dedup.sql` **필수** |
 | [v1.30.0](release/v1.30.0/RELEASE_NOTES.md) | **재해복구·BCP 훈련 신설** — 교육 및 훈련 > 재해복구·BCP 훈련 메뉴 추가. 재해 유형·난이도·**목표 RTO/RPO**·상황 설정과 **대응 단계**(담당 역할·수행 절차·목표 소요시간·판정 기준)로 구성된 훈련 시나리오 관리, **기본 시나리오 예제 7종**(정전·랜섬웨어·DB 장애 DR 전환·클라우드 리전 장애·사옥 화재·ISP 장애·개인정보 유출)을 seed-when-empty 초기화기(`BcpScenarioInitializer`)로 제공. 훈련 등록 시 시나리오 단계를 **훈련 시점 값으로 복사**해 이후 시나리오 수정이 과거 기록에 영향을 주지 않음. 도상훈련/시뮬레이션/실제 전환 방식, 계획→진행중→완료 전이, 단계별 성공/부분/실패·실제 소요시간 기록, 완료 시 **달성률 자동 산출**(성공 1.0·부분 0.5·실패 0)과 80%↑ 적합·60%↑ 보완필요·미만 부적합 판정, 목표 대비 실제 RTO 달성 여부. **교육·훈련 결과에 재해복구·BCP 훈련 결과 탭** 추가(요약 카드·단계 수행 누적 막대·실시 이력·총평/개선사항). **비상연락망 신설** — 보안 운영 > 비상연락망 메뉴 추가. 연락 그룹(내부 조직·외부 기관·협력사)과 **연락 순서(1차·2차…)**·비상 시 역할·24시간 연락 가능 여부 관리, **기본 연락 계통 6종**과 **외부 신고기관 4건**(KISA 118·경찰청 182·국정원 111) 자동 시드, 휴대전화·이메일 **AES-256-GCM 암호화 저장 + 목록 마스킹**, 사무실·대표번호는 원문 표시로 즉시 전화 연결. **마스킹 해제 권한의 화면 단위 예외** — `MANAGER_REVEALABLE_SCREENS`(현재 비상연락망)에 등록된 화면은 MANAGER도 해제 가능하되 **해제한 화면에서만 유효**하고 ADMIN 기존 동작은 불변, 감사로그 `PI_UNMASK` 기록 유지. 신규 테이블 6개(`bcp_*` 4개·`emergency_*` 2개, `ddl-auto` 자동 생성) + 마이그레이션 `v1.55.0_bcp_training.sql`·`v1.56.0_emergency_contacts.sql`. 사용자매뉴얼 8.8·14.1절 신설 |
 | [v1.29.0](release/v1.29.0/RELEASE_NOTES.md) | **모의 악성메일 훈련 보강** — 훈련용 **기본 템플릿 예제 10종**(카테고리·난이도별)을 seed-when-empty 초기화기(`PhishingTemplateInitializer`+`PhishingTemplateDefaults`)로 제공. **열람/클릭 추적 401 오류 수정(중요)** — 추적 엔드포인트(`/api/phishing/track/{token}/open`·`/click`)가 Security 화이트리스트에 없어 열람·클릭이 전혀 기록되지 않던 문제를 `SecurityConfig` 에 `/phishing/track/**` GET 공개 규칙 추가로 해결. **설정관리에서 발송 메일서버(SMTP) 설정** — 라우팅되지 않던 SMTP UI를 관리>설정관리>시스템 설정 탭으로 이식(호스트·포트·계정·비번·STARTTLS·인증·활성화·테스트 발송), 기본값 폴백으로 나던 `Authentication failed` 해결. **전역 새로고침 버튼** — 사이드바·모바일 상단바에서 현재 라우트 재마운트로 화면 데이터만 재로딩. **KSecPortal 브랜딩 통일** — `phishing-awareness.html`·프론트 UI 문구의 SecPortal→KSecPortal(코드 식별자 제외). 신규 문서 `docs/phishing-training-manual.md` 및 사용자매뉴얼 14장 보강. DB 스키마 변경 없음 |
 | [v1.28.1](release/v1.28.1/RELEASE_NOTES.md) | **SAST 오탐 억제** — 소스 취약점 점검이 취약점이 아닌 코드를 지적한 2건에 `// sast:ignore 사유` 주석 추가. `SecretsStartupCheck.DEFAULT_DB_PASSWORD`(CWE-798)는 인증용 비밀이 아니라 샘플 비밀번호 잔존 여부를 비교하는 탐지용 상수, `cweInfo.js` CWE-295 조치 안내 문구(CWE-295)는 TLS 설정이 아니라 화면 표시 텍스트. 규칙을 좁히는 대신 줄 단위 억제를 택해 실제 하드코딩·TLS 우회 탐지력을 유지. 동작 변화 없음 |

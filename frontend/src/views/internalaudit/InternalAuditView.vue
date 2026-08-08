@@ -68,7 +68,7 @@
     </div>
 
     <!-- Audit Form Modal -->
-    <div v-if="showAuditModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div v-if="showAuditModal" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
         <div class="px-6 py-4 border-b">
           <h2 class="text-lg font-semibold">{{ editAuditTarget ? $t('internalAudit.editAudit') : $t('internalAudit.addAudit') }}</h2>
@@ -116,21 +116,31 @@
       </div>
     </div>
 
-    <!-- Audit Detail Drawer -->
-    <div v-if="showDetail && auditDetail" class="fixed inset-0 bg-black/50 z-50 flex items-start justify-end">
-      <div class="bg-white w-full max-w-2xl h-full overflow-y-auto flex flex-col shadow-2xl">
-        <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+    <!-- Audit Detail Modal -->
+    <div v-if="showDetail && auditDetail" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      @click.self="showDetail = false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
           <div>
             <p class="text-xs text-gray-500">{{ auditDetail.year }}년</p>
             <h2 class="text-lg font-semibold">{{ auditDetail.title }}</h2>
           </div>
-          <button @click="showDetail = false" class="text-gray-400 hover:text-gray-600 p-1">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
+          <div class="flex items-center gap-1">
+            <button v-if="isManager" @click="openEditAudit(auditDetail)"
+              class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700" title="수정">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </button>
+            <button @click="showDetail = false" class="text-gray-400 hover:text-gray-600 p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="px-6 py-5 space-y-6 flex-1">
+        <div class="px-6 py-5 space-y-6 flex-1 overflow-y-auto">
           <!-- Basic Info -->
           <div class="grid grid-cols-2 gap-3 text-sm">
             <div><span class="text-gray-500">기간</span>
@@ -176,7 +186,8 @@
             <div v-if="!auditDetail.items?.length" class="text-sm text-gray-400 py-2 text-center border rounded-lg">{{ $t('internalAudit.noItems') }}</div>
             <div v-else class="space-y-2">
               <div v-for="item in auditDetail.items" :key="item.id"
-                class="p-3 bg-gray-50 rounded-lg border text-sm">
+                class="p-3 bg-gray-50 rounded-lg border text-sm hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer"
+                @click="openItemDetail(item)">
                 <div class="flex items-start justify-between">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -190,7 +201,7 @@
                     <p v-if="item.finding" class="text-xs text-amber-700 mt-1 bg-amber-50 px-2 py-1 rounded">발견: {{ item.finding }}</p>
                     <p v-if="item.actionRequired" class="text-xs text-blue-700 mt-1 bg-blue-50 px-2 py-1 rounded">조치: {{ item.actionRequired }}</p>
                   </div>
-                  <div v-if="isManager" class="flex gap-1 flex-shrink-0 ml-2">
+                  <div v-if="isManager" class="flex gap-1 flex-shrink-0 ml-2" @click.stop>
                     <button @click="openEditItem(item)" class="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700">
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
@@ -255,6 +266,67 @@
         <div class="px-6 py-4 border-t flex justify-end gap-2">
           <button @click="showTargetModal = false" class="btn-secondary">{{ $t('common.cancel') }}</button>
           <button @click="saveTarget" :disabled="saving" class="btn-primary">{{ saving ? $t('common.loading') : $t('common.save') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item Detail Modal -->
+    <div v-if="showItemDetail && itemDetail" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+      @click.self="showItemDetail = false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b flex items-start justify-between flex-shrink-0">
+          <div class="min-w-0">
+            <p class="text-xs text-gray-500">{{ $t('internalAudit.items') }}</p>
+            <h2 class="text-lg font-semibold break-words">{{ itemDetail.itemName }}</h2>
+          </div>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <button v-if="isManager" @click="editItemFromDetail"
+              class="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700" title="수정">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </button>
+            <button @click="showItemDetail = false" class="text-gray-400 hover:text-gray-600 p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="px-6 py-5 space-y-4 flex-1 overflow-y-auto text-sm">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <span class="text-gray-500 text-xs">점검대상</span>
+              <p class="font-medium mt-0.5">{{ itemDetail.targetName || '-' }}</p>
+            </div>
+            <div>
+              <span class="text-gray-500 text-xs">{{ $t('internalAudit.result') }}</span>
+              <p class="mt-0.5">
+                <span v-if="itemDetail.result" :class="resultBadge(itemDetail.result)" class="text-xs px-2 py-0.5 rounded font-medium">
+                  {{ $t(`internalAudit.result_label.${itemDetail.result}`) }}
+                </span>
+                <span v-else class="text-gray-400">미결정</span>
+              </p>
+            </div>
+          </div>
+          <div>
+            <span class="text-gray-500 text-xs">{{ $t('internalAudit.checkMethod') }}</span>
+            <p class="mt-1 whitespace-pre-wrap break-words">{{ itemDetail.checkMethod || '-' }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500 text-xs">{{ $t('internalAudit.finding') }}</span>
+            <p class="mt-1 whitespace-pre-wrap break-words rounded-lg px-3 py-2"
+              :class="itemDetail.finding ? 'bg-amber-50 text-amber-800' : 'text-gray-400'">{{ itemDetail.finding || '-' }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500 text-xs">{{ $t('internalAudit.actionRequired') }}</span>
+            <p class="mt-1 whitespace-pre-wrap break-words rounded-lg px-3 py-2"
+              :class="itemDetail.actionRequired ? 'bg-blue-50 text-blue-800' : 'text-gray-400'">{{ itemDetail.actionRequired || '-' }}</p>
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t flex justify-end flex-shrink-0">
+          <button @click="showItemDetail = false" class="btn-secondary">{{ $t('common.close') }}</button>
         </div>
       </div>
     </div>
@@ -372,6 +444,8 @@ const showAuditModal = ref(false)
 const showDetail = ref(false)
 const showTargetModal = ref(false)
 const showItemModal = ref(false)
+const showItemDetail = ref(false)
+const itemDetail = ref(null)
 const showAuditFileModal = ref(false)
 const showYearPicker = ref(false)
 const pickerYear = ref(currentYear)
@@ -450,6 +524,11 @@ async function saveAudit() {
     }
     showAuditModal.value = false
     fetchAudits()
+    // 상세 팝업에서 수정한 경우 팝업 내용도 갱신
+    if (showDetail.value && auditDetail.value?.id === editAuditTarget.value?.id) {
+      const res = await internalAuditApi.get(auditDetail.value.id)
+      auditDetail.value = res?.data
+    }
   } catch (e) { alert(e || '저장 실패') } finally { saving.value = false }
 }
 
@@ -482,6 +561,12 @@ async function deleteTarget(t) {
 }
 
 // Items
+function openItemDetail(i) { itemDetail.value = i; showItemDetail.value = true }
+function editItemFromDetail() {
+  const target = itemDetail.value
+  showItemDetail.value = false
+  openEditItem(target)
+}
 function openAddItem() { editItemTarget.value = null; itemForm.value = { targetId: null, itemName: '', checkMethod: '', result: '', finding: '', actionRequired: '', sortOrder: 0 }; showItemModal.value = true }
 function openEditItem(i) { editItemTarget.value = i; itemForm.value = { targetId: i.targetId, itemName: i.itemName, checkMethod: i.checkMethod || '', result: i.result || '', finding: i.finding || '', actionRequired: i.actionRequired || '', sortOrder: i.sortOrder }; showItemModal.value = true }
 async function saveItem() {

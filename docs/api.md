@@ -1534,6 +1534,93 @@ GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenSt
 
 ---
 
+## 위협 카탈로그 기본 항목 (Threat Defaults)
+
+위험평가에 사용할 위협 마스터. 기본 140건이 시드되며 관리>코드관리>위협 기본 항목에서 관리합니다.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/threats/defaults?page=0&size=20` | 기본 항목 목록 (페이지네이션) |
+| `GET` | `/threats/defaults/check` | 위협 관리로 복사 가능 여부·기본 항목 수 |
+| `POST` | `/threats/defaults` | 기본 항목을 위협 관리(`threats`)로 복사 |
+| `POST` | `/threats/defaults/item` | 기본 항목 추가 (ADMIN) |
+| `PATCH` | `/threats/defaults/{id}` | 기본 항목 수정 (ADMIN) |
+| `DELETE` | `/threats/defaults/{id}` | 기본 항목 1건 삭제 (ADMIN) |
+| `POST` | `/threats/defaults/bulk-delete` | **선택 일괄 삭제 (ADMIN, v1.31.0)** |
+
+### POST /threats/defaults/bulk-delete *(ADMIN, v1.31.0)*
+
+```json
+// Request
+{ "ids": [12, 34, 56] }
+
+// Response
+{ "deleted": 3 }
+```
+
+존재하는 항목만 삭제하고 실제 삭제 건수를 반환합니다. `ids` 가 비어 있으면 `400`.
+
+> **중복 판정 기준(v1.31.0)**: 기본 항목의 유니크 제약은 `(위협명, 유형, 카테고리, 발생가능성, 잠재영향)` 입니다. 같은 위협명이라도 위험도 조합이 다르면 별도 항목으로 등록할 수 있습니다.
+
+---
+
+## 알림 설정 (Notification Config) *(ADMIN)*
+
+승인 알림(계정 삭제·ADMIN 승격 요청)의 수신 방식과 Slack 연동을 관리합니다.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/admin/notification-config` | 설정 조회 — 토큰은 마스킹 |
+| `PUT` | `/admin/notification-config` | 설정 저장 |
+| `POST` | `/admin/notification-config/slack/test` | **Slack 연동 테스트 (v1.31.0)** |
+
+### GET /admin/notification-config
+
+```json
+{
+  "method": "SLACK",              // EMAIL | SLACK | BOTH | INBOX
+  "approvalEmail": "sec@example.com",
+  "slackWebhookUrl": "https://hooks.slack.com/services/...",
+  "slackMode": "SOCKET",          // WEBHOOK | SOCKET
+  "slackChannel": "#security-alert",
+  "slackBotTokenStored": true,
+  "slackBotTokenMasked": "xoxb-1****ab",
+  "slackAppTokenStored": false,
+  "slackAppTokenMasked": ""
+}
+```
+
+### PUT /admin/notification-config
+
+```json
+{
+  "method": "SLACK",
+  "approvalEmail": "sec@example.com",
+  "slackMode": "SOCKET",
+  "slackChannel": "#security-alert",
+  "slackBotToken": "xoxb-...",    // 빈 값이면 기존 유지, "-" 이면 삭제
+  "slackAppToken": ""
+}
+```
+
+전달한 키만 반영되며, 응답은 `GET` 과 동일한 형식(토큰 마스킹)입니다.
+
+### POST /admin/notification-config/slack/test *(v1.31.0)*
+
+저장된 설정 기준으로 연동을 점검합니다(요청 본문 없음).
+
+- `WEBHOOK` — Webhook URL로 테스트 메시지 발송
+- `SOCKET` — `auth.test`(봇 토큰) → `apps.connections.open`(앱 레벨 토큰, 설정된 경우) → 채널 지정 시 `chat.postMessage` 테스트 발송
+
+```json
+{ "mode": "SOCKET", "success": true,
+  "message": "봇 토큰 정상 (워크스페이스: monosun, 봇: secportal) / 소켓 연결 발급 정상 (앱 레벨 토큰 유효) / #security-alert 채널로 메시지를 전송했습니다." }
+```
+
+> 소켓 모드에서도 **발송은 Web API `chat.postMessage`(봇 토큰)** 를 사용합니다. Socket Mode의 WebSocket은 Slack → 앱 방향(이벤트 수신) 전송 수단이라 상시 리스너는 두지 않으며, 앱 레벨 토큰은 소켓 연결 발급 가능 여부 점검에만 사용합니다.
+
+---
+
 ## 관련 문서
 
 - [FAQ — 자주 묻는 오류](faq.md)

@@ -620,9 +620,74 @@
           </div>
 
           <div v-if="notifyCfg.method !== 'EMAIL' && notifyCfg.method !== 'INBOX'" class="mb-4">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Slack Webhook URL</label>
-            <input v-model="notifyCfg.slackWebhookUrl" type="url" class="input w-full text-sm" placeholder="https://hooks.slack.com/services/..." />
-            <p class="text-xs text-gray-400 mt-1">Slack 앱 → Incoming Webhooks에서 생성한 URL을 입력하세요.</p>
+            <p class="text-sm font-semibold text-gray-700 mb-2">Slack 연동 방식</p>
+            <div class="flex gap-2 mb-3">
+              <button v-for="opt in slackModes" :key="opt.value"
+                @click="notifyCfg.slackMode = opt.value"
+                class="flex-1 py-2.5 px-3 rounded-xl border-2 text-sm font-semibold transition-all text-left"
+                :class="notifyCfg.slackMode === opt.value
+                  ? 'border-primary-500 bg-primary-50 text-primary-600'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'">
+                {{ opt.label }}
+                <span class="block text-[11px] font-normal mt-0.5 opacity-80">{{ opt.hint }}</span>
+              </button>
+            </div>
+
+            <!-- Webhook 방식 -->
+            <div v-if="notifyCfg.slackMode !== 'SOCKET'">
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Slack Webhook URL</label>
+              <input v-model="notifyCfg.slackWebhookUrl" type="url" class="input w-full text-sm" placeholder="https://hooks.slack.com/services/..." />
+              <p class="text-xs text-gray-400 mt-1">Slack 앱 → Incoming Webhooks에서 생성한 URL을 입력하세요.</p>
+            </div>
+
+            <!-- 소켓 모드 방식 -->
+            <div v-else class="space-y-3">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">봇 토큰 (Bot User OAuth Token)</label>
+                <input v-model="notifyCfg.slackBotToken" type="password" class="input w-full text-sm"
+                  :placeholder="notifyCfg.slackBotTokenStored ? `저장됨 (${notifyCfg.slackBotTokenMasked}) · 변경 시에만 입력` : 'xoxb-...'"
+                  autocomplete="new-password" />
+                <p class="text-xs text-gray-400 mt-1">
+                  Slack 앱 → OAuth &amp; Permissions의 <code class="font-mono bg-gray-100 px-1 rounded">xoxb-</code> 토큰.
+                  <code class="font-mono bg-gray-100 px-1 rounded">chat:write</code> 권한이 필요합니다.
+                  <span v-if="notifyCfg.slackBotTokenStored">비워두면 기존 토큰이 유지되며, 삭제하려면 <code class="font-mono bg-gray-100 px-1 rounded">-</code>를 입력하세요.</span>
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">앱 레벨 토큰 (App-Level Token)</label>
+                <input v-model="notifyCfg.slackAppToken" type="password" class="input w-full text-sm"
+                  :placeholder="notifyCfg.slackAppTokenStored ? `저장됨 (${notifyCfg.slackAppTokenMasked}) · 변경 시에만 입력` : 'xapp-... (선택)'"
+                  autocomplete="new-password" />
+                <p class="text-xs text-gray-400 mt-1">
+                  Socket Mode 활성화 시 발급되는 <code class="font-mono bg-gray-100 px-1 rounded">xapp-</code> 토큰
+                  (<code class="font-mono bg-gray-100 px-1 rounded">connections:write</code>). 연결 테스트에 사용합니다.
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">발송 채널</label>
+                <input v-model="notifyCfg.slackChannel" type="text" class="input w-full text-sm" placeholder="#security-alert 또는 C0123ABCDEF" />
+                <p class="text-xs text-gray-400 mt-1">봇이 초대된 채널이어야 합니다. 채널명(#) 또는 채널 ID를 입력하세요.</p>
+              </div>
+              <div class="flex items-start gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>소켓 모드는 외부에서 접근 가능한 URL 없이 Slack 앱을 연동하는 방식입니다.
+                  알림 <b>발송</b>은 소켓 모드 앱에서도 봇 토큰 기반 Web API(<code class="font-mono bg-gray-100 px-1 rounded">chat.postMessage</code>)로 이루어지며,
+                  앱 레벨 토큰은 소켓 연결 가능 여부 점검에 사용됩니다.</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 mt-3">
+              <button @click="testSlackConfig" :disabled="slackTesting"
+                class="btn-secondary text-sm px-4 py-2 rounded-xl">
+                {{ slackTesting ? '테스트 중...' : '연결 테스트' }}
+              </button>
+              <span class="text-xs text-gray-400">저장된 설정 기준으로 점검합니다. 변경했다면 먼저 저장하세요.</span>
+            </div>
+            <p v-if="slackTestResult" class="mt-2 text-xs font-medium"
+              :class="slackTestOk ? 'text-green-600' : 'text-red-500'">{{ slackTestResult }}</p>
           </div>
 
           <div v-if="notifyCfg.method === 'INBOX'" class="mb-4 flex items-start gap-2 p-3 rounded-xl bg-primary-50 border border-primary-200 text-sm text-primary-800">
@@ -1305,9 +1370,21 @@ const notifyMethods = [
   { value: 'BOTH',  label: '이메일 + Slack' },
   { value: 'INBOX', label: '수신함' }
 ]
-const notifyCfg = ref({ method: 'EMAIL', approvalEmail: '', slackWebhookUrl: '' })
+const slackModes = [
+  { value: 'WEBHOOK', label: 'Webhook', hint: 'Incoming Webhook URL' },
+  { value: 'SOCKET',  label: '소켓 모드', hint: '봇 토큰 + 앱 레벨 토큰' }
+]
+const notifyCfg = ref({
+  method: 'EMAIL', approvalEmail: '', slackWebhookUrl: '',
+  slackMode: 'WEBHOOK', slackChannel: '',
+  slackBotToken: '', slackBotTokenStored: false, slackBotTokenMasked: '',
+  slackAppToken: '', slackAppTokenStored: false, slackAppTokenMasked: ''
+})
 const notifySaving = ref(false)
 const notifySaved = ref(false)
+const slackTesting = ref(false)
+const slackTestResult = ref('')
+const slackTestOk = ref(false)
 const linkBaseUrl = ref('')   // 이메일 발송 링크 도메인 (app.base_url)
 
 const DEFAULT_RSS_FEEDS = [
@@ -1423,13 +1500,46 @@ async function onSaveSessionTimeout() {
   catch { alert('저장에 실패했습니다.') }
   finally { sessionTimeoutSaving.value = false }
 }
+function applyNotifyConfig(data) {
+  notifyCfg.value = {
+    ...notifyCfg.value,
+    ...data,
+    // 토큰은 서버에서 마스킹만 내려오므로 입력값은 항상 비운다
+    slackBotToken: '',
+    slackAppToken: '',
+    slackBotTokenStored: !!data.slackBotTokenStored,
+    slackBotTokenMasked: data.slackBotTokenMasked ?? '',
+    slackAppTokenStored: !!data.slackAppTokenStored,
+    slackAppTokenMasked: data.slackAppTokenMasked ?? ''
+  }
+}
 async function saveNotifyConfig() {
-  notifySaving.value = true; notifySaved.value = false
+  notifySaving.value = true; notifySaved.value = false; slackTestResult.value = ''
   try {
-    await notificationConfigApi.update({ method: notifyCfg.value.method, approvalEmail: notifyCfg.value.approvalEmail, slackWebhookUrl: notifyCfg.value.slackWebhookUrl })
+    const data = await notificationConfigApi.update({
+      method: notifyCfg.value.method,
+      approvalEmail: notifyCfg.value.approvalEmail,
+      slackWebhookUrl: notifyCfg.value.slackWebhookUrl,
+      slackMode: notifyCfg.value.slackMode,
+      slackChannel: notifyCfg.value.slackChannel,
+      slackBotToken: notifyCfg.value.slackBotToken,   // 빈 값이면 기존 유지, '-'면 삭제
+      slackAppToken: notifyCfg.value.slackAppToken
+    })
+    applyNotifyConfig(data)
     await appSettingApi.update('app.base_url', linkBaseUrl.value.trim())
     notifySaved.value = true; setTimeout(() => { notifySaved.value = false }, 3000)
   } finally { notifySaving.value = false }
+}
+async function testSlackConfig() {
+  slackTesting.value = true; slackTestResult.value = ''
+  try {
+    const res = await notificationConfigApi.testSlack()
+    slackTestOk.value = !!res.success
+    slackTestResult.value = res.message || (res.success ? '연동 정상' : '연동 실패')
+  } catch (e) {
+    slackTestOk.value = false
+    slackTestResult.value = typeof e === 'string' ? e : '연결 테스트에 실패했습니다.'
+  } finally { slackTesting.value = false }
 }
 function rssAddFeed() { rssFeeds.value.push({ url: '', category: '', label: '' }) }
 function rssRemoveFeed(idx) { rssFeeds.value.splice(idx, 1) }
@@ -1754,7 +1864,7 @@ onMounted(async () => {
   loadOktaConfig()
   loadLawApiKeyStatus()
   loadGithubConfig()
-  try { const data = await notificationConfigApi.get(); notifyCfg.value = { ...notifyCfg.value, ...data } } catch {}
+  try { const data = await notificationConfigApi.get(); applyNotifyConfig(data) } catch {}
   loadRssConfig()
   loadMailConfig()
 })

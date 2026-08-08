@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.monosun.secportal'
-version = '1.30.0'
+version = '1.31.0'
 sourceCompatibility = '17'
 
 configurations {

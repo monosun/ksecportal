@@ -17,12 +17,21 @@ public class ApprovalNotificationService {
         String method = config.getNotificationMethod();
         switch (method) {
             case "INBOX" -> { /* 수신함 전용 — 이메일·Slack 발송 생략 */ }
-            case "SLACK" -> slackService.send(config.getSlackWebhookUrl(), slackText);
+            case "SLACK" -> sendSlack(slackText);
             case "BOTH" -> {
                 emailService.send(config.getApprovalEmail(), emailSubject, emailHtml);
-                slackService.send(config.getSlackWebhookUrl(), slackText);
+                sendSlack(slackText);
             }
             default -> emailService.send(config.getApprovalEmail(), emailSubject, emailHtml);
+        }
+    }
+
+    /** 설정된 Slack 연동 방식(Webhook / 소켓 모드 봇 토큰)에 맞춰 발송한다. */
+    private void sendSlack(String slackText) {
+        if ("SOCKET".equals(config.getSlackMode())) {
+            slackService.sendApi(config.getSlackBotToken(), config.getSlackChannel(), slackText);
+        } else {
+            slackService.send(config.getSlackWebhookUrl(), slackText);
         }
     }
 

@@ -33,6 +33,14 @@ public class ThreatDto {
         private String remark;
     }
 
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BulkDeleteRequest {
+        private List<Long> ids;
+    }
+
     /** 저장 형식("서버,네트워크") → 목록 */
     public static List<String> splitAssetTypes(String stored) {
         if (stored == null || stored.isBlank()) return List.of();

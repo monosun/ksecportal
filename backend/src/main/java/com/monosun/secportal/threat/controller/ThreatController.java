@@ -89,6 +89,13 @@ public class ThreatController {
         return ApiResponse.noContent();
     }
 
+    @PostMapping("/defaults/bulk-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Map<String, Integer>> deleteDefaults(@RequestBody ThreatDto.BulkDeleteRequest request) {
+        int deleted = threatService.deleteDefaults(request.getIds());
+        return ApiResponse.ok(Map.of("deleted", deleted));
+    }
+
     @PostMapping("/reset")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ApiResponse<Map<String, Integer>> resetToDefaults() {
