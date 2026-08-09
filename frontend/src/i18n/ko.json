@@ -42,6 +42,8 @@
     "settings": "환경설정",
     "help": "도움말",
     "inbox": "수신함",
+    "collapseMenu": "메뉴 숨기기",
+    "expandMenu": "메뉴 보이기",
     "threats": "위협 관리",
     "riskAssessment": "위험평가",
     "riskTreatment": "위험처리 계획",
@@ -99,7 +101,10 @@
     "sidebarStyle": "사이드바 스타일",
     "sidebarStyleDesc": "사이드바 메뉴의 색상 스타일을 선택합니다",
     "sidebarDark": "어두운 스타일",
-    "sidebarLight": "밝은 스타일"
+    "sidebarLight": "밝은 스타일",
+    "sidebarCollapse": "화면 넓게 보기",
+    "sidebarCollapseDesc": "좌측 메뉴를 숨겨 본문을 화면 전체로 넓혀 봅니다. 숨긴 상태에서는 화면 왼쪽 가장자리의 탭을 눌러 다시 엽니다.",
+    "sidebarCollapseShortcut": "로도 접고 펼 수 있습니다"
   },
   "notice": {
     "title": "공지사항",

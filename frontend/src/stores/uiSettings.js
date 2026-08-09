@@ -73,6 +73,15 @@ function applyFontSize(key) {
 }
 
 const DEFAULT_FAVICON = '/shield.svg'
+const DEFAULT_TITLE_NAME = 'KSecPortal'
+const TITLE_SUFFIX = ' — 정보보호 포탈'
+// 브라우저 탭 제목을 설정된 로고 텍스트로 적용 — 미설정 시 기본 제품명으로 되돌린다.
+function applyTitle(name) {
+  if (typeof document === 'undefined') return
+  const trimmed = (name || '').trim()
+  document.title = (trimmed || DEFAULT_TITLE_NAME) + TITLE_SUFFIX
+}
+
 // 브라우저 탭 아이콘(파비콘)을 설정된 로고로 적용 — 로고가 없으면 기본 아이콘으로 되돌린다.
 function applyFavicon(url) {
   if (typeof document === 'undefined') return
@@ -100,8 +109,11 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   const font = ref(localStorage.getItem('ui-font') || 'pretendard')
   const fontSize = ref(localStorage.getItem('ui-font-size') || 'medium')
   const sidebarStyle = ref(localStorage.getItem('ui-sidebar') || 'dark')
+  // 좌측 메뉴 접기(숨기기) — 접으면 본문이 화면 전체를 쓴다. 개인 설정이라 localStorage 에만 저장
+  const sidebarCollapsed = ref(localStorage.getItem('ui-sidebar-collapsed') === '1')
   const logoUrl = ref(localStorage.getItem('ui-logo') || null)
-  const logoText = ref(localStorage.getItem('ui-logo-text') ?? 'monosun')
+  // 개인 오버라이드가 없으면 null — 하드코딩 기본값을 두면 DB 설정(login_logo_text)이 가려진다
+  const logoText = ref(localStorage.getItem('ui-logo-text'))
   // DB에서 로드한 기본 로고 (localStorage 미설정 시 사용)
   const dbLogoUrl = ref(null)
   const dbLogoText = ref(null)
@@ -118,13 +130,15 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
     applyFont(font.value)
     applyFontSize(fontSize.value)
     applyFavicon(effectiveLogoUrl())   // localStorage 로고 우선 즉시 적용
+    applyTitle(effectiveLogoText())
     try {
       const res = await appSettingApi.getAll()
       const settings = res?.data || {}
       if (settings.login_logo) dbLogoUrl.value = settings.login_logo
       if (settings.login_logo_text) dbLogoText.value = settings.login_logo_text
-      // 파비콘을 설정된 로고로 적용
+      // 파비콘·탭 제목을 설정된 로고로 적용
       applyFavicon(effectiveLogoUrl())
+      applyTitle(effectiveLogoText())
       if (settings.session_timeout_minutes) {
         const m = parseInt(settings.session_timeout_minutes, 10)
         if (m >= 1) sessionTimeoutMinutes.value = m
@@ -166,6 +180,15 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
     localStorage.setItem('ui-sidebar', style)
   }
 
+  function setSidebarCollapsed(collapsed) {
+    sidebarCollapsed.value = !!collapsed
+    localStorage.setItem('ui-sidebar-collapsed', sidebarCollapsed.value ? '1' : '0')
+  }
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed(!sidebarCollapsed.value)
+  }
+
   function setLogoUrl(dataUrl) {
     logoUrl.value = dataUrl
     localStorage.setItem('ui-logo', dataUrl)
@@ -181,6 +204,7 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   function setLogoText(text) {
     logoText.value = text
     localStorage.setItem('ui-logo-text', text)
+    applyTitle(effectiveLogoText())
   }
 
   async function saveLogoToServer(dataUrl) {
@@ -192,7 +216,7 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   async function saveLogoTextToServer(text) {
     await appSettingApi.update('login_logo_text', text)
     dbLogoText.value = text
-    setLogoText(text)
+    setLogoText(text)   // setLogoText 이 탭 제목도 갱신
   }
 
   async function saveSessionTimeoutToServer(minutes) {
@@ -201,10 +225,11 @@ export const useUiSettingsStore = defineStore('uiSettings', () => {
   }
 
   return {
-    theme, font, fontSize, sidebarStyle, logoUrl, logoText,
+    theme, font, fontSize, sidebarStyle, sidebarCollapsed, logoUrl, logoText,
     dbLogoUrl, dbLogoText, sessionTimeoutMinutes, menuOrder,
     effectiveLogoUrl, effectiveLogoText,
     init, setTheme, setFont, setFontSize, setSidebarStyle,
+    setSidebarCollapsed, toggleSidebarCollapsed,
     setLogoUrl, clearLogoUrl, setLogoText,
     saveLogoToServer, saveLogoTextToServer, saveSessionTimeoutToServer,
     saveMenuOrder

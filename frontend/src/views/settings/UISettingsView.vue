@@ -177,6 +177,28 @@
         </div>
       </div>
 
+      <!-- 화면 넓게 보기 (좌측 메뉴 접기) -->
+      <div class="card">
+        <h2 class="text-sm font-bold text-gray-800 mb-0.5">{{ $t('settings.sidebarCollapse') }}</h2>
+        <p class="text-xs text-gray-400 mb-3">{{ $t('settings.sidebarCollapseDesc') }}</p>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <kbd class="px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 font-mono text-[11px]">Ctrl</kbd>
+            <span class="text-gray-300">+</span>
+            <kbd class="px-1.5 py-0.5 rounded border border-gray-200 bg-gray-50 font-mono text-[11px]">\</kbd>
+            <span>{{ $t('settings.sidebarCollapseShortcut') }}</span>
+          </div>
+          <!-- 스위치 -->
+          <button type="button" role="switch" :aria-checked="ui.sidebarCollapsed"
+            @click="ui.toggleSidebarCollapsed()"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors"
+            :class="ui.sidebarCollapsed ? 'bg-primary-500' : 'bg-gray-200'">
+            <span class="inline-block h-5 w-5 mt-0.5 rounded-full bg-white shadow transform transition-transform"
+              :class="ui.sidebarCollapsed ? 'translate-x-[22px]' : 'translate-x-0.5'"></span>
+          </button>
+        </div>
+      </div>
+
       </div><!-- /탭: 화면 -->
 
       <!-- 탭: 계정 -->

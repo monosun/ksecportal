@@ -5,25 +5,36 @@
     <div v-if="mobileNavOpen" class="fixed inset-0 z-40 bg-black/40 md:hidden"
       @click="mobileNavOpen = false"></div>
 
-    <!-- Sidebar -->
-    <aside class="fixed md:static inset-y-0 left-0 z-50 w-[220px] flex-shrink-0 flex flex-col border-r
-      transform transition-transform duration-200 md:translate-x-0"
+    <!-- Sidebar — 데스크톱에서도 fixed. 접으면 왼쪽으로 밀어내고 본문 padding 이 함께 줄어든다 -->
+    <aside class="fixed inset-y-0 left-0 z-50 w-[220px] flex flex-col border-r
+      transform transition-transform duration-200"
       :class="[isDark ? 'bg-gray-900 border-gray-700/50' : 'bg-white border-gray-100',
-        mobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full']">
+        mobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+        sidebarCollapsed ? 'md:-translate-x-full' : 'md:translate-x-0']">
 
       <!-- Logo -->
-      <div class="h-[60px] px-5 flex items-center border-b flex-shrink-0"
+      <div class="h-[60px] pl-5 pr-3 flex items-center justify-between gap-2 border-b flex-shrink-0"
         :class="isDark ? 'border-gray-700/50' : 'border-gray-100'">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 min-w-0">
           <img
             v-if="ui.effectiveLogoUrl()"
             :src="ui.effectiveLogoUrl()"
             alt="KSecPortal"
             :style="{ height: '22px', width: 'auto' }"
           />
-          <span class="text-[15px] font-bold tracking-tight"
+          <span class="text-[15px] font-bold tracking-tight truncate"
             :class="isDark ? 'text-white' : 'text-gray-900'">{{ ui.effectiveLogoText() }}</span>
         </div>
+        <!-- 메뉴 접기 (데스크톱 전용) -->
+        <button @click="ui.toggleSidebarCollapsed()"
+          class="hidden md:flex flex-shrink-0 p-1.5 rounded-lg transition-colors"
+          :class="isDark ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'"
+          :title="`${$t('nav.collapseMenu')} (Ctrl+\\)`"
+          :aria-label="$t('nav.collapseMenu')">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+          </svg>
+        </button>
       </div>
 
       <!-- Nav -->
@@ -243,8 +254,24 @@
       </div>
     </aside>
 
+    <!-- 메뉴 열기 — 접힌 상태에서만 보이는 좌측 가장자리 탭 (데스크톱 전용) -->
+    <button v-if="sidebarCollapsed" @click="ui.toggleSidebarCollapsed()"
+      class="hidden md:flex fixed left-0 top-1/2 -translate-y-1/2 z-40 items-center justify-center
+        w-6 h-16 rounded-r-lg border border-l-0 shadow-sm transition-colors"
+      :class="isDark
+        ? 'bg-gray-900 border-gray-700/50 text-gray-400 hover:text-gray-100 hover:bg-gray-800'
+        : 'bg-white border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50'"
+      :title="`${$t('nav.expandMenu')} (Ctrl+\\)`"
+      :aria-label="$t('nav.expandMenu')">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+      </svg>
+    </button>
+
     <!-- Main -->
-    <main class="flex-1 overflow-auto bg-gray-50 min-w-0">
+    <!-- 사이드바가 fixed 이므로 margin 으로 자리를 비운다 (padding 이면 가로 스크롤 시 본문이 사이드바 밑으로 들어감) -->
+    <main class="flex-1 overflow-auto bg-gray-50 min-w-0 transition-[margin] duration-200"
+      :class="sidebarCollapsed ? 'md:ml-0' : 'md:ml-[220px]'">
       <!-- 모바일 상단바 (햄버거) -->
       <div class="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 border-b"
         :class="isDark ? 'bg-gray-900 border-gray-700/50' : 'bg-white border-gray-100'">
@@ -326,13 +353,24 @@ const route = useRoute()
 const { locale } = useI18n()
 const session = useSessionTimer()
 
+// 좌측 메뉴 접기/펼치기 — Ctrl+\ (Notion 과 동일한 단축키)
+const sidebarCollapsed = computed(() => ui.sidebarCollapsed)
+function onKeydown(e) {
+  if (e.key === '\\' && (e.ctrlKey || e.metaKey) && !e.altKey) {
+    e.preventDefault()
+    ui.toggleSidebarCollapsed()
+  }
+}
+
 onMounted(() => {
   inbox.startPolling()
   if (auth.isAuthenticated) session.start()
+  window.addEventListener('keydown', onKeydown)
 })
 onUnmounted(() => {
   inbox.stopPolling()
   session.stop()
+  window.removeEventListener('keydown', onKeydown)
 })
 
 const isDark = computed(() => ui.sidebarStyle === 'dark')

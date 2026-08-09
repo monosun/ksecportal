@@ -352,7 +352,7 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="label">부서</label>
-                <input v-model="targetModal.form.department" class="input" />
+                <DepartmentInput v-model="targetModal.form.department" input-class="input" />
               </div>
               <div>
                 <label class="label">직책</label>
@@ -519,6 +519,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { phishingApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import DepartmentInput from '@/components/DepartmentInput.vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
 
 // 대상자 이름·이메일은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다

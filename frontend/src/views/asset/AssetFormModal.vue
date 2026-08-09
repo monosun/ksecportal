@@ -83,7 +83,7 @@
               </div>
               <div>
                 <label class="lbl">{{ $t('asset.department') }}</label>
-                <input v-model="form.department" class="input w-full" />
+                <DepartmentInput v-model="form.department" />
               </div>
               <div class="col-span-2">
                 <label class="lbl">운영담당자</label>
@@ -267,6 +267,7 @@
 import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { assetApi, adminApi, codeApi, sbomApi } from '@/api'
+import DepartmentInput from '@/components/DepartmentInput.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },

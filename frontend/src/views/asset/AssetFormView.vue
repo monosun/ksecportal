@@ -74,7 +74,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('asset.department') }} *</label>
-            <input v-model="form.department" class="input w-full" />
+            <DepartmentInput v-model="form.department" />
           </div>
         </div>
 
@@ -290,6 +290,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { assetApi, adminApi, codeApi, sbomApi } from '@/api'
+import DepartmentInput from '@/components/DepartmentInput.vue'
 
 const route = useRoute()
 const router = useRouter()

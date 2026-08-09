@@ -42,6 +42,8 @@
     "settings": "Settings",
     "help": "Help",
     "inbox": "Inbox",
+    "collapseMenu": "Hide menu",
+    "expandMenu": "Show menu",
     "threats": "Threat Management",
     "riskAssessment": "Risk Assessment",
     "riskTreatment": "Risk Treatment Plan",
@@ -99,7 +101,10 @@
     "sidebarStyle": "Sidebar Style",
     "sidebarStyleDesc": "Choose between a dark or light sidebar",
     "sidebarDark": "Dark",
-    "sidebarLight": "Light"
+    "sidebarLight": "Light",
+    "sidebarCollapse": "Wide view",
+    "sidebarCollapseDesc": "Hide the left menu so the content fills the screen. While hidden, use the tab on the left edge to open it again.",
+    "sidebarCollapseShortcut": "toggles the menu as well"
   },
   "notice": {
     "title": "Notices",

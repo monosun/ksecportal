@@ -133,7 +133,7 @@
             </div>
             <div>
               <label class="text-sm font-medium text-gray-700">요청 부서</label>
-              <input v-model="form.department" class="input w-full mt-1" placeholder="예: 서비스개발팀" />
+              <DepartmentInput v-model="form.department" input-class="input w-full mt-1" placeholder="부서 선택 또는 직접 입력 (예: 서비스개발팀)" />
             </div>
             <div>
               <label class="text-sm font-medium text-gray-700">오픈(적용) 예정일</label>
@@ -317,6 +317,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { securityReviewApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import DepartmentInput from '@/components/DepartmentInput.vue'
 import { useDebounceFn } from '@vueuse/core'
 
 const auth = useAuthStore()

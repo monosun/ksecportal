@@ -94,8 +94,9 @@
                     {{ c.contactOrder }}
                   </span>
                 </td>
+                <!-- 기관(외부 신고처)은 담당 부서명이라 원문을 두고, 대응반·협력사의 개인 성명은 가려서 표시한다 -->
                 <td class="px-4 py-2.5">
-                  <p class="font-medium text-gray-900">{{ c.name }}</p>
+                  <p class="font-medium text-gray-900">{{ displayName(g, c) }}</p>
                   <p v-if="c.organization" class="text-xs text-gray-400">{{ c.organization }}</p>
                 </td>
                 <td class="px-4 py-2.5 text-gray-600 text-xs">{{ c.roleName || '—' }}</td>
@@ -228,7 +229,7 @@
               </div>
               <div>
                 <label class="label">부서</label>
-                <input v-model="contactModal.form.department" class="input" />
+                <DepartmentInput v-model="contactModal.form.department" input-class="input" />
               </div>
               <div>
                 <label class="label">직위</label>
@@ -281,6 +282,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { emergencyContactApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import DepartmentInput from '@/components/DepartmentInput.vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
 
 // 개인 휴대전화·이메일은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
@@ -319,6 +321,14 @@ const visibleGroups = computed(() => {
     // 검색 중에는 결과가 있는 그룹만 남긴다
     .filter(g => !kw || g.contacts.length > 0)
 })
+
+// 성명 표시 — 외부 기관(EXTERNAL)은 '민원상담팀' 같은 담당 부서명이라 원문 그대로 두고,
+// 대응반(INTERNAL)·협력사(PARTNER)는 실제 개인 성명이므로 마스킹 기준을 적용한다.
+function displayName(group, contact) {
+  if (!contact.name) return contact.name
+  if (group.contactType === 'EXTERNAL' || pi.revealed) return contact.name
+  return pi.mask('name', contact.name)
+}
 
 function notesOf(g) { return g.contacts.filter(c => c.note) }
 
