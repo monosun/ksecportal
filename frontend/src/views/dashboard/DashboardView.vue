@@ -623,7 +623,7 @@ async function loadRss() {
 
 async function loadRssSettings() {
   try {
-    const res = await import('@/api').then(m => m.appSettingApi.getAll())
+    const res = await import('@/api').then(m => m.appSettingApi.getAllAuth())
     const s = res.data || {}
     if (s['rss.days']) noticeDays.value = parseInt(s['rss.days']) || 7
     if (s['rss.vuln.days']) vulnDays.value = parseInt(s['rss.vuln.days']) || 30

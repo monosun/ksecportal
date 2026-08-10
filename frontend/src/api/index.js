@@ -870,8 +870,15 @@ export const performanceApi = {
 }
 
 export const appSettingApi = {
+  // 인증 전(로그인 화면)에서 필요한 로고 등 안전한 항목만 반환 — 민감값은 서버에서 제외됨
   getAll: () => api.get('/public/app-settings'),
+  // 로그인 후 화면(설정관리·대시보드 등)에서 사용 — 인증된 사용자만 전체 설정값 조회 가능
+  getAllAuth: () => api.get('/app-settings'),
   update: (key, value) => api.put(`/admin/app-settings/${key}`, { value }),
+}
+
+export const lawProxyApi = {
+  test: () => api.post('/law-proxy/test'),
 }
 
 export const aiApi = {

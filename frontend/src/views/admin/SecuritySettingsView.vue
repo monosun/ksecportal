@@ -170,7 +170,7 @@ async function saveSecurityConfig() {
 
 async function loadOktaConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const s = res.data || {}
     oktaCfg.value = {
       enabled:     s['okta.enabled']     === 'true',

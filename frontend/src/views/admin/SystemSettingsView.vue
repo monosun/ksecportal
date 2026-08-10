@@ -621,7 +621,7 @@ async function saveRssConfig() {
 
 async function loadRssConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const settings = res.data || {}
     if (settings['rss.days']) rssDays.value = parseInt(settings['rss.days']) || 7
     if (settings['rss.feeds']) {

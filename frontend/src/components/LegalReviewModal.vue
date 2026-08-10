@@ -353,7 +353,7 @@ const auth = useAuthStore()
 const companyName = ref('')
 
 onMounted(() => {
-  appSettingApi.getAll()
+  appSettingApi.getAllAuth()
     .then(res => {
       const s = res?.data || {}
       // 설정관리 > 회사정보의 회사명 우선, 없으면 로고 텍스트

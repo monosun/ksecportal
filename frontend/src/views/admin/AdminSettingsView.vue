@@ -1032,6 +1032,10 @@
                 class="btn-primary px-6 py-2 text-sm rounded-xl disabled:opacity-50">
                 {{ lawApiKeySaving ? '저장 중...' : (lawApiKeyStored ? '교체' : '저장') }}
               </button>
+              <button v-if="lawApiKeyStored" @click="testLawApiConnection" :disabled="lawApiKeyTesting"
+                class="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                {{ lawApiKeyTesting ? '테스트 중...' : '연결 테스트' }}
+              </button>
               <button v-if="lawApiKeyStored" @click="clearLawApiKey" :disabled="lawApiKeySaving"
                 class="px-4 py-2 text-sm border border-red-300 text-red-600 rounded-xl hover:bg-red-50 disabled:opacity-50 transition-colors">
                 API 키 삭제
@@ -1052,7 +1056,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUiSettingsStore } from '@/stores/uiSettings'
-import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi, adminToolsApi, mailConfigApi } from '@/api/index.js'
+import { securityConfigApi, appSettingApi, authApi, notificationConfigApi, aiApi, githubConfigApi, adminToolsApi, mailConfigApi, lawProxyApi } from '@/api/index.js'
 import { INDUSTRIES, CATEGORIES } from '@/data/legalIndustries.js'
 import { setLawApiKeySet, searchLaws } from '@/services/legalApiService.js'
 
@@ -1112,6 +1116,7 @@ const showApiKey      = ref(false)
 const lawApiKeyMsg    = ref('')
 const lawApiKeyOk     = ref(false)
 const lawApiKeySaving = ref(false)
+const lawApiKeyTesting = ref(false)
 
 // ── GitHub 연동 설정 ─────────────────────────────
 const ghCfg = ref({ tokenStored: false, tokenMasked: '', owner: '', apiBaseUrl: '' })
@@ -1193,7 +1198,7 @@ async function testGithubConnection() {
 
 async function loadLawApiKeyStatus() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const val = (res.data || {}).lawApiKey || ''
     lawApiKeyStored.value = val.length > 0
     lawApiKeyValue.value  = val
@@ -1236,6 +1241,22 @@ async function clearLawApiKey() {
     lawApiKeyMsg.value = '삭제에 실패했습니다.'
   } finally {
     lawApiKeySaving.value = false
+  }
+}
+
+async function testLawApiConnection() {
+  lawApiKeyTesting.value = true
+  lawApiKeyMsg.value = ''
+  try {
+    const res = await lawProxyApi.test()
+    const d = res.data || {}
+    lawApiKeyOk.value  = !!d.success
+    lawApiKeyMsg.value = d.message || (d.success ? '연결 성공' : '연결 실패')
+  } catch (e) {
+    lawApiKeyOk.value  = false
+    lawApiKeyMsg.value = e || '연결 테스트에 실패했습니다.'
+  } finally {
+    lawApiKeyTesting.value = false
   }
 }
 
@@ -1309,7 +1330,7 @@ async function saveSecurityConfig() {
 }
 async function loadOktaConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const s = res.data || {}
     oktaCfg.value = {
       enabled:     s['okta.enabled']     === 'true',
@@ -1555,7 +1576,7 @@ async function saveRssConfig() {
 }
 async function loadRssConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const s = res.data || {}
     if (s['rss.days']) rssDays.value = parseInt(s['rss.days']) || 7
     if (s['rss.feeds']) { const feeds = JSON.parse(s['rss.feeds']); if (Array.isArray(feeds) && feeds.length > 0) rssFeeds.value = feeds }
@@ -1570,7 +1591,7 @@ const companySaved  = ref(false)
 
 async function loadCompanyConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const s = res.data || {}
     companyCfg.value = {
       name:     s['company.name']     || '',
@@ -1794,7 +1815,7 @@ function toggleCategory(catKey, checked) {
 
 async function loadIndustryConfig() {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const raw = res.data?.['company.industries']
     let ids = []
     if (raw) {

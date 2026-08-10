@@ -347,7 +347,7 @@ function typeColor(type) {
 // ── 마운트: 업종 설정 로드 ──────────────────────────
 onMounted(async () => {
   try {
-    const res = await appSettingApi.getAll()
+    const res = await appSettingApi.getAllAuth()
     const raw = res.data?.['company.industries']
     if (raw) {
       const ids = JSON.parse(raw)
