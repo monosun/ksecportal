@@ -718,8 +718,14 @@ async function loadLegal() {
         if (cached && (now - cached.ts) < LEGAL_TTL) {
           meta = cached.meta
         } else {
-          try { meta = await fetchLawMeta(law.name) } catch { meta = null }
-          cache[law.name] = { meta, ts: now }
+          // 조회 실패(네트워크·일시적 오류)는 캐시하지 않음 — "개정 없음"과 뒤섞여
+          // 12시간 동안 숨겨지는 것을 막고 다음 로드 때 재시도되게 한다.
+          try {
+            meta = await fetchLawMeta(law.name)
+            cache[law.name] = { meta, ts: now }
+          } catch {
+            meta = null
+          }
         }
         if (meta) results.push({ ...law, ...meta })
       }

@@ -345,25 +345,33 @@ export async function searchLaws(query) {
 // 검색 + 매칭 (target 별)
 // admrul(행정규칙) 검색 응답은 AdmRulSearch.admrul + 행정규칙명/행정규칙일련번호 구조 →
 // 법령 검색과 같은 필드명으로 매핑해 matchHit을 공용으로 사용
+//
+// 요청 실패(네트워크·429 등)는 그대로 던진다 — "검색 결과 없음"과 구분해야
+// 호출부(대시보드 캐시)가 일시 실패를 "개정 없음"으로 12시간 동안 오인 캐시하지 않는다.
 async function searchHit(lawName, target) {
+  // 검색어에서 괄호 주석 제거 — "... 법률 (AML)" 형태는 그대로 검색하면 0건
+  const query = lawName.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+  const { data } = await axios.get(PROXY + '/search', { params: { query, target }, headers: authHeaders() })
+  const 목록 = target === 'admrul'
+    ? toArr(data?.AdmRulSearch?.admrul).map(r => ({
+        법령명한글:   r.행정규칙명,
+        법령일련번호: r.행정규칙일련번호,
+        법령구분명:   r.행정규칙종류,
+        소관부처명:   r.소관부처명,
+        공포일자:     r.발령일자,
+        시행일자:     r.시행일자,
+        공포번호:     r.발령번호,
+        법령링크:     r.행정규칙상세링크,
+      }))
+    : toArr(data?.LawSearch?.law)
+  if (!목록.length) return null
+  return matchHit(목록, lawName)
+}
+
+// searchHit의 안전 버전 — 실패해도 null 반환 (Excel 다운로드 등 1회성 조회용)
+async function searchHitSafe(lawName, target) {
   try {
-    // 검색어에서 괄호 주석 제거 — "... 법률 (AML)" 형태는 그대로 검색하면 0건
-    const query = lawName.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
-    const { data } = await axios.get(PROXY + '/search', { params: { query, target }, headers: authHeaders() })
-    const 목록 = target === 'admrul'
-      ? toArr(data?.AdmRulSearch?.admrul).map(r => ({
-          법령명한글:   r.행정규칙명,
-          법령일련번호: r.행정규칙일련번호,
-          법령구분명:   r.행정규칙종류,
-          소관부처명:   r.소관부처명,
-          공포일자:     r.발령일자,
-          시행일자:     r.시행일자,
-          공포번호:     r.발령번호,
-          법령링크:     r.행정규칙상세링크,
-        }))
-      : toArr(data?.LawSearch?.law)
-    if (!목록.length) return null
-    return matchHit(목록, lawName)
+    return await searchHit(lawName, target)
   } catch {
     return null
   }
@@ -378,9 +386,9 @@ function parseContentData(contentData) {
 
 // 법령명으로 조문 전체 가져오기 (Excel 다운로드용)
 export async function fetchLawByName(lawName) {
-  let hit = await searchHit(lawName, 'law')
+  let hit = await searchHitSafe(lawName, 'law')
   let target = 'law'
-  if (!hit) { hit = await searchHit(lawName, 'admrul'); target = 'admrul' }
+  if (!hit) { hit = await searchHitSafe(lawName, 'admrul'); target = 'admrul' }
   if (!hit) return null
 
   const mst = hit.법령일련번호
@@ -390,10 +398,20 @@ export async function fetchLawByName(lawName) {
 
 // 법령명으로 개정 메타정보만 가져오기 (대시보드 법령 개정 위젯용)
 // 전문(content) 호출 없이 검색(search) 응답만으로 공포·시행·제개정 정보를 추출 → 가볍고 빠름
+//
+// "검색 결과 없음"(hit === null, 정상)과 "요청 실패"(예외, 일시적)를 구분해서 던진다 —
+// 호출부(대시보드)가 실패까지 "개정 없음"으로 캐시해 12시간 동안 숨겨버리지 않도록.
 export async function fetchLawMeta(lawName) {
-  let hit = await searchHit(lawName, 'law')
-  if (!hit) hit = await searchHit(lawName, 'admrul')
-  if (!hit) return null
+  let hit = null
+  let failed = false
+  try { hit = await searchHit(lawName, 'law') } catch { failed = true }
+  if (!hit) {
+    try { hit = await searchHit(lawName, 'admrul') } catch { failed = true }
+  }
+  if (!hit) {
+    if (failed) throw new Error(`법령 조회 실패: ${lawName}`)
+    return null
+  }
 
   const rawLink = hit.법령상세링크 || hit.법령링크 || null
   const digits = (v) => String(v ?? '').replace(/\D/g, '')
@@ -413,9 +431,9 @@ export async function fetchLawMeta(lawName) {
 
 // 법령명으로 조문 + 메타정보 가져오기 (법령검토 모달용)
 export async function fetchLawFull(lawName) {
-  let hit = await searchHit(lawName, 'law')
+  let hit = await searchHitSafe(lawName, 'law')
   let target = 'law'
-  if (!hit) { hit = await searchHit(lawName, 'admrul'); target = 'admrul' }
+  if (!hit) { hit = await searchHitSafe(lawName, 'admrul'); target = 'admrul' }
   if (!hit) return { articles: null, meta: null }
 
   // 검색 결과에서 1차 메타 추출
