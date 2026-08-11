@@ -10,6 +10,9 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  // 파일 업로드(FormData)는 전송에만 수십 초가 걸릴 수 있다.
+  // 기본 timeout(30초)을 그대로 두면 대용량 발표자료 등이 업로드 도중 끊기므로 제한을 두지 않는다.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) config.timeout = 0
   return config
 })
 
@@ -21,6 +24,21 @@ api.interceptors.response.use(
       const auth = useAuthStore()
       auth.logout()
       router.push('/login')
+    }
+    // 응답 자체가 없는 경우(타임아웃·연결 끊김)는 사용자가 원인을 알 수 있게 안내한다
+    if (!err.response) {
+      if (err.code === 'ECONNABORTED') {
+        return Promise.reject('요청 시간이 초과되었습니다. 파일이 크거나 네트워크가 느린 경우 잠시 후 다시 시도해주세요.')
+      }
+      return Promise.reject('서버에 연결하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.')
+    }
+    // 업로드 용량 초과 — 백엔드(JSON) / nginx(HTML) 어느 쪽이 거절해도 같은 안내를 준다
+    if (status === 413) {
+      let body = err.response.data
+      if (body instanceof Blob) {
+        try { body = JSON.parse(await body.text()) } catch { body = null }
+      }
+      return Promise.reject(body?.message || '파일 용량이 허용 한도를 초과했습니다. 더 작은 파일로 나누어 올려주세요.')
     }
     if (status >= 500) {
       return Promise.reject(null)
@@ -88,7 +106,8 @@ export const trainingApi = {
   submitQuiz: (id, data) => api.post(`/training/courses/${id}/submit`, data),
   delete: (id) => api.delete(`/training/courses/${id}`),
   results: () => api.get('/training/results'),
-  resultCompletions: (params) => api.get('/training/results/completions', { params })
+  resultCompletions: (params) => api.get('/training/results/completions', { params }),
+  exportCourseExcel: (id) => api.get(`/training/results/courses/${id}/export/excel`, { responseType: 'blob' })
 }
 
 export const quizBankApi = {
@@ -652,6 +671,7 @@ export const phishingApi = {
   completeCampaign: (id) => api.post(`/phishing/campaigns/${id}/complete`),
   cancelCampaign:   (id) => api.post(`/phishing/campaigns/${id}/cancel`),
   deleteCampaign:   (id) => api.delete(`/phishing/campaigns/${id}`),
+  exportCampaignExcel: (id) => api.get(`/phishing/campaigns/${id}/export/excel`, { responseType: 'blob' }),
 
   listSendLogs:     ()   => api.get('/phishing/send-logs'),
 }
@@ -688,6 +708,7 @@ export const bcpApi = {
   completeExercise: (id, data) => api.post(`/bcp/exercises/${id}/complete`, data),
   cancelExercise: (id)       => api.post(`/bcp/exercises/${id}/cancel`),
   deleteExercise: (id)       => api.delete(`/bcp/exercises/${id}`),
+  exportExerciseExcel: (id)  => api.get(`/bcp/exercises/${id}/export/excel`, { responseType: 'blob' }),
 }
 
 export const mailConfigApi = {

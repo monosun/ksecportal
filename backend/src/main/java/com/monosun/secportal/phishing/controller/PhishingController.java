@@ -1,6 +1,7 @@
 package com.monosun.secportal.phishing.controller;
 
 import com.monosun.secportal.auth.entity.User;
+import com.monosun.secportal.common.excel.ExportSupport;
 import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.phishing.dto.PhishingDto;
 import com.monosun.secportal.phishing.service.PhishingService;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -145,6 +147,15 @@ public class PhishingController {
         return ApiResponse.noContent();
     }
 
+    /** 모의훈련 1건의 개요·대상자별 결과 엑셀 내려받기 */
+    @GetMapping("/campaigns/{id}/export/excel")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<byte[]> exportCampaignExcel(@PathVariable Long id) {
+        byte[] data = service.exportCampaignExcel(id);
+        String filename = "모의훈련결과_" + ExportSupport.safeFileName(service.campaignName(id)) + ".xlsx";
+        return ExportSupport.xlsx(data, filename);
+    }
+
     // ── Send logs (발송 처리 결과) ─────────────────────────────────────────
 
     @GetMapping("/send-logs")
@@ -169,5 +180,12 @@ public class PhishingController {
         service.trackClick(token);
         // Redirect to a phishing awareness page
         res.sendRedirect("/phishing-awareness.html");
+    }
+
+    @GetMapping("/track/{token}/report")
+    public void trackReport(@PathVariable String token, HttpServletResponse res) throws IOException {
+        service.trackReport(token);
+        // Redirect to a "thanks for reporting" page
+        res.sendRedirect("/phishing-report-thanks.html");
     }
 }

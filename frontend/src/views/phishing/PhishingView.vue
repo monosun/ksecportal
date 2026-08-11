@@ -126,7 +126,7 @@
                 <th class="px-4 py-3 text-left">훈련명</th>
                 <th class="px-4 py-3 text-left">템플릿</th>
                 <th class="px-4 py-3 text-center">대상</th>
-                <th class="px-4 py-3 text-center">발송/열람/클릭</th>
+                <th class="px-4 py-3 text-center">발송/열람/클릭/신고</th>
                 <th class="px-4 py-3 text-center">상태</th>
                 <th class="px-4 py-3 text-left">생성일</th>
                 <th class="px-4 py-3 text-center">작업</th>
@@ -143,11 +143,13 @@
                 <td class="px-4 py-3 text-gray-600 text-xs">{{ c.templateName }}</td>
                 <td class="px-4 py-3 text-center font-semibold text-gray-700">{{ c.totalTargets }}</td>
                 <td class="px-4 py-3 text-center text-xs space-x-1">
-                  <span class="text-gray-500">{{ c.sentCount }}</span>
+                  <span class="text-gray-500" title="발송">{{ c.sentCount }}</span>
                   <span class="text-gray-300">/</span>
-                  <span class="text-amber-600">{{ c.openedCount }}</span>
+                  <span class="text-amber-600" title="열람">{{ c.openedCount }}</span>
                   <span class="text-gray-300">/</span>
-                  <span class="text-red-600 font-semibold">{{ c.clickedCount }}</span>
+                  <span class="text-red-600 font-semibold" title="클릭">{{ c.clickedCount }}</span>
+                  <span class="text-gray-300">/</span>
+                  <span class="text-primary-600 font-semibold" title="신고">{{ c.reportedCount }}</span>
                 </td>
                 <td class="px-4 py-3 text-center">
                   <span :class="campaignStatusClass(c.status)" class="px-2 py-0.5 rounded-full text-xs font-semibold">
@@ -156,7 +158,16 @@
                 </td>
                 <td class="px-4 py-3 text-gray-400 text-xs">{{ fmtDate(c.createdAt) }}</td>
                 <td class="px-4 py-3">
-                  <div class="flex justify-center gap-1.5 flex-wrap">
+                  <div class="flex justify-center items-center gap-1.5 flex-wrap">
+                    <button @click="refreshCampaign(c)" :disabled="refreshingIds.includes(c.id)"
+                      class="text-gray-400 hover:text-primary-600 disabled:opacity-50 disabled:cursor-wait"
+                      title="훈련 상태 새로고침 (발송/열람/클릭 현황 갱신)">
+                      <svg class="w-4 h-4" :class="{ 'animate-spin': refreshingIds.includes(c.id) }"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                    </button>
                     <button @click="viewCampaign(c.id)" class="text-xs text-blue-600 hover:underline">결과</button>
                     <button v-if="c.status === 'DRAFT'" @click="launchCampaign(c)"
                       class="text-xs text-green-600 hover:underline">실시</button>
@@ -281,6 +292,11 @@
                   <code class="bg-gray-100 px-1 rounded ml-1">{TARGET_EMAIL}</code>
                   <code class="bg-gray-100 px-1 rounded ml-1">{CLICK_URL}</code>
                   <code class="bg-gray-100 px-1 rounded ml-1">{OPEN_URL}</code>
+                  <code class="bg-gray-100 px-1 rounded ml-1">{REPORT_URL}</code>
+                </p>
+                <p class="text-xs text-gray-400 mb-1">
+                  <code class="bg-gray-100 px-1 rounded">{REPORT_URL}</code> 은 "악성메일로 신고하기" 링크 주소입니다.
+                  본문에 넣지 않으면 발송 시 메일 하단에 신고 링크가 자동으로 추가됩니다.
                 </p>
                 <textarea v-model="templateModal.form.bodyHtml" class="input font-mono text-xs" rows="10" required></textarea>
               </div>
@@ -729,6 +745,25 @@ async function confirmDeleteCampaign(c) {
     await phishingApi.deleteCampaign(c.id)
     campaigns.value = campaigns.value.filter(x => x.id !== c.id)
   } catch (e) { alert(typeof e === 'string' ? e : '삭제 실패') }
+}
+
+// 개별 훈련 상태 새로고침 — 발송/열람/클릭 집계와 상태를 서버에서 다시 읽어 해당 행만 갱신한다
+const refreshingIds = ref([])
+async function refreshCampaign(c) {
+  if (refreshingIds.value.includes(c.id)) return
+  refreshingIds.value.push(c.id)
+  try {
+    const res = await phishingApi.getCampaign(c.id)
+    const updated = res.data?.campaign
+    const idx = campaigns.value.findIndex(x => x.id === c.id)
+    if (updated && idx !== -1) campaigns.value[idx] = updated
+    // 결과 팝업이 같은 훈련을 보고 있다면 함께 갱신
+    if (resultModal.open && resultModal.detail?.campaign?.id === c.id) resultModal.detail = res.data
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '상태 새로고침에 실패했습니다.')
+  } finally {
+    refreshingIds.value = refreshingIds.value.filter(id => id !== c.id)
+  }
 }
 
 // ── Campaign result modal ──────────────────────────────────────────────────

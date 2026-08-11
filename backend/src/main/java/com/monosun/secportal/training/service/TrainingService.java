@@ -4,6 +4,8 @@ import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.auth.repository.UserRepository;
 import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
+import com.monosun.secportal.common.excel.ExcelWriter;
+import com.monosun.secportal.common.excel.ExportSupport;
 import com.monosun.secportal.training.dto.TrainingDto;
 import com.monosun.secportal.training.entity.QuizQuestion;
 import com.monosun.secportal.training.entity.TrainingCompletion;
@@ -11,6 +13,7 @@ import com.monosun.secportal.training.entity.TrainingCourse;
 import com.monosun.secportal.training.repository.TrainingCompletionRepository;
 import com.monosun.secportal.training.repository.TrainingCourseRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -195,6 +198,87 @@ public class TrainingService {
                 ? completionRepository.findByCourseIdOrderByCompletedAtDesc(courseId)
                 : completionRepository.findAllByOrderByCompletedAtDesc();
         return comps.stream().map(TrainingDto.CompletionRow::from).collect(Collectors.toList());
+    }
+
+    /** 교육 코스 1건의 개요·이수 이력·퀴즈 문항을 엑셀로 만든다. */
+    @Transactional(readOnly = true)
+    public byte[] exportCourseExcel(Long courseId) {
+        TrainingCourse course = findById(courseId);
+        List<TrainingCompletion> comps = completionRepository.findByCourseIdOrderByCompletedAtDesc(courseId);
+        long totalUsers = userRepository.countByActiveTrue();
+        long passed = comps.stream().filter(c -> Boolean.TRUE.equals(c.getPassed())).count();
+        Double avg = comps.stream()
+                .map(TrainingCompletion::getScore)
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .average().stream().boxed().findFirst().orElse(null);
+
+        try (ExcelWriter xw = new ExcelWriter()) {
+            // ── 시트 1: 개요 + 이수 이력 ──
+            Sheet sheet = xw.sheet("교육 결과");
+            int r = xw.title(sheet, 0, "교육 결과 — " + course.getTitle(), 5);
+            r++; // 빈 행
+            r = xw.meta(sheet, r, new String[][]{
+                    {"교육명", course.getTitle()},
+                    {"필수 여부", course.isMandatory() ? "필수" : "선택"},
+                    {"콘텐츠 유형", course.getContentType() != null ? course.getContentType().name() : ""},
+                    {"합격 기준 점수", String.valueOf(course.getPassingScore())},
+                    {"퀴즈 문항 수", String.valueOf(course.getQuestions().size())},
+                    {"대상 인원", String.valueOf(totalUsers)},
+                    {"이수 인원", String.valueOf(comps.size())},
+                    {"이수율", pct(comps.size(), totalUsers) + "%"},
+                    {"합격 인원", String.valueOf(passed)},
+                    {"합격률", pct(passed, comps.size()) + "%"},
+                    {"평균 점수", avg != null ? String.valueOf(Math.round(avg)) : "-"},
+                    {"내려받은 시각", ExportSupport.now()},
+            });
+            r++; // 빈 행
+
+            r = xw.header(sheet, r, new String[]{"No", "이수자", "부서", "점수", "결과", "이수 일시"});
+            int seq = 1;
+            for (TrainingCompletion c : comps) {
+                r = xw.row(sheet, r, new Object[]{
+                        seq++,
+                        c.getUser() != null ? c.getUser().getName() : "-",
+                        c.getUser() != null ? c.getUser().getDepartment() : "-",
+                        c.getScore() != null ? c.getScore() : "-",
+                        Boolean.TRUE.equals(c.getPassed()) ? "합격" : "불합격",
+                        ExportSupport.dt(c.getCompletedAt()),
+                }, 0, 3, 4, 5);
+            }
+            xw.widths(sheet, 6, 18, 20, 10, 10, 22);
+
+            // ── 시트 2: 퀴즈 문항 ──
+            if (!course.getQuestions().isEmpty()) {
+                Sheet qs = xw.sheet("퀴즈 문항");
+                int qr = xw.header(qs, 0, new String[]{
+                        "No", "문항", "①", "②", "③", "④", "⑤", "정답", "난이도", "해설"});
+                int qSeq = 1;
+                List<QuizQuestion> questions = course.getQuestions().stream()
+                        .sorted(java.util.Comparator.comparingInt(QuizQuestion::getSortOrder))
+                        .toList();
+                for (QuizQuestion q : questions) {
+                    qr = xw.row(qs, qr, new Object[]{
+                            qSeq++, q.getQuestion(),
+                            q.getOptionA(), q.getOptionB(), q.getOptionC(), q.getOptionD(), q.getOptionE(),
+                            q.getCorrectAnswer(), q.getDifficulty(), q.getExplanation(),
+                    }, 0, 7, 8);
+                }
+                xw.widths(qs, 6, 44, 22, 22, 22, 22, 22, 8, 8, 40);
+            }
+
+            return xw.toBytes();
+        }
+    }
+
+    /** 파일명에 쓸 코스 제목 */
+    @Transactional(readOnly = true)
+    public String courseTitle(Long courseId) {
+        return findById(courseId).getTitle();
+    }
+
+    private static long pct(long n, long d) {
+        return d > 0 ? Math.round(n * 100.0 / d) : 0;
     }
 
     private TrainingCourse findById(Long id) {

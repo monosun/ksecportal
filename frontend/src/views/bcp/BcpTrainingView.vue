@@ -541,6 +541,19 @@
           </div>
 
           <div class="flex justify-end gap-3 px-6 py-4 border-t">
+            <button @click="downloadResultExcel" :disabled="exportingResult"
+              class="btn-secondary mr-auto flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
+              title="이 훈련의 개요·단계별 결과·총평을 엑셀로 내려받기">
+              <svg v-if="exportingResult" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              {{ exportingResult ? '다운로드 중...' : '결과 엑셀 다운로드' }}
+            </button>
             <button @click="runModal.open = false" class="btn-secondary">닫기</button>
             <button v-if="runEx?.status === 'DRAFT'" @click="startExercise(runEx, true)" class="btn-primary">훈련 시작</button>
             <button v-if="runEx?.status === 'RUNNING'" @click="completeExercise" class="btn-primary" :disabled="runModal.saving">
@@ -710,6 +723,26 @@ const runModal = reactive({
 const runEx = computed(() => runModal.detail?.exercise ?? null)
 const runSteps = ref([])
 const recordedCount = computed(() => runSteps.value.filter(s => s.result !== 'PENDING').length)
+
+// 훈련 결과 엑셀 내려받기 (개요 + 단계별 수행 결과 + 총평·개선사항)
+const exportingResult = ref(false)
+async function downloadResultExcel() {
+  if (!runModal.id || exportingResult.value) return
+  exportingResult.value = true
+  try {
+    const blob = await bcpApi.exportExerciseExcel(runModal.id)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `BCP훈련결과_${String(runEx.value?.name || '훈련').replace(/[\\/:*?"<>|]/g, '_')}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    runModal.error = typeof e === 'string' ? e : '엑셀 다운로드에 실패했습니다.'
+  } finally {
+    exportingResult.value = false
+  }
+}
 
 async function openRunModal(id) {
   try {

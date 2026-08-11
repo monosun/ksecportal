@@ -139,6 +139,8 @@ public class RiskAssessmentService {
                         .threatId(threat.getId())
                         .threatName(threat.getName())
                         .threatType(threat.getType())
+                        .threatCategory(threat.getCategory())
+                        .threatAssetTypes(threat.getAssetTypes())
                         .vulnerability(threat.getDescription())
                         .likelihood(threat.getLikelihood())
                         .impact(threat.getImpact())
@@ -177,6 +179,8 @@ public class RiskAssessmentService {
                 .threatId(req.getThreatId())
                 .threatName(req.getThreatName())
                 .threatType(req.getThreatType())
+                .threatCategory(req.getThreatCategory())
+                .threatAssetTypes(req.getThreatAssetTypes())
                 .vulnerability(req.getVulnerability())
                 .likelihood(req.getLikelihood())
                 .impact(req.getImpact())
@@ -200,6 +204,8 @@ public class RiskAssessmentService {
         if (req.getThreatId() != null) assessment.setThreatId(req.getThreatId());
         if (req.getThreatName() != null) assessment.setThreatName(req.getThreatName());
         if (req.getThreatType() != null) assessment.setThreatType(req.getThreatType());
+        if (req.getThreatCategory() != null) assessment.setThreatCategory(req.getThreatCategory());
+        if (req.getThreatAssetTypes() != null) assessment.setThreatAssetTypes(req.getThreatAssetTypes());
         if (req.getVulnerability() != null) assessment.setVulnerability(req.getVulnerability());
         assessment.setLikelihood(req.getLikelihood());
         assessment.setImpact(req.getImpact());
@@ -443,12 +449,12 @@ public class RiskAssessmentService {
                 Cell atCell = assetTitleRow.createCell(0);
                 atCell.setCellValue("자산명: " + assetName + (assetType.isEmpty() ? "" : "  [" + assetType + "]"));
                 atCell.setCellStyle(assetHeaderStyle);
-                aSheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 9));
+                aSheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 11));
 
                 r++; // 빈 행
 
                 // 위협 목록 헤더
-                String[] threatHeaders = {"No", "위협명", "위협유형", "취약점", "발생가능성", "영향도", "위험점수", "위험등급", "처리방법", "비고"};
+                String[] threatHeaders = {"No", "위협명", "위협유형", "카테고리", "대상자산유형", "취약점", "발생가능성", "영향도", "위험점수", "위험등급", "처리방법", "비고"};
                 Row hRow = aSheet.createRow(r++);
                 hRow.setHeightInPoints(22);
                 for (int i = 0; i < threatHeaders.length; i++) {
@@ -467,6 +473,8 @@ public class RiskAssessmentService {
                     Cell noCell = dRow.createCell(col++); noCell.setCellValue(tSeq++); noCell.setCellStyle(centerStyle);
                     Cell tnCell = dRow.createCell(col++); tnCell.setCellValue(nvl(item.getThreatName())); tnCell.setCellStyle(dataStyle);
                     Cell ttCell = dRow.createCell(col++); ttCell.setCellValue(nvl(item.getThreatType())); ttCell.setCellStyle(centerStyle);
+                    Cell tcCell = dRow.createCell(col++); tcCell.setCellValue(nvl(item.getThreatCategory())); tcCell.setCellStyle(centerStyle);
+                    Cell taCell = dRow.createCell(col++); taCell.setCellValue(nvl(item.getThreatAssetTypes())); taCell.setCellStyle(dataStyle);
                     Cell vuCell = dRow.createCell(col++); vuCell.setCellValue(nvl(item.getVulnerability())); vuCell.setCellStyle(dataStyle);
                     Cell liCell = dRow.createCell(col++); liCell.setCellValue(item.getLikelihood()); liCell.setCellStyle(centerStyle);
                     Cell imCell = dRow.createCell(col++); imCell.setCellValue(item.getImpact()); imCell.setCellStyle(centerStyle);
@@ -485,7 +493,7 @@ public class RiskAssessmentService {
                     Cell ntCell = dRow.createCell(col); ntCell.setCellValue(nvl(item.getNotes())); ntCell.setCellStyle(dataStyle);
                 }
 
-                int[] assetColWidths = {6, 26, 14, 28, 10, 8, 9, 9, 9, 28};
+                int[] assetColWidths = {6, 26, 14, 16, 22, 28, 10, 8, 9, 9, 9, 28};
                 for (int i = 0; i < assetColWidths.length; i++) {
                     aSheet.setColumnWidth(i, assetColWidths[i] * 256);
                 }

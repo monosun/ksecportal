@@ -90,6 +90,8 @@
         <thead class="bg-gray-50 border-b border-gray-100">
           <tr>
             <th class="text-left px-5 py-3 font-semibold text-gray-600">위험 항목 (자산 · 위협 · 취약점)</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600">카테고리</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600">대상자산유형</th>
             <th class="text-center px-4 py-3 font-semibold text-gray-600">위험도</th>
             <th class="text-left px-5 py-3 font-semibold text-gray-600">조치 계획</th>
             <th class="text-left px-4 py-3 font-semibold text-gray-600">담당자</th>
@@ -101,7 +103,7 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           <tr v-if="filteredItems.length === 0">
-            <td colspan="8" class="px-5 py-10 text-center text-gray-400">
+            <td colspan="10" class="px-5 py-10 text-center text-gray-400">
               {{ items.length === 0 ? "이 차수에는 '감소' 처리 항목이 없습니다." : '검색/상태 조건에 맞는 처리 계획이 없습니다.' }}
             </td>
           </tr>
@@ -111,6 +113,16 @@
               <p class="text-xs text-gray-500 mt-0.5">
                 {{ item.threatName || '-' }}<span v-if="item.vulnerability" class="text-gray-400"> · {{ item.vulnerability }}</span>
               </p>
+            </td>
+            <td class="px-4 py-3.5 text-gray-600 text-xs">{{ item.threatCategory || '-' }}</td>
+            <td class="px-4 py-3.5">
+              <div v-if="item.threatAssetTypes?.length" class="flex flex-wrap gap-1 max-w-40">
+                <span v-for="t in item.threatAssetTypes" :key="t"
+                  class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap">
+                  {{ assetTypeLabel(t) }}
+                </span>
+              </div>
+              <span v-else class="text-gray-400 text-xs">-</span>
             </td>
             <td class="px-4 py-3.5 text-center">
               <span class="font-bold" :class="scoreColor(item.riskScore)">{{ item.riskScore }}</span>
@@ -197,6 +209,12 @@
             <span class="ml-auto font-bold" :class="scoreColor(editTarget.riskScore)">위험점수 {{ editTarget.riskScore }}</span>
             <span class="px-1.5 py-0.5 rounded-full text-xs font-bold" :class="gradeBadge(editTarget.riskGrade)">{{ gradeLabel(editTarget.riskGrade) }}</span>
           </div>
+          <div v-if="editTarget.threatCategory || editTarget.threatAssetTypes?.length" class="flex items-center gap-2 flex-wrap mb-1">
+            <span v-if="editTarget.threatCategory" class="text-xs text-gray-500">카테고리 · {{ editTarget.threatCategory }}</span>
+            <span v-if="editTarget.threatAssetTypes?.length" class="text-xs text-gray-500">대상자산유형 ·</span>
+            <span v-for="t in editTarget.threatAssetTypes || []" :key="t"
+              class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">{{ assetTypeLabel(t) }}</span>
+          </div>
           <p v-if="editTarget.vulnerability" class="text-xs text-gray-500">취약점 · {{ editTarget.vulnerability }}</p>
         </div>
 
@@ -242,7 +260,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { riskApi } from '@/api'
+import { riskApi, codeApi } from '@/api'
 
 const tabs = [
   { key: 'ALL', label: '전체' },
@@ -259,6 +277,14 @@ const selectedRoundId = ref(null)
 const items = ref([])
 const loading = ref(false)
 const activeTab = ref('ALL')
+
+// 자산유형 코드(ASSET_TYPE) — 코드값을 한글 라벨로 표시하기 위해 사용
+const assetTypeCodes = ref([])
+
+function assetTypeLabel(value) {
+  if (!value) return ''
+  return assetTypeCodes.value.find(c => c.value === value)?.label || value
+}
 
 const completedRounds = computed(() => rounds.value.filter(r => r.status === 'COMPLETED'))
 const selectedRound = computed(() => completedRounds.value.find(r => r.id === selectedRoundId.value) || null)
@@ -403,8 +429,17 @@ async function loadPlans() {
   }
 }
 
+async function loadAssetTypeCodes() {
+  try {
+    const res = await codeApi.getValues('ASSET_TYPE')
+    assetTypeCodes.value = (res.data || []).map(c => ({ value: c.value, label: c.label || c.value }))
+  } catch { assetTypeCodes.value = [] }
+}
+
 watch(currentYear, loadRounds)
-onMounted(loadRounds)
+onMounted(async () => {
+  await Promise.all([loadAssetTypeCodes(), loadRounds()])
+})
 
 // ── 헬퍼 ────────────────────────────────────────────────
 function gradeBadge(grade) {

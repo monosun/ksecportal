@@ -32,6 +32,12 @@ public class RiskAssessment {
     private String threatName;
     @Column(length = 100)
     private String threatType;
+    /** 위협 카테고리 스냅샷 */
+    @Column(length = 100)
+    private String threatCategory;
+    /** 위협의 대상 자산유형(복수) 스냅샷 — 콤마 구분 (예: "서버,네트워크") */
+    @Column(length = 500)
+    private String threatAssetTypes;
     private String vulnerability;
 
     @Builder.Default

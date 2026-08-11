@@ -179,7 +179,9 @@
           </div>
           <div>
             <label class="text-sm font-medium text-gray-700">파일 첨부</label>
-            <input type="file" @change="onFileChange" class="mt-1 w-full text-sm text-gray-600" />
+            <input type="file" :accept="ACCEPT" @change="onFileChange" class="mt-1 w-full text-sm text-gray-600" />
+            <p class="text-xs text-gray-400 mt-1">{{ UPLOAD_HINT }}</p>
+            <p v-if="fileError" class="text-xs text-red-600 mt-1">{{ fileError }}</p>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-5">
@@ -209,7 +211,9 @@
           </div>
           <div>
             <label class="text-sm font-medium text-gray-700">파일 첨부 (선택)</label>
-            <input type="file" @change="onVersionFileChange" class="mt-1 w-full text-sm text-gray-600" />
+            <input type="file" :accept="ACCEPT" @change="onVersionFileChange" class="mt-1 w-full text-sm text-gray-600" />
+            <p class="text-xs text-gray-400 mt-1">{{ UPLOAD_HINT }}</p>
+            <p v-if="versionFileError" class="text-xs text-red-600 mt-1">{{ versionFileError }}</p>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-5">
@@ -310,6 +314,36 @@ const formFile = ref(null)
 const versionForm = ref({ version: '', description: '' })
 const versionFile = ref(null)
 
+// ── 첨부파일 제한 (백엔드 FileStorageService·multipart 설정과 맞춘다) ──────
+const MAX_UPLOAD_MB = 100
+const ALLOWED_EXTS = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.pdf', '.txt', '.csv',
+  '.doc', '.docx', '.xls', '.xlsx', '.xlsm',
+  '.ppt', '.pptx', '.pptm', '.pps', '.ppsx', '.ppsm', '.pot', '.potx',
+  '.odp', '.odt', '.ods', '.hwp', '.hwpx', '.zip',
+]
+const ACCEPT = ALLOWED_EXTS.join(',')
+const UPLOAD_HINT = `PPT·PDF·문서·이미지·압축 파일 (최대 ${MAX_UPLOAD_MB}MB)`
+
+const fileError = ref('')
+const versionFileError = ref('')
+
+/** 확장자·용량을 미리 확인해 업로드 전에 사유를 알려준다. 통과하면 빈 문자열. */
+function validateFile(file) {
+  if (!file) return ''
+  const name = file.name || ''
+  const dot = name.lastIndexOf('.')
+  const ext = dot > 0 ? name.slice(dot).toLowerCase() : ''
+  if (!ALLOWED_EXTS.includes(ext)) {
+    return `허용되지 않는 파일 형식입니다: ${ext || '(확장자 없음)'}`
+  }
+  if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+    return `파일 용량이 ${MAX_UPLOAD_MB}MB를 초과합니다. (현재 ${(file.size / 1024 / 1024).toFixed(1)}MB)`
+  }
+  return ''
+}
+
 let searchTimer = null
 
 const visiblePages = computed(() => {
@@ -375,6 +409,7 @@ async function load() {
 function openCreate() {
   form.value = { title: '', category: '', version: '1.0', description: '', producingOrgSelect: '', producingOrgCustom: '' }
   formFile.value = null
+  fileError.value = ''
   showCreate.value = true
 }
 
@@ -383,15 +418,22 @@ function closeCreate() {
 }
 
 function onFileChange(e) {
-  formFile.value = e.target.files[0] || null
+  const file = e.target.files[0] || null
+  fileError.value = validateFile(file)
+  formFile.value = fileError.value ? null : file
+  if (fileError.value) e.target.value = ''
 }
 
 function onVersionFileChange(e) {
-  versionFile.value = e.target.files[0] || null
+  const file = e.target.files[0] || null
+  versionFileError.value = validateFile(file)
+  versionFile.value = versionFileError.value ? null : file
+  if (versionFileError.value) e.target.value = ''
 }
 
 async function submitCreate() {
   if (!form.value.title || !form.value.category) return
+  if (fileError.value) return
   saving.value = true
   try {
     const { producingOrgSelect, producingOrgCustom, ...data } = form.value
@@ -412,10 +454,12 @@ function openAddVersion(doc) {
   selectedDoc.value = doc
   versionForm.value = { version: '', description: '' }
   versionFile.value = null
+  versionFileError.value = ''
   showAddVersion.value = true
 }
 
 async function submitAddVersion() {
+  if (versionFileError.value) return
   saving.value = true
   try {
     await secDocApi.addVersion(selectedDoc.value.id, versionForm.value, versionFile.value)

@@ -73,9 +73,14 @@
                 <span class="font-medium text-gray-800 truncate">{{ c.title }}</span>
                 <span v-if="c.mandatory" class="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600">필수</span>
               </div>
-              <span class="text-xs text-gray-500 flex-shrink-0 ml-3">
-                이수 {{ c.completedCount }}/{{ c.totalUsers }}명 · 합격 {{ c.passedCount }}명
-                <template v-if="c.avgScore != null"> · 평균 {{ Math.round(c.avgScore) }}점</template>
+              <span class="text-xs text-gray-500 flex-shrink-0 ml-3 flex items-center gap-2">
+                <span>
+                  이수 {{ c.completedCount }}/{{ c.totalUsers }}명 · 합격 {{ c.passedCount }}명
+                  <template v-if="c.avgScore != null"> · 평균 {{ Math.round(c.avgScore) }}점</template>
+                </span>
+                <ExcelDownloadButton :busy="downloading === 'course-' + c.courseId"
+                  title="이 교육의 결과를 엑셀로 내려받기"
+                  @click="downloadCourse(c)" />
               </span>
             </div>
             <div class="h-3 rounded-full bg-gray-100 overflow-hidden">
@@ -205,6 +210,7 @@
               <th class="py-2.5 px-3 font-semibold text-center w-24">클릭(률)</th>
               <th class="py-2.5 px-3 font-semibold text-center w-24">신고(률)</th>
               <th class="py-2.5 px-3 font-semibold w-32">일시</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-24">다운로드</th>
             </tr>
           </thead>
           <tbody>
@@ -222,6 +228,11 @@
               <td class="py-2.5 px-3 text-center text-red-600 font-semibold">{{ c.clickedCount }} ({{ rate(c.clickedCount, c.sentCount) }}%)</td>
               <td class="py-2.5 px-3 text-center text-green-600">{{ c.reportedCount }} ({{ rate(c.reportedCount, c.sentCount) }}%)</td>
               <td class="py-2.5 px-3 text-gray-400 text-xs">{{ formatDt(c.createdAt) }}</td>
+              <td class="py-2.5 px-3 text-center">
+                <ExcelDownloadButton :busy="downloading === 'campaign-' + c.id"
+                  title="이 훈련의 대상자별 결과를 엑셀로 내려받기"
+                  @click="downloadCampaign(c)" />
+              </td>
             </tr>
           </tbody>
         </table></div>
@@ -309,6 +320,7 @@
               <th class="py-2.5 px-3 font-semibold text-center w-20">판정</th>
               <th class="py-2.5 px-3 font-semibold text-center w-20">상태</th>
               <th class="py-2.5 px-3 font-semibold w-40">실시 일시</th>
+              <th class="py-2.5 px-3 font-semibold text-center w-24">다운로드</th>
             </tr>
           </thead>
           <tbody>
@@ -337,6 +349,11 @@
                 </span>
               </td>
               <td class="py-2.5 px-3 text-gray-400 text-xs">{{ formatDt(e.startedAt || e.plannedAt) }}</td>
+              <td class="py-2.5 px-3 text-center">
+                <ExcelDownloadButton :busy="downloading === 'exercise-' + e.id"
+                  title="이 훈련의 단계별 결과·총평을 엑셀로 내려받기"
+                  @click="downloadExercise(e)" />
+              </td>
             </tr>
           </tbody>
         </table></div>
@@ -369,6 +386,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { trainingApi, phishingApi, bcpApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
+import ExcelDownloadButton from '@/components/ExcelDownloadButton.vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
 
 // 이수자 이름은 코드관리의 항목별 마스킹 기준에 따라 가려서 표시한다
@@ -453,6 +471,43 @@ function campaignStatusClass(s) {
     COMPLETED: 'bg-green-100 text-green-700',
     CANCELLED: 'bg-gray-100 text-gray-500',
   }[s] || 'bg-gray-100 text-gray-600'
+}
+
+// ── 훈련별 엑셀 내려받기 ───────────────────────────────────────────────────
+// 한 번에 하나만 진행하도록 진행 중인 항목 키('course-3' 등)를 담아둔다
+const downloading = ref(null)
+
+async function download(key, request, filename) {
+  if (downloading.value) return
+  downloading.value = key
+  try {
+    const blob = await request()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '엑셀 다운로드에 실패했습니다.')
+  } finally {
+    downloading.value = null
+  }
+}
+
+function safeName(name) { return String(name || '').replace(/[\\/:*?"<>|]/g, '_') }
+
+function downloadCourse(c) {
+  download(`course-${c.courseId}`, () => trainingApi.exportCourseExcel(c.courseId),
+    `교육결과_${safeName(c.title)}.xlsx`)
+}
+function downloadCampaign(c) {
+  download(`campaign-${c.id}`, () => phishingApi.exportCampaignExcel(c.id),
+    `모의훈련결과_${safeName(c.name)}.xlsx`)
+}
+function downloadExercise(e) {
+  download(`exercise-${e.id}`, () => bcpApi.exportExerciseExcel(e.id),
+    `BCP훈련결과_${safeName(e.name)}.xlsx`)
 }
 
 function formatDt(dt) {

@@ -4,6 +4,8 @@ import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
+import com.monosun.secportal.common.excel.ExcelWriter;
+import com.monosun.secportal.common.excel.ExportSupport;
 import com.monosun.secportal.notification.service.EmailService;
 import com.monosun.secportal.phishing.dto.PhishingDto;
 import com.monosun.secportal.phishing.entity.PhishingCampaign;
@@ -15,6 +17,7 @@ import com.monosun.secportal.phishing.repository.PhishingCampaignTargetRepositor
 import com.monosun.secportal.phishing.repository.PhishingTargetRepository;
 import com.monosun.secportal.phishing.repository.PhishingTemplateRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -200,11 +203,14 @@ public class PhishingService {
         int success = 0, failed = 0;
         for (PhishingCampaignTarget ct : c.getCampaignTargets()) {
             String trackBase = appBaseUrl() + "/phishing/track/" + ct.getTrackingToken();
+            String reportUrl = trackBase + "/report";
             String body = tmpl.getBodyHtml()
                     .replace("{CLICK_URL}", trackBase + "/click")
                     .replace("{OPEN_URL}", trackBase + "/open")
+                    .replace("{REPORT_URL}", reportUrl)
                     .replace("{TARGET_NAME}", ct.getTarget().getName())
                     .replace("{TARGET_EMAIL}", ct.getTarget().getEmail());
+            body = appendReportFooter(body, reportUrl);
             // 동기 발송하여 처리 결과(성공/실패)를 대상별로 기록한다.
             try {
                 emailService.sendSync(ct.getTarget().getEmail(), tmpl.getSubject(), body);
@@ -280,7 +286,120 @@ public class PhishingService {
         });
     }
 
+    /**
+     * 대상자가 훈련 메일의 "신고하기" 링크를 눌렀을 때 신고 시각을 기록한다.
+     * 신고 전에 메일을 열어봤다는 뜻이므로 열람 시각도 함께 채운다(클릭은 채우지 않는다 — 신고는 클릭 실패가 아니다).
+     */
+    @Transactional
+    public void trackReport(String token) {
+        campaignTargetRepo.findByTrackingToken(token).ifPresent(ct -> {
+            if (ct.getOpenedAt() == null) ct.setOpenedAt(LocalDateTime.now());
+            if (ct.getReportedAt() == null) ct.setReportedAt(LocalDateTime.now());
+            campaignTargetRepo.save(ct);
+        });
+    }
+
+    // ── Excel export ──────────────────────────────────────────────────────
+
+    /** 모의훈련(캠페인) 1건의 개요와 대상자별 반응 결과를 엑셀로 만든다. */
+    @Transactional(readOnly = true)
+    public byte[] exportCampaignExcel(Long id) {
+        PhishingCampaign c = campaignRepo.findByIdWithTargets(id)
+                .orElseThrow(() -> new ResourceNotFoundException("PhishingCampaign", id));
+        List<PhishingCampaignTarget> targets = c.getCampaignTargets();
+
+        long sent = targets.stream().filter(t -> t.getSentAt() != null).count();
+        long opened = targets.stream().filter(t -> t.getOpenedAt() != null).count();
+        long clicked = targets.stream().filter(t -> t.getClickedAt() != null).count();
+        long reported = targets.stream().filter(t -> t.getReportedAt() != null).count();
+        long failed = targets.stream()
+                .filter(t -> t.getSendStatus() == PhishingCampaignTarget.SendStatus.FAILED).count();
+
+        try (ExcelWriter xw = new ExcelWriter()) {
+            Sheet sheet = xw.sheet("모의훈련 결과");
+            int r = xw.title(sheet, 0, "모의 악성메일 훈련 결과 — " + c.getName(), 9);
+            r++;
+            r = xw.meta(sheet, r, new String[][]{
+                    {"훈련명", c.getName()},
+                    {"템플릿", c.getTemplate() != null ? c.getTemplate().getName() : "-"},
+                    {"상태", campaignStatusLabel(c.getStatus())},
+                    {"설명", c.getDescription()},
+                    {"대상 인원", String.valueOf(targets.size())},
+                    {"발송 성공", sent + " (" + pct(sent, targets.size()) + "%)"},
+                    {"발송 실패", String.valueOf(failed)},
+                    {"열람", opened + " (" + pct(opened, sent) + "%)"},
+                    {"클릭", clicked + " (" + pct(clicked, sent) + "%)"},
+                    {"신고", reported + " (" + pct(reported, sent) + "%)"},
+                    {"생성자", c.getCreatedBy() != null ? c.getCreatedBy().getName() : "-"},
+                    {"생성일시", ExportSupport.dt(c.getCreatedAt())},
+                    {"내려받은 시각", ExportSupport.now()},
+            });
+            r++;
+
+            r = xw.header(sheet, r, new String[]{
+                    "No", "대상자", "이메일", "부서", "발송 결과", "실패 사유",
+                    "발송 시각", "열람 시각", "클릭 시각", "신고 시각"});
+            int seq = 1;
+            for (PhishingCampaignTarget t : targets) {
+                String sendResult = t.getSendStatus() == null ? "미발송"
+                        : t.getSendStatus() == PhishingCampaignTarget.SendStatus.SUCCESS ? "성공" : "실패";
+                r = xw.row(sheet, r, new Object[]{
+                        seq++,
+                        t.getTarget() != null ? t.getTarget().getName() : "-",
+                        t.getTarget() != null ? t.getTarget().getEmail() : "-",
+                        t.getTarget() != null ? t.getTarget().getDepartment() : "-",
+                        sendResult,
+                        t.getSendError(),
+                        ExportSupport.dt(t.getSentAt()),
+                        ExportSupport.dt(t.getOpenedAt()),
+                        ExportSupport.dt(t.getClickedAt()),
+                        ExportSupport.dt(t.getReportedAt()),
+                }, 0, 4, 6, 7, 8, 9);
+            }
+            xw.widths(sheet, 6, 16, 28, 16, 12, 30, 20, 20, 20, 20);
+
+            return xw.toBytes();
+        }
+    }
+
+    /** 파일명에 쓸 훈련명 */
+    @Transactional(readOnly = true)
+    public String campaignName(Long id) {
+        return campaignRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("PhishingCampaign", id))
+                .getName();
+    }
+
+    private static String campaignStatusLabel(PhishingCampaign.Status s) {
+        if (s == null) return "-";
+        return switch (s) {
+            case DRAFT -> "대기";
+            case RUNNING -> "실시중";
+            case COMPLETED -> "완료";
+            case CANCELLED -> "취소";
+        };
+    }
+
+    private static long pct(long n, long d) {
+        return d > 0 ? Math.round(n * 100.0 / d) : 0;
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────
+
+    /**
+     * 템플릿이 {REPORT_URL} 을 직접 쓰지 않은 경우, 메일 하단에 신고 링크를 자동으로 덧붙인다.
+     * 기존 템플릿을 수정하지 않아도 신고율이 집계되도록 하기 위한 처리다.
+     */
+    private String appendReportFooter(String body, String reportUrl) {
+        if (body != null && body.contains(reportUrl)) return body;
+        String footer = "<div style=\"margin-top:28px;padding-top:14px;border-top:1px solid #e5e7eb;"
+                + "font-family:'Segoe UI',system-ui,sans-serif;font-size:12px;color:#6b7280;\">"
+                + "이 메일이 의심스럽다면 "
+                + "<a href=\"" + reportUrl + "\" style=\"color:#2563eb;font-weight:600;text-decoration:underline;\">"
+                + "악성메일로 신고하기</a> 를 눌러주세요."
+                + "</div>";
+        return (body != null ? body : "") + footer;
+    }
 
     private PhishingTemplate findTemplate(Long id) {
         return templateRepo.findById(id)

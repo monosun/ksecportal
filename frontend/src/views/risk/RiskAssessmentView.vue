@@ -171,7 +171,7 @@
         class="input w-32 text-sm py-1.5"/>
       <select v-model="searchAssetType" class="input w-32 text-sm py-1.5">
         <option value="">자산 유형 전체</option>
-        <option v-for="t in assetTypeOptions" :key="t" :value="t">{{ t }}</option>
+        <option v-for="t in assetTypeOptions" :key="t" :value="t">{{ assetTypeLabel(t) }}</option>
       </select>
       <select v-model="searchAssetEnv" class="input w-28 text-sm py-1.5">
         <option value="">환경 전체</option>
@@ -258,6 +258,8 @@
               <th class="text-left px-4 py-3 font-semibold text-gray-600">자산유형</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600">위협명</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600">위협유형</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">카테고리</th>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">대상자산유형</th>
               <th class="text-left px-4 py-3 font-semibold text-gray-600">취약점</th>
               <th class="text-center px-4 py-3 font-semibold text-gray-600">발생가능성</th>
               <th class="text-center px-4 py-3 font-semibold text-gray-600">영향도</th>
@@ -280,12 +282,22 @@
               </td>
               <td class="px-4 py-3.5 font-medium text-gray-900">{{ item.assetName || '-' }}</td>
               <td class="px-4 py-3.5">
-                <span v-if="item.assetType" class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{{ item.assetType }}</span>
+                <span v-if="item.assetType" class="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">{{ assetTypeLabel(item.assetType) }}</span>
                 <span v-else class="text-gray-400">-</span>
               </td>
               <td class="px-4 py-3.5 text-gray-700">{{ item.threatName || '-' }}</td>
               <td class="px-4 py-3.5">
                 <span v-if="item.threatType" class="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">{{ item.threatType }}</span>
+                <span v-else class="text-gray-400">-</span>
+              </td>
+              <td class="px-4 py-3.5 text-gray-600 text-xs">{{ item.threatCategory || '-' }}</td>
+              <td class="px-4 py-3.5">
+                <div v-if="item.threatAssetTypes?.length" class="flex flex-wrap gap-1 max-w-40">
+                  <span v-for="t in item.threatAssetTypes" :key="t"
+                    class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap">
+                    {{ assetTypeLabel(t) }}
+                  </span>
+                </div>
                 <span v-else class="text-gray-400">-</span>
               </td>
               <td class="px-4 py-3.5 text-gray-500 text-xs max-w-36 truncate" :title="item.vulnerability || ''">{{ item.vulnerability || '-' }}</td>
@@ -462,9 +474,19 @@
               <input v-model="form.threatName" class="input w-full text-sm" placeholder="위협명"/>
             </div>
           </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">위협 유형 <span class="text-xs text-gray-400">(스냅샷 저장)</span></label>
+              <input v-model="form.threatType" class="input w-full text-sm" placeholder="예: 외부공격, 내부위협" :readonly="!!form.threatId"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">카테고리 <span class="text-xs text-gray-400">(스냅샷 저장)</span></label>
+              <input v-model="form.threatCategory" class="input w-full text-sm" placeholder="위협 카테고리" :readonly="!!form.threatId"/>
+            </div>
+          </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">위협 유형 <span class="text-xs text-gray-400">(스냅샷 저장)</span></label>
-            <input v-model="form.threatType" class="input w-full text-sm" placeholder="예: 외부공격, 내부위협" :readonly="!!form.threatId"/>
+            <label class="block text-sm font-medium text-gray-700 mb-1">대상 자산유형 <span class="text-xs text-gray-400">(콤마 구분 · 스냅샷 저장)</span></label>
+            <input v-model="form.threatAssetTypes" class="input w-full text-sm" placeholder="예: 서버,네트워크" :readonly="!!form.threatId"/>
           </div>
           <!-- 취약점 -->
           <div>
@@ -569,7 +591,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { riskApi, assetApi, threatApi } from '@/api'
+import { riskApi, assetApi, threatApi, codeApi } from '@/api'
 
 // 연도/차수 상태
 const currentYear = ref(new Date().getFullYear())
@@ -741,6 +763,14 @@ function clearSearch() {
 const assets = ref([])
 const threats = ref([])
 
+// 자산유형 코드(ASSET_TYPE) — 코드값을 한글 라벨로 표시하기 위해 사용
+const assetTypeCodes = ref([])
+
+function assetTypeLabel(value) {
+  if (!value) return ''
+  return assetTypeCodes.value.find(c => c.value === value)?.label || value
+}
+
 const groupedThreats = computed(() => {
   const groups = {}
   for (const t of threats.value) {
@@ -769,7 +799,7 @@ const assessmentSaving = ref(false)
 const assessmentError = ref('')
 const form = reactive({
   assetId: null, assetName: '', assetType: '', assetEnvironment: '',
-  threatId: null, threatName: '', threatType: '',
+  threatId: null, threatName: '', threatType: '', threatCategory: '', threatAssetTypes: '',
   vulnerability: '', likelihood: 3, impact: 3, treatment: '감소', notes: ''
 })
 
@@ -834,6 +864,13 @@ async function loadAssets() {
   } catch { assets.value = [] }
 }
 
+async function loadAssetTypeCodes() {
+  try {
+    const res = await codeApi.getValues('ASSET_TYPE')
+    assetTypeCodes.value = (res.data || []).map(c => ({ value: c.value, label: c.label || c.value }))
+  } catch { assetTypeCodes.value = [] }
+}
+
 async function loadThreats() {
   try {
     const res = await threatApi.list()
@@ -842,7 +879,7 @@ async function loadThreats() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadYears(), loadAssets(), loadThreats()])
+  await Promise.all([loadYears(), loadAssets(), loadThreats(), loadAssetTypeCodes()])
   await loadRounds()
 })
 
@@ -862,6 +899,8 @@ function onThreatChange() {
   if (threat) {
     form.threatName = threat.name
     form.threatType = threat.type || ''
+    form.threatCategory = threat.category || ''
+    form.threatAssetTypes = (threat.assetTypes || []).join(',')
     // 취약점에는 선택한 위협의 설명(description)을 채운다
     form.vulnerability = threat.description || ''
   }
@@ -999,6 +1038,8 @@ function openAssessmentModal(assessment) {
     form.threatId = assessment.threatId || null
     form.threatName = assessment.threatName || ''
     form.threatType = assessment.threatType || ''
+    form.threatCategory = assessment.threatCategory || ''
+    form.threatAssetTypes = (assessment.threatAssetTypes || []).join(',')
     form.vulnerability = assessment.vulnerability || ''
     form.likelihood = assessment.likelihood
     form.impact = assessment.impact
@@ -1007,6 +1048,7 @@ function openAssessmentModal(assessment) {
   } else {
     form.assetId = null; form.assetName = ''; form.assetType = ''; form.assetEnvironment = ''
     form.threatId = null; form.threatName = ''; form.threatType = ''
+    form.threatCategory = ''; form.threatAssetTypes = ''
     form.vulnerability = ''
     form.likelihood = 3; form.impact = 3
     form.treatment = '감소'; form.notes = ''
@@ -1028,6 +1070,8 @@ async function saveAssessment() {
       threatId: form.threatId || null,
       threatName: form.threatName,
       threatType: form.threatType || null,
+      threatCategory: form.threatCategory || null,
+      threatAssetTypes: form.threatAssetTypes || null,
       vulnerability: form.vulnerability || null,
       likelihood: form.likelihood,
       impact: form.impact,

@@ -1,6 +1,7 @@
 package com.monosun.secportal.training.controller;
 
 import com.monosun.secportal.auth.entity.User;
+import com.monosun.secportal.common.excel.ExportSupport;
 import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.training.dto.TrainingDto;
 import com.monosun.secportal.training.entity.TrainingCourse;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -43,6 +45,15 @@ public class TrainingController {
     public ApiResponse<java.util.List<TrainingDto.CompletionRow>> resultCompletions(
             @RequestParam(required = false) Long courseId) {
         return ApiResponse.ok(trainingService.resultCompletions(courseId));
+    }
+
+    /** 교육 1건의 개요·이수 이력·퀴즈 문항 엑셀 내려받기 */
+    @GetMapping("/results/courses/{id}/export/excel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<byte[]> exportCourseExcel(@PathVariable Long id) {
+        byte[] data = trainingService.exportCourseExcel(id);
+        String filename = "교육결과_" + ExportSupport.safeFileName(trainingService.courseTitle(id)) + ".xlsx";
+        return ExportSupport.xlsx(data, filename);
     }
 
     @GetMapping("/courses/{id}")

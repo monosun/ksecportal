@@ -3,10 +3,12 @@ package com.monosun.secportal.bcp.controller;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.bcp.dto.BcpDto;
 import com.monosun.secportal.bcp.service.BcpService;
+import com.monosun.secportal.common.excel.ExportSupport;
 import com.monosun.secportal.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -73,6 +75,15 @@ public class BcpController {
     @GetMapping("/exercises/{id}")
     public ApiResponse<BcpDto.ExerciseDetail> getExercise(@PathVariable Long id) {
         return ApiResponse.ok(service.getExercise(id));
+    }
+
+    /** 재해복구·BCP 훈련 1건의 개요·단계 결과·총평 엑셀 내려받기 */
+    @GetMapping("/exercises/{id}/export/excel")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<byte[]> exportExerciseExcel(@PathVariable Long id) {
+        byte[] data = service.exportExerciseExcel(id);
+        String filename = "BCP훈련결과_" + ExportSupport.safeFileName(service.exerciseName(id)) + ".xlsx";
+        return ExportSupport.xlsx(data, filename);
     }
 
     @PostMapping("/exercises")

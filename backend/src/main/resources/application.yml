@@ -25,8 +25,9 @@
         format_sql: true
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      # 이미지가 많은 발표자료(PPT)는 수십 MB를 넘기는 경우가 많아 100MB 로 둔다. nginx client_max_body_size 와 함께 맞춰야 한다.
+      max-file-size: ${MAX_FILE_SIZE:100MB}
+      max-request-size: ${MAX_REQUEST_SIZE:100MB}
   jackson:
     time-zone: Asia/Seoul
     serialization:
@@ -84,6 +85,10 @@ server:
   port: 8080
   servlet:
     context-path: /api
+  tomcat:
+    # 용량 초과로 거절한 요청도 본문을 끝까지 읽어야 오류 응답(413)이 브라우저에 전달된다.
+    # -1 이 아니면 연결이 끊겨 사용자에게는 원인 없는 네트워크 오류로만 보인다.
+    max-swallow-size: -1
   error:
     include-stacktrace: never
     include-message: never

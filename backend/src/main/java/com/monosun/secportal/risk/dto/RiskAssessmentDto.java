@@ -2,6 +2,7 @@ package com.monosun.secportal.risk.dto;
 
 import com.monosun.secportal.risk.entity.RiskAssessment;
 import com.monosun.secportal.risk.entity.RiskAssessmentRound;
+import com.monosun.secportal.threat.dto.ThreatDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -63,6 +64,8 @@ public class RiskAssessmentDto {
         private Long threatId;
         private String threatName;
         private String threatType;
+        private String threatCategory;
+        private String threatAssetTypes;
         private String vulnerability;
         private int likelihood = 3;
         private int impact = 3;
@@ -82,6 +85,9 @@ public class RiskAssessmentDto {
         private Long threatId;
         private String threatName;
         private String threatType;
+        private String threatCategory;
+        /** 위협의 대상 자산유형(복수) 스냅샷 */
+        private List<String> threatAssetTypes;
         private String vulnerability;
         private int likelihood;
         private int impact;
@@ -109,6 +115,8 @@ public class RiskAssessmentDto {
                     .threatId(a.getThreatId())
                     .threatName(a.getThreatName())
                     .threatType(a.getThreatType())
+                    .threatCategory(a.getThreatCategory())
+                    .threatAssetTypes(ThreatDto.splitAssetTypes(a.getThreatAssetTypes()))
                     .vulnerability(a.getVulnerability())
                     .likelihood(a.getLikelihood())
                     .impact(a.getImpact())

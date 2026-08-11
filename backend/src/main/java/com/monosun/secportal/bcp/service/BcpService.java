@@ -12,7 +12,10 @@ import com.monosun.secportal.bcp.repository.BcpExerciseStepRepository;
 import com.monosun.secportal.bcp.repository.BcpScenarioRepository;
 import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
+import com.monosun.secportal.common.excel.ExcelWriter;
+import com.monosun.secportal.common.excel.ExportSupport;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -271,6 +274,128 @@ public class BcpService {
     private BcpScenario findScenario(Long id) {
         return scenarioRepo.findByIdWithSteps(id)
                 .orElseThrow(() -> new ResourceNotFoundException("BcpScenario", id));
+    }
+
+    // ── Excel export ──────────────────────────────────────────────────────
+
+    /** 재해복구·BCP 훈련 1건의 개요·단계별 수행 결과·총평을 엑셀로 만든다. */
+    @Transactional(readOnly = true)
+    public byte[] exportExerciseExcel(Long id) {
+        BcpExercise e = findExercise(id);
+        BcpScenario s = e.getScenario();
+        List<BcpExerciseStep> steps = e.getSteps();
+        long passed = countStep(steps, BcpExerciseStep.StepResult.PASS);
+        long partial = countStep(steps, BcpExerciseStep.StepResult.PARTIAL);
+        long failed = countStep(steps, BcpExerciseStep.StepResult.FAIL);
+        long pending = countStep(steps, BcpExerciseStep.StepResult.PENDING);
+
+        try (ExcelWriter xw = new ExcelWriter()) {
+            Sheet sheet = xw.sheet("BCP 훈련 결과");
+            int r = xw.title(sheet, 0, "재해복구·BCP 훈련 결과 — " + e.getName(), 8);
+            r++;
+            r = xw.meta(sheet, r, new String[][]{
+                    {"훈련명", e.getName()},
+                    {"시나리오", s != null ? s.getName() : "-"},
+                    {"재해 유형", s != null ? s.getCategory() : "-"},
+                    {"대상 시스템·업무", s != null ? s.getTargetSystem() : "-"},
+                    {"훈련 방식", methodLabel(e.getMethod())},
+                    {"상태", statusLabel(e.getStatus())},
+                    {"총괄자", e.getLeaderName()},
+                    {"참가자", e.getParticipants()},
+                    {"참가 인원", e.getParticipantCount() != null ? String.valueOf(e.getParticipantCount()) : "-"},
+                    {"계획 일시", ExportSupport.dt(e.getPlannedAt())},
+                    {"시작 일시", ExportSupport.dt(e.getStartedAt())},
+                    {"종료 일시", ExportSupport.dt(e.getEndedAt())},
+                    {"목표 RTO(분)", s != null && s.getRtoMinutes() != null ? String.valueOf(s.getRtoMinutes()) : "-"},
+                    {"실제 RTO(분)", e.getActualRtoMinutes() != null ? String.valueOf(e.getActualRtoMinutes()) : "-"},
+                    {"목표 RPO(분)", s != null && s.getRpoMinutes() != null ? String.valueOf(s.getRpoMinutes()) : "-"},
+                    {"실제 RPO(분)", e.getActualRpoMinutes() != null ? String.valueOf(e.getActualRpoMinutes()) : "-"},
+                    {"달성률", e.getScore() != null ? e.getScore() + "%" : "-"},
+                    {"판정", resultLabel(e.getResult())},
+                    {"단계 수행", "총 " + steps.size() + " · 성공 " + passed + " · 부분 " + partial
+                            + " · 실패 " + failed + " · 미수행 " + pending},
+                    {"내려받은 시각", ExportSupport.now()},
+            });
+            r++;
+
+            r = xw.header(sheet, r, new String[]{
+                    "No", "단계명", "담당 역할", "수행 절차", "성공 판정 기준",
+                    "목표(분)", "실제(분)", "수행 결과", "비고", "완료 시각"});
+            for (BcpExerciseStep step : steps) {
+                r = xw.row(sheet, r, new Object[]{
+                        step.getStepOrder(),
+                        step.getTitle(),
+                        step.getRoleName(),
+                        step.getAction(),
+                        step.getSuccessCriteria(),
+                        step.getTargetMinutes() != null ? step.getTargetMinutes() : "-",
+                        step.getActualMinutes() != null ? step.getActualMinutes() : "-",
+                        stepResultLabel(step.getResult()),
+                        step.getNote(),
+                        ExportSupport.dt(step.getCompletedAt()),
+                }, 0, 5, 6, 7, 9);
+            }
+            xw.widths(sheet, 6, 26, 14, 40, 30, 10, 10, 12, 30, 20);
+
+            r++;
+            r = xw.textBlock(sheet, r, "상황 설정", s != null ? s.getSituation() : "", 9, 60);
+            r++;
+            r = xw.textBlock(sheet, r, "훈련 총평", e.getSummary(), 9, 60);
+            r++;
+            xw.textBlock(sheet, r, "도출된 개선사항", e.getImprovement(), 9, 60);
+
+            return xw.toBytes();
+        }
+    }
+
+    /** 파일명에 쓸 훈련명 */
+    @Transactional(readOnly = true)
+    public String exerciseName(Long id) {
+        return exerciseRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("BcpExercise", id))
+                .getName();
+    }
+
+    private static long countStep(List<BcpExerciseStep> steps, BcpExerciseStep.StepResult r) {
+        return steps.stream().filter(s -> s.getResult() == r).count();
+    }
+
+    private static String methodLabel(BcpExercise.Method m) {
+        if (m == null) return "-";
+        return switch (m) {
+            case TABLETOP -> "도상훈련";
+            case SIMULATION -> "시뮬레이션";
+            case FAILOVER -> "실제 전환";
+        };
+    }
+
+    private static String statusLabel(BcpExercise.Status s) {
+        if (s == null) return "-";
+        return switch (s) {
+            case DRAFT -> "계획";
+            case RUNNING -> "진행중";
+            case COMPLETED -> "완료";
+            case CANCELLED -> "취소";
+        };
+    }
+
+    private static String resultLabel(BcpExercise.Result r) {
+        if (r == null) return "-";
+        return switch (r) {
+            case PASS -> "적합";
+            case PARTIAL -> "보완필요";
+            case FAIL -> "부적합";
+        };
+    }
+
+    private static String stepResultLabel(BcpExerciseStep.StepResult r) {
+        if (r == null) return "-";
+        return switch (r) {
+            case PASS -> "성공";
+            case PARTIAL -> "부분";
+            case FAIL -> "실패";
+            case PENDING -> "미수행";
+        };
     }
 
     private BcpExercise findExercise(Long id) {
