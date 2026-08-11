@@ -75,6 +75,17 @@ docker compose up -d backend frontend
 
 배포 후 브라우저에서 **하드 새로고침(Ctrl+Shift+R)** 이 필요합니다.
 
+### 운영 배포 시 주의사항
+
+- **배포 전 DB 백업이 먼저입니다.** 이번 마이그레이션은 되돌리는 스크립트를 제공하지 않습니다.
+  `docker compose exec -T db mysqldump -usecportal -p<비밀번호> secportal > backup_$(date +%F).sql`
+- **마이그레이션은 백엔드 재기동 전에 적용하세요.** `ddl-auto: update` 는 컬럼을 추가하지만 **기존 행의 백필은 하지 않습니다.** 마이그레이션 없이 올리면 기존 평가 항목의 카테고리·대상자산유형이 계속 빈 값으로 보입니다.
+- **`db/init/*.sql` 은 신규 설치(빈 볼륨)에서만 실행됩니다.** 운영 인스턴스에는 `db/migration` 적용이 필수입니다.
+- **frontend 이미지 재빌드 필수** — 이번 릴리즈는 `nginx/nginx.conf`(업로드 용량 100MB·본문 타임아웃)가 바뀌었습니다. nginx 설정은 frontend 이미지에 복사되므로 `up -d` 만 하면 반영되지 않습니다.
+- **업로드 한도는 양쪽을 같이 맞추세요.** nginx `client_max_body_size` 와 백엔드 `MAX_FILE_SIZE`(기본 100MB) 중 한쪽만 바꾸면 큰 파일이 413 또는 원인 불명 오류로 실패합니다.
+- **기동 확인** — `docker compose logs backend --tail 50` 에서 `Started SecPortalApplication` 확인. 기동 로그의 `[보안점검]` 경고(기본 JWT_SECRET·Jasypt 마스터 키·샘플 DB 비밀번호)가 남아 있으면 운영에서 반드시 교체하세요.
+- **롤백 주의** — 이전 태그로 이미지를 되돌려도 **적용된 DB 마이그레이션은 되돌아가지 않습니다.** 추가된 컬럼은 이전 버전에서 무시되어 동작에는 지장이 없지만, 완전한 롤백이 필요하면 백업에서 복원하세요.
+
 ## 변경 파일 요약
 
 **백엔드**
