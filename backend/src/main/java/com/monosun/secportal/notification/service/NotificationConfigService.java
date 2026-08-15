@@ -18,8 +18,10 @@ public class NotificationConfigService {
     static final String KEY_EMAIL           = "notification.approval-email";
     static final String KEY_SLACK_WEBHOOK   = "notification.slack-webhook-url";
     static final String KEY_SLACK_MODE      = "notification.slack-mode";
-    static final String KEY_SLACK_BOT_TOKEN = "notification.slack-bot-token";
-    static final String KEY_SLACK_APP_TOKEN = "notification.slack-app-token";
+    // 아래 두 상수는 토큰 값이 아니라 notification_config 테이블의 설정 '키 이름'이다.
+    // 실제 토큰은 코드에 없고 관리자가 저장한 DB 값을 런타임에 읽는다.
+    static final String KEY_SLACK_BOT_TOKEN = "notification.slack-bot-token"; // sast:ignore 설정 키 이름(자격증명 아님)
+    static final String KEY_SLACK_APP_TOKEN = "notification.slack-app-token"; // sast:ignore 설정 키 이름(자격증명 아님)
     static final String KEY_SLACK_CHANNEL   = "notification.slack-channel";
 
     static final String DEFAULT_EMAIL      = "noreply@monosun.com";
