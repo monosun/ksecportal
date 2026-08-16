@@ -70,7 +70,7 @@
     <div v-else-if="!articles.length" class="card text-center text-gray-400 py-12">
       검색 조건에 맞는 조문이 없습니다.
     </div>
-    <div v-else class="space-y-2">
+    <div v-else ref="listEl" class="space-y-2">
       <div v-for="a in articles" :key="a.id"
         class="card p-0 overflow-hidden hover:border-primary-200 transition-colors">
         <button class="w-full text-left px-5 py-3.5" @click="toggle(a.id)">
@@ -122,6 +122,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { useDebounceFn } from '@vueuse/core'
 import { policyApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
@@ -233,12 +234,18 @@ function runSearch() {
 // 마지막으로 보낸 요청의 결과만 화면에 반영한다.
 let requestSeq = 0
 
+// 결과 카드가 화면 높이에 맞게 들어가도록 한 페이지 건수를 정한다(카드 높이를 실측).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  rowSelector: ':scope > div', rowHeight: 104, headHeight: 0, fallbackTop: 430,
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); load() }
+})
+
 async function load() {
   const seq = ++requestSeq
   loading.value = true
   errorMsg.value = ''
   try {
-    const params = { page: page.value, size: 20 }
+    const params = { page: page.value, size: pageSize.value }
     if (filters.keyword) { params.keyword = filters.keyword; params.scope = filters.scope }
     if (filters.guideline) params.guideline = filters.guideline
     if (filters.chapterKey) params.policyId = filters.chapterKey
@@ -288,5 +295,5 @@ function statusBadgeClass(status) {
   return { DRAFT: 'badge-gray', REVIEW: 'badge-yellow', PUBLISHED: 'badge-green', ARCHIVED: 'badge-gray' }[status] || 'badge-gray'
 }
 
-onMounted(() => { loadFacets(); load() })
+onMounted(async () => { loadFacets(); await load(); refinePageSize() })
 </script>

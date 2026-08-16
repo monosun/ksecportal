@@ -322,6 +322,7 @@ const MENUS = [
   { key: 'bcp_training',      label: '재해복구·BCP 훈련' },
   { key: 'sec_docs',          label: '보안 가이드 및 자료' },
   { key: 'glossary',          label: '보안용어집' },
+  { key: 'security_cases',    label: '알기쉬운 보안사례집' },
   { key: 'related_sites',     label: '관련 사이트' },
   // 개인정보보호
   { key: 'privacy_processing', label: '[개인정보] 처리현황' },

@@ -14,16 +14,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 보안정책 조(條) 세분화 · 조문 검색 서비스.
  *
  * <p>정책(장) 본문을 파싱해 {@link PolicyArticle} 로 펼쳐 두고, 지침/장/조/제목/본문 기준으로 검색한다.
- * 조 데이터는 정책 본문의 파생물이므로 정책 저장 시마다 {@link #sync(Policy)} 로 다시 만든다.
+ * 조 데이터는 정책 본문의 파생물이므로 정책 저장 시마다 {@link #sync(Policy)} 로 다시 맞춘다.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,7 +46,10 @@ public class PolicyArticleService {
 
     /**
      * 정책 1건의 제목·본문을 다시 파싱해 지침/장 정보와 조 목록을 동기화한다.
-     * 기존 조는 지우고 새로 만들기 때문에 본문 수정 결과가 항상 그대로 반영된다.
+     *
+     * <p><b>조 레코드는 지우고 새로 만들지 않고 조 표기(제N조) 기준으로 재사용한다.</b>
+     * ISMS-P 통제항목이 조 id 로 매핑을 걸어 두기 때문에, 본문을 조금 고쳤다고 id 가 바뀌면
+     * 매핑이 통째로 사라진다. 본문에서 없어진 조만 orphanRemoval 로 지운다.
      *
      * @return 등록된 조 개수
      */
@@ -49,12 +57,38 @@ public class PolicyArticleService {
     public int sync(Policy policy) {
         parser.applyTitleStructure(policy);
 
-        // orphanRemoval 로 기존 조를 지우고 새로 파싱한 조로 교체한다.
-        policy.getArticles().clear();
-        for (PolicyArticle a : parser.parseArticles(policy.getContent())) {
+        // 같은 표기가 여러 번 나올 수 있으므로 표기별 큐에서 앞에서부터 하나씩 꺼내 쓴다.
+        Map<String, Deque<PolicyArticle>> reusable = new LinkedHashMap<>();
+        for (PolicyArticle a : policy.getArticles()) {
+            reusable.computeIfAbsent(a.getArticleLabel(), k -> new ArrayDeque<>()).add(a);
+        }
+
+        Set<PolicyArticle> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+        List<PolicyArticle> added = new ArrayList<>();
+
+        for (PolicyArticle parsed : parser.parseArticles(policy.getContent())) {
+            Deque<PolicyArticle> bucket = reusable.get(parsed.getArticleLabel());
+            PolicyArticle target = (bucket == null) ? null : bucket.poll();
+            if (target == null) {
+                added.add(parsed);
+                continue;
+            }
+            target.setArticleNo(parsed.getArticleNo());
+            target.setArticleSubNo(parsed.getArticleSubNo());
+            target.setTitle(parsed.getTitle());
+            target.setNote(parsed.getNote());
+            target.setContent(parsed.getContent());
+            target.setSortOrder(parsed.getSortOrder());
+            kept.add(target);
+        }
+
+        // 본문에서 사라진 조는 여기서 빠지며 orphanRemoval 이 삭제한다.
+        policy.getArticles().removeIf(a -> !kept.contains(a));
+        for (PolicyArticle a : added) {
             a.setPolicy(policy);
             policy.getArticles().add(a);
         }
+
         policyRepository.save(policy);
         return policy.getArticles().size();
     }

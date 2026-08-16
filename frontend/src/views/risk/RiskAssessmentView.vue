@@ -341,6 +341,7 @@
               / {{ filteredAssessments.length }}건
             </span>
             <select v-model.number="pageSize" class="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 bg-white">
+              <option :value="fitSize">화면 맞춤 ({{ fitSize }}개)</option>
               <option :value="10">10개</option>
               <option :value="20">20개</option>
               <option :value="50">50개</option>
@@ -591,6 +592,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { estimateRows } from '@/composables/useFitPageSize'
 import { riskApi, assetApi, threatApi, codeApi } from '@/api'
 
 // 연도/차수 상태
@@ -655,7 +657,9 @@ const belowThresholdCount = computed(() =>
 
 // 페이지네이션
 const currentPage = ref(1)
-const pageSize = ref(20)
+// 기본 건수는 모니터 화면 높이에 맞춘다. 사용자가 목록 아래 선택으로 바꿀 수 있다.
+const fitSize = estimateRows({ top: 430, max: 100 })
+const pageSize = ref(fitSize)
 
 const totalPages = computed(() => Math.ceil(filteredAssessments.value.length / pageSize.value) || 1)
 

@@ -418,15 +418,18 @@ CREATE TABLE IF NOT EXISTS risk_assessments (
     FOREIGN KEY (round_id) REFERENCES risk_assessment_rounds(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ISMS-P 통제항목-정책 매핑 (v1.44.0)
+-- ISMS-P 통제항목-정책 매핑 (v1.44.0, v1.35.0 에서 조 단위로 세분화)
+-- policy_article_id 가 NULL 이면 장(章) 전체 매핑, 값이 있으면 그 장의 조(條) 하나를 가리킨다.
 CREATE TABLE IF NOT EXISTS isms_policy_mappings (
-    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
-    isms_item_id BIGINT NOT NULL,
-    policy_id    BIGINT NOT NULL,
-    created_at   DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    UNIQUE KEY uq_isms_policy (isms_item_id, policy_id),
-    CONSTRAINT fk_ipm_isms_item FOREIGN KEY (isms_item_id) REFERENCES isms_items (id) ON DELETE CASCADE,
-    CONSTRAINT fk_ipm_policy    FOREIGN KEY (policy_id)    REFERENCES policies (id)    ON DELETE CASCADE
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    isms_item_id      BIGINT NOT NULL,
+    policy_id         BIGINT NOT NULL,
+    policy_article_id BIGINT NULL COMMENT '조 단위 매핑 대상 (NULL 이면 장 전체)',
+    created_at        DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    UNIQUE KEY uq_isms_policy_article (isms_item_id, policy_id, policy_article_id),
+    CONSTRAINT fk_ipm_isms_item      FOREIGN KEY (isms_item_id)      REFERENCES isms_items (id)      ON DELETE CASCADE,
+    CONSTRAINT fk_ipm_policy         FOREIGN KEY (policy_id)         REFERENCES policies (id)        ON DELETE CASCADE,
+    CONSTRAINT fk_ipm_policy_article FOREIGN KEY (policy_article_id) REFERENCES policy_articles (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─────────────────────────────────────────────────────────────────────────────

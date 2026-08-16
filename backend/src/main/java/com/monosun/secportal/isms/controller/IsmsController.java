@@ -81,6 +81,7 @@ public class IsmsController {
         return ApiResponse.ok(ismsService.updateItemDefaults(id, req));
     }
 
+    /** 장(章) 전체 매핑 */
     @PostMapping("/items/{itemId}/policies/{policyId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> mapPolicy(@PathVariable Long itemId, @PathVariable Long policyId) {
@@ -88,10 +89,26 @@ public class IsmsController {
         return ApiResponse.ok(null);
     }
 
+    /** 장 전체 매핑만 해제한다. 같은 장의 조 단위 매핑은 유지된다. */
     @DeleteMapping("/items/{itemId}/policies/{policyId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> unmapPolicy(@PathVariable Long itemId, @PathVariable Long policyId) {
         ismsService.unmapPolicy(itemId, policyId);
+        return ApiResponse.noContent();
+    }
+
+    /** 조(條) 단위 매핑 */
+    @PostMapping("/items/{itemId}/articles/{articleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<Void> mapArticle(@PathVariable Long itemId, @PathVariable Long articleId) {
+        ismsService.mapArticle(itemId, articleId);
+        return ApiResponse.ok(null);
+    }
+
+    @DeleteMapping("/items/{itemId}/articles/{articleId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<Void> unmapArticle(@PathVariable Long itemId, @PathVariable Long articleId) {
+        ismsService.unmapArticle(itemId, articleId);
         return ApiResponse.noContent();
     }
 

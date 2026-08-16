@@ -15,6 +15,8 @@ import com.monosun.secportal.isms.repository.IsmsItemNoteRepository;
 import com.monosun.secportal.isms.repository.IsmsItemRepository;
 import com.monosun.secportal.isms.repository.IsmsPolicyMappingRepository;
 import com.monosun.secportal.policy.entity.Policy;
+import com.monosun.secportal.policy.entity.PolicyArticle;
+import com.monosun.secportal.policy.repository.PolicyArticleRepository;
 import com.monosun.secportal.policy.repository.PolicyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -41,6 +43,7 @@ public class IsmsService {
     private final FileStorageService fileStorageService;
     private final IsmsPolicyMappingRepository policyMappingRepository;
     private final PolicyRepository policyRepository;
+    private final PolicyArticleRepository policyArticleRepository;
     private final IsmsItemNoteRepository itemNoteRepository;
 
     @Transactional(readOnly = true)
@@ -75,9 +78,10 @@ public class IsmsService {
         }).collect(Collectors.toList());
     }
 
+    /** 장(章) 전체 매핑 */
     @Transactional
     public void mapPolicy(Long itemId, Long policyId) {
-        if (policyMappingRepository.existsByIsmsItemIdAndPolicyId(itemId, policyId)) return;
+        if (policyMappingRepository.existsByIsmsItemIdAndPolicyIdAndPolicyArticleIsNull(itemId, policyId)) return;
         IsmsItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
         Policy policy = policyRepository.findById(policyId)
@@ -86,23 +90,61 @@ public class IsmsService {
                 .ismsItem(item).policy(policy).build());
     }
 
+    /** 장 전체 매핑만 해제한다. 같은 장의 조 단위 매핑은 그대로 둔다. */
     @Transactional
     public void unmapPolicy(Long itemId, Long policyId) {
-        policyMappingRepository.deleteByIsmsItemIdAndPolicyId(itemId, policyId);
+        policyMappingRepository.deleteByIsmsItemIdAndPolicyIdAndPolicyArticleIsNull(itemId, policyId);
     }
+
+    /** 조(條) 단위 매핑 — 소속 장은 조에서 따라간다. */
+    @Transactional
+    public void mapArticle(Long itemId, Long articleId) {
+        if (policyMappingRepository.existsByIsmsItemIdAndPolicyArticleId(itemId, articleId)) return;
+        IsmsItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
+        PolicyArticle article = policyArticleRepository.findById(articleId)
+                .orElseThrow(() -> new ResourceNotFoundException("PolicyArticle", articleId));
+        policyMappingRepository.save(IsmsPolicyMapping.builder()
+                .ismsItem(item).policy(article.getPolicy()).policyArticle(article).build());
+    }
+
+    @Transactional
+    public void unmapArticle(Long itemId, Long articleId) {
+        policyMappingRepository.deleteByIsmsItemIdAndPolicyArticleId(itemId, articleId);
+    }
+
+    /** 장 → 조 순으로 정렬해 화면에서 장 기준으로 묶기 쉽게 만든다(장 전체 매핑이 각 장의 맨 앞). */
+    private static final Comparator<IsmsDto.PolicyRef> REF_ORDER =
+            Comparator.comparing(IsmsDto.PolicyRef::getId)
+                    .thenComparing(r -> r.getArticleId() == null ? 0 : 1)
+                    .thenComparing(IsmsDto.PolicyRef::getArticleId, Comparator.nullsFirst(Comparator.naturalOrder()));
 
     private Map<Long, List<IsmsDto.PolicyRef>> buildMappingsMap(List<Long> itemIds) {
         if (itemIds.isEmpty()) return Collections.emptyMap();
         return policyMappingRepository.findByIsmsItemIdIn(itemIds).stream()
                 .collect(Collectors.groupingBy(
                         m -> m.getIsmsItem().getId(),
-                        Collectors.mapping(m -> IsmsDto.PolicyRef.builder()
-                                .id(m.getPolicy().getId())
-                                .title(m.getPolicy().getTitle())
-                                .status(m.getPolicy().getStatus().name())
-                                .category(m.getPolicy().getCategory().name())
-                                .build(),
-                        Collectors.toList())));
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(IsmsService::toPolicyRef, Collectors.toList()),
+                                refs -> { refs.sort(REF_ORDER); return refs; })));
+    }
+
+    private static IsmsDto.PolicyRef toPolicyRef(IsmsPolicyMapping m) {
+        Policy p = m.getPolicy();
+        PolicyArticle a = m.getPolicyArticle();
+        return IsmsDto.PolicyRef.builder()
+                .id(p.getId())
+                .title(p.getTitle())
+                .status(p.getStatus().name())
+                .category(p.getCategory().name())
+                .guidelineName(p.getGuidelineName())
+                .chapterLabel(p.getChapterLabel())
+                .chapterTitle(p.getChapterTitle())
+                .articleId(a == null ? null : a.getId())
+                .articleLabel(a == null ? null : a.getArticleLabel())
+                .articleTitle(a == null ? null : a.getTitle())
+                .articleDisplayName(a == null ? null : a.getDisplayName())
+                .build();
     }
 
     @Transactional(readOnly = true)

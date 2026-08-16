@@ -94,7 +94,7 @@
     </div>
 
     <!-- 목록 -->
-    <div class="card">
+    <div ref="listEl" class="card">
       <div v-if="loading" class="text-center py-10 text-gray-500">로딩 중...</div>
       <div v-else-if="questions.length === 0" class="text-center py-10 text-gray-400">
         등록된 문제가 없습니다. "문제 추가" 또는 "Excel 일괄 등록"으로 문항을 등록하세요.
@@ -269,6 +269,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import * as XLSX from 'xlsx-js-style'
 import { quizBankApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
@@ -413,10 +414,15 @@ function goPage(p) {
   if (t !== page.value) { page.value = t; load() }
 }
 
+// 한 페이지 건수는 화면 높이에 맞춘다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); load() }
+})
+
 async function load() {
   loading.value = true
   try {
-    const res = await quizBankApi.list({ page: page.value, size: 20, ...activeFilterParams() })
+    const res = await quizBankApi.list({ page: page.value, size: pageSize.value, ...activeFilterParams() })
     const d = res.data
     questions.value = d?.content || []
     totalPages.value = d?.page?.totalPages ?? d?.totalPages ?? 0
@@ -517,5 +523,5 @@ async function handleBulkUpload(file, resolve, reject) {
 
 function formatDate(dt) { return dt ? new Date(dt).toLocaleDateString() : '-' }
 
-onMounted(() => { load(); loadCategories(); loadStats() })
+onMounted(async () => { await load(); refinePageSize(); loadCategories(); loadStats() })
 </script>

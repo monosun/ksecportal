@@ -162,6 +162,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { estimateRows } from '@/composables/useFitPageSize'
 import { adminApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
 import { usePiMaskingStore } from '@/stores/piMasking'
@@ -190,7 +191,8 @@ const RESOURCE_LIST = ['USER', 'POLICY', 'VULNERABILITY', 'INCIDENT', 'ASSET']
 const logs = ref([])
 const loading = ref(true)
 const page = ref(0)
-const pageSize = ref(20)
+// 기본값은 화면 높이에 맞춰 잡고, 사용자가 직접 바꾸면 그 값을 따른다.
+const pageSize = ref(estimateRows({ top: 420, max: 200 }))
 const totalPages = ref(0)
 const filters = ref({ action: '', resourceType: '', dateFrom: '', dateTo: '' })
 

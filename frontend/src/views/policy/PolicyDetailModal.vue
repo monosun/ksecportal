@@ -100,7 +100,9 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   itemId: { type: [Number, String], default: null },
   // 내용 확인용 미리보기 — 수신확인/수정/삭제 액션을 감춘다
-  readonly: { type: Boolean, default: false }
+  readonly: { type: Boolean, default: false },
+  // 열 때 펼쳐 둘 조(條) — ISMS 조 매핑에서 넘어올 때 그 조를 바로 보여준다
+  focusArticleId: { type: [Number, String], default: null }
 })
 const emit = defineEmits(['close', 'edit', 'changed'])
 
@@ -147,6 +149,11 @@ watch(() => props.open, async (open) => {
     // 조문 조회가 실패해도 원문 보기는 가능해야 하므로 별도로 감싼다.
     try { articles.value = (await policyApi.articlesOf(props.itemId)).data || [] }
     catch { articles.value = [] }
+    // 특정 조를 지정해 열었으면 그 조만 펼쳐 둔다.
+    if (props.focusArticleId != null) {
+      const focus = Number(props.focusArticleId)
+      if (articles.value.some(a => a.id === focus)) expandedArticles.value = new Set([focus])
+    }
   }
   catch (e) { loadError.value = typeof e === 'string' ? e : '정책을 불러오지 못했습니다.' }
   finally { loading.value = false }

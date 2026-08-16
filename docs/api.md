@@ -323,11 +323,25 @@ ISMS-P 인증 항목 목록 조회.
   "guide": "…이행가이드…",
   "defaultEvidenceTitle": "경영진의 참여 증적",
   "defaultEvidenceContent": "…증적예시…",
-  "evidenceCount": 2, "latestStatus": "COMPLIANT"
+  "evidenceCount": 2, "latestStatus": "COMPLIANT",
+  "mappedPolicies": [
+    { "id": 96, "title": "개인정보보호 지침 - 제1장 총칙", "status": "PUBLISHED", "category": "DATA_PROTECTION",
+      "guidelineName": "개인정보보호 지침", "chapterLabel": "제1장", "chapterTitle": "총칙",
+      "articleId": null },
+    { "id": 96, "title": "개인정보보호 지침 - 제1장 총칙", "status": "PUBLISHED", "category": "DATA_PROTECTION",
+      "guidelineName": "개인정보보호 지침", "chapterLabel": "제1장", "chapterTitle": "총칙",
+      "articleId": 126, "articleLabel": "제2조", "articleTitle": "정의",
+      "articleDisplayName": "제2조(정의)" }
+  ]
 }
 ```
 
 `guide` / `defaultEvidenceTitle` / `defaultEvidenceContent` 는 항목별 기본값(연도 무관)으로, 일괄등록 템플릿의 기본값이자 관리 > 코드관리 `ISMS-P 101항목` 탭에서 편집한다.
+
+`mappedPolicies` 는 **지침 &gt; 장 &gt; 조** 계층을 그대로 싣는다. `articleId` 가 `null` 이면 **장(章) 전체** 매핑,
+값이 있으면 그 장 안의 **조(條) 단위** 매핑이다. 같은 장에 장 전체와 여러 조가 함께 걸릴 수 있으므로
+`id`(정책 id) 하나로는 항목을 구분할 수 없다 — 화면에서 키를 만들 때는 `articleId` 까지 조합해야 한다.
+정렬은 정책 id → 장 전체 → 조 순서로 내려온다.
 
 ### GET /isms/items/:id
 
@@ -340,6 +354,22 @@ ISMS-P 인증 항목 목록 조회.
 ```json
 { "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "guide": "…" }
 ```
+
+### 통제항목 × 정책 매핑
+
+정책은 **장(章) 전체** 또는 **조(條) 단위**로 매핑한다. 두 매핑은 서로 독립이라, 장 전체를 해제해도
+같은 장의 조 매핑은 남는다. 이미 걸려 있는 매핑을 다시 요청하면 조용히 무시된다(중복 생성 없음).
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/isms/items/:itemId/policies/:policyId` | 장 전체 매핑 *(MANAGER+)* |
+| DELETE | `/isms/items/:itemId/policies/:policyId` | 장 전체 매핑만 해제 *(MANAGER+)* |
+| POST | `/isms/items/:itemId/articles/:articleId` | 조 단위 매핑 — 소속 장은 조에서 따라간다 *(MANAGER+)* |
+| DELETE | `/isms/items/:itemId/articles/:articleId` | 조 매핑 해제 *(MANAGER+)* |
+
+매핑할 조 목록은 `GET /policies/:id/articles` 로 가져온다.
+정책 본문에서 사라진 조는 매핑도 함께 삭제된다(조 삭제 시 연쇄 삭제).
+반대로 본문을 고쳐도 **같은 조 표기(제N조)는 레코드를 재사용**하므로 매핑이 유지된다.
 
 ### GET /isms/items/:id/evidences
 

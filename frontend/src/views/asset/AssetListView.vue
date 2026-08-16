@@ -194,7 +194,7 @@
     </div>
 
     <!-- Table -->
-    <div class="card p-0 overflow-hidden">
+    <div ref="listEl" class="card p-0 overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-gray-400">{{ $t('common.loading') }}</div>
       <div v-else-if="!assets.length" class="p-8 text-center text-gray-400">{{ $t('common.noData') }}</div>
       <div v-else class="overflow-x-auto">
@@ -277,6 +277,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { useI18n } from 'vue-i18n'
 import { assetApi, exportApi, assetBulkApi, codeApi } from '@/api'
 import { useDebounceFn } from '@vueuse/core'
@@ -410,10 +411,15 @@ const criticalities = ['HIGH', 'MEDIUM', 'LOW']
 const cloudProviders = ['AWS', 'GCP', 'AZURE', 'ON_PREMISE', 'OTHER']
 const environments = ['PRODUCTION', 'STAGING', 'DEVELOPMENT', 'TEST']
 
+// 한 페이지 건수는 화면 높이에 맞춘다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); load() }
+})
+
 async function load() {
   loading.value = true
   try {
-    const params = { page: page.value, size: 20 }
+    const params = { page: page.value, size: pageSize.value }
     if (filters.value.keyword) params.keyword = filters.value.keyword
     if (filters.value.type) params.type = filters.value.type
     if (filters.value.assetCategory) params.assetCategory = filters.value.assetCategory
@@ -516,6 +522,7 @@ onMounted(async () => {
   }
 
   await load()
+  refinePageSize()   // 표가 그려진 뒤 실제 행 높이로 다시 맞춘다
   loadTypeStats()
   try {
     const [highRes, cloudRes] = await Promise.all([

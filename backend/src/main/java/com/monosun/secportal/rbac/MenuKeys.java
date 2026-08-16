@@ -29,13 +29,17 @@ public final class MenuKeys {
             // 교육 및 훈련
             "training", "phishing", "bcp_training",
             // 보안 가이드 및 자료
-            "sec_docs", "glossary", "related_sites",
+            "sec_docs", "glossary", "security_cases", "related_sites",
             // 개인정보보호
             "privacy_processing", "privacy_files", "privacy_consent", "privacy_provision",
             "privacy_contractors", "privacy_retention", "privacy_disposal", "privacy_dpia",
             "privacy_breach", "privacy_rights", "privacy_safeguard", "privacy_report"
     );
 
-    /** USER 역할의 초기 권한 — 기존 하드코딩 기본값(보안교육·보안 가이드 읽기)을 그대로 옮긴 것 */
-    public static final List<String> DEFAULT_USER_READ = List.of("training", "sec_docs");
+    /**
+     * USER 역할의 초기 권한 — 기존 하드코딩 기본값(보안교육·보안 가이드 읽기)에 사례집을 더한 것.
+     * 이 값은 <b>USER 역할을 처음 만들 때만</b> 쓰인다(시더는 비어 있을 때만 동작).
+     * 이미 운영 중인 인스턴스에서 임직원에게 새 메뉴를 열어 주려면 관리 &gt; 권한관리에서 직접 켜야 한다.
+     */
+    public static final List<String> DEFAULT_USER_READ = List.of("training", "sec_docs", "security_cases");
 }

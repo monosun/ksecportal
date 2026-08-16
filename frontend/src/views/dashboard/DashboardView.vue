@@ -292,16 +292,18 @@
                 <template v-else>
                   <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssEmptyLabel }}간 게시물이 없습니다</div>
                   <div v-else class="divide-y divide-gray-50">
+                    <!-- 요약이 감춰지는 피드(구글 뉴스 등)는 제목 한 줄만 남으므로 행 여백을 더 좁힌다 -->
                     <a v-for="item in filteredRss" :key="item.link"
                       :href="item.link" target="_blank" rel="noopener noreferrer"
-                      class="flex items-start gap-3 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group">
+                      class="flex items-start gap-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors group"
+                      :class="showRssDescription(item) ? 'py-1.5' : 'py-1'">
                       <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-800 group-hover:text-primary-600 transition-colors line-clamp-1">{{ item.title }}</p>
                         <!-- 요약이 제목과 같은 피드(구글 뉴스 등)는 같은 문장이 두 줄로 보이므로 표시하지 않는다 -->
                         <p v-if="showRssDescription(item)"
-                          class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ item.description }}</p>
+                          class="text-xs text-gray-400 line-clamp-1">{{ item.description }}</p>
                       </div>
-                      <span class="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">{{ fmtRssDate(item.pubDate) }}</span>
+                      <span class="text-[11px] text-gray-400 flex-shrink-0">{{ fmtRssDate(item.pubDate) }}</span>
                     </a>
                   </div>
                 </template>

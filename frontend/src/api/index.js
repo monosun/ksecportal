@@ -396,8 +396,12 @@ export const ismsApi = {
   saveItemNote: (id, year, data) => api.put(`/isms/items/${id}/note`, data, { params: { year } }),
   updateGuide: (id, guide) => api.patch(`/isms/items/${id}/guide`, { guide }),
   updateItemDefaults: (id, data) => api.patch(`/isms/items/${id}/defaults`, data),
+  // 장(章) 전체 매핑
   mapPolicy: (itemId, policyId) => api.post(`/isms/items/${itemId}/policies/${policyId}`),
   unmapPolicy: (itemId, policyId) => api.delete(`/isms/items/${itemId}/policies/${policyId}`),
+  // 조(條) 단위 매핑
+  mapArticle: (itemId, articleId) => api.post(`/isms/items/${itemId}/articles/${articleId}`),
+  unmapArticle: (itemId, articleId) => api.delete(`/isms/items/${itemId}/articles/${articleId}`),
   listEvidences: (itemId, year) => api.get(`/isms/items/${itemId}/evidences`, { params: { year } }),
   createEvidence: (itemId, { year, title, content, status, file }) => {
     const fd = new FormData()

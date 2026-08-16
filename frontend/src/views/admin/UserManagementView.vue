@@ -49,7 +49,7 @@
       </div>
     </transition>
 
-    <div class="card">
+    <div ref="listEl" class="card">
       <div v-if="loading" class="text-center py-10 text-gray-500">{{ $t('common.loading') }}</div>
       <div v-else-if="error" class="text-center py-10 text-red-500">{{ error }}</div>
       <div v-else class="overflow-x-auto"><table class="w-full text-sm">
@@ -277,6 +277,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { adminApi, exportApi, userBulkApi, codeApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
@@ -346,11 +347,16 @@ function showToast(msg) {
   toastTimer = setTimeout(() => { toast.value = '' }, 3500)
 }
 
+// 한 페이지 건수는 화면 높이에 맞춘다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); load() }
+})
+
 async function load() {
   loading.value = true
   error.value = null
   try {
-    const res = await adminApi.listUsers({ page: page.value, size: 20 })
+    const res = await adminApi.listUsers({ page: page.value, size: pageSize.value })
     users.value = res.data.content
     totalPages.value = res.data?.page?.totalPages ?? res.data?.totalPages ?? 0
   } catch (e) {
@@ -489,6 +495,7 @@ function closeCreateModal() {
 
 onMounted(async () => {
   await load()
+  refinePageSize()   // 표가 그려진 뒤 실제 행 높이로 다시 맞춘다
   try {
     const res = await codeApi.getValues('DEPARTMENT')
     departments.value = res.data

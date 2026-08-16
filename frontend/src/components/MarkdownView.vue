@@ -9,15 +9,16 @@ import DOMPurify from 'dompurify'
 
 const props = defineProps({
   content: { type: String, default: '' },
+  // breaks: true — 줄바꿈을 그대로 <br> 로 렌더링한다.
+  // 정책 문서는 개발자가 아닌 담당자가 작성하므로 "엔터 = 줄바꿈" 이 기대 동작이다.
+  // 문장 중간에서 줄이 접힌 외부 문서(사례집 등)는 false 로 넘겨 문단으로 합친다.
+  breaks: { type: Boolean, default: true },
 })
 
-// breaks: true — 줄바꿈을 그대로 <br> 로 렌더링한다.
-// 정책 문서는 개발자가 아닌 담당자가 작성하므로 "엔터 = 줄바꿈" 이 기대 동작이다.
-const marked = new Marked({ gfm: true, breaks: true })
-
-const renderedHtml = computed(() =>
-  DOMPurify.sanitize(marked.parse(props.content || ''))
-)
+const renderedHtml = computed(() => {
+  const marked = new Marked({ gfm: true, breaks: props.breaks })
+  return DOMPurify.sanitize(marked.parse(props.content || ''))
+})
 </script>
 
 <style scoped>

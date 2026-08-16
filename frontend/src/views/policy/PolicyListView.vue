@@ -94,7 +94,7 @@
     </p>
 
     <!-- Table -->
-    <div class="card p-0 overflow-hidden">
+    <div ref="listCard" class="card p-0 overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-gray-400">{{ $t('common.loading') }}</div>
       <div v-else-if="!policies.length" class="p-8 text-center text-gray-400">{{ $t('common.noData') }}</div>
       <div v-else class="overflow-x-auto"><table class="w-full">
@@ -193,6 +193,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { policyApi, exportApi, policyBulkApi } from '@/api'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
 import BulkImportModal from '@/components/BulkImportModal.vue'
@@ -331,10 +332,15 @@ const filters = ref({ keyword: '', status: '', category: '' })
 const statuses = ['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED']
 const categories = ['GENERAL', 'ACCESS_CONTROL', 'DATA_PROTECTION', 'INCIDENT_RESPONSE', 'NETWORK', 'PHYSICAL', 'VENDOR', 'OTHER']
 
+// 한 페이지 건수는 화면 높이에 맞춰 정한다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl: listCard, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); loadPolicies() }
+})
+
 async function loadPolicies() {
   loading.value = true
   try {
-    const params = { page: page.value, size: 20 }
+    const params = { page: page.value, size: pageSize.value }
     if (filters.value.keyword) params.keyword = filters.value.keyword
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.category) params.category = filters.value.category
@@ -352,5 +358,8 @@ function statusBadgeClass(status) {
   return { DRAFT: 'badge-gray', REVIEW: 'badge-yellow', PUBLISHED: 'badge-green', ARCHIVED: 'badge-gray' }[status] || 'badge-gray'
 }
 
-onMounted(loadPolicies)
+onMounted(async () => {
+  await loadPolicies()
+  refinePageSize()   // 표가 그려진 뒤 실제 행 높이로 다시 맞춘다
+})
 </script>

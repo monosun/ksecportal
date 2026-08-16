@@ -46,7 +46,7 @@
     </div>
 
     <!-- 점검 이력 -->
-    <div class="card p-0 overflow-hidden mb-6">
+    <div ref="listEl" class="card p-0 overflow-hidden mb-6">
       <div class="px-5 py-3 border-b flex items-center justify-between">
         <h2 class="text-base font-semibold text-gray-800">점검 이력</h2>
         <button @click="loadScans" class="text-xs text-blue-600 hover:underline">새로고침</button>
@@ -226,6 +226,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { RouterLink } from 'vue-router'
 import { sourceScanApi, exportApi } from '@/api'
 import { CWE_INFO, extractCwe, cweUrl } from '@/data/cweInfo.js'
@@ -276,10 +277,15 @@ const scansLoading = ref(false)
 const page = ref(0)
 const totalPages = ref(0)
 
+// 한 페이지 건수는 화면 높이에 맞춘다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); loadScans() }
+})
+
 async function loadScans() {
   scansLoading.value = true
   try {
-    const res = await sourceScanApi.scans({ page: page.value, size: 20 })
+    const res = await sourceScanApi.scans({ page: page.value, size: pageSize.value })
     scans.value = res.data?.content || []
     totalPages.value = res.data?.page?.totalPages ?? res.data?.totalPages ?? 0
   } finally {
@@ -362,5 +368,5 @@ function formatDateTime(dt) {
   return dt ? new Date(dt).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) : '-'
 }
 
-onMounted(loadScans)
+onMounted(async () => { await loadScans(); refinePageSize() })
 </script>

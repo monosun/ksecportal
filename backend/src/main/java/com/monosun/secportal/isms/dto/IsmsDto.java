@@ -15,13 +15,30 @@ import java.util.List;
 
 public class IsmsDto {
 
+    /**
+     * 통제항목에 매핑된 정책 참조.
+     *
+     * <p>{@code articleId} 가 null 이면 <b>장(章) 전체</b> 매핑, 값이 있으면 그 장의
+     * <b>조(條) 단위</b> 매핑이다. 화면에서 장 기준으로 묶어 보여줄 수 있도록
+     * 조 매핑도 소속 장 정보를 함께 싣는다.
+     */
     @Getter
     @Builder
     public static class PolicyRef {
+        /** 소속 장(정책) id */
         private Long id;
         private String title;
         private String status;
         private String category;
+        private String guidelineName;
+        private String chapterLabel;
+        private String chapterTitle;
+        /** 조 단위 매핑일 때만 채워진다 */
+        private Long articleId;
+        private String articleLabel;
+        private String articleTitle;
+        /** "제31조(접속기록의 보관 및 점검)" 형태의 표시용 이름 */
+        private String articleDisplayName;
     }
 
     @Getter

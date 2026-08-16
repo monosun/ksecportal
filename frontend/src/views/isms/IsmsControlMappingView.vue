@@ -114,10 +114,13 @@
                     </td>
                     <td class="px-4 py-3">
                       <div v-if="item.mappedPolicies && item.mappedPolicies.length" class="flex flex-wrap gap-1">
-                        <button v-for="p in item.mappedPolicies.slice(0, 2)" :key="p.id"
-                          class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium truncate max-w-[120px] hover:bg-indigo-200 transition-colors"
-                          :title="`${p.title} — 클릭하면 내용 미리보기`"
-                          @click.stop="openPreview(p)">{{ p.title }}</button>
+                        <button v-for="p in item.mappedPolicies.slice(0, 2)" :key="refKey(p)"
+                          class="text-[10px] px-1.5 py-0.5 rounded font-medium truncate max-w-[120px] transition-colors"
+                          :class="p.articleId
+                            ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                            : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'"
+                          :title="`${refTooltip(p)} — 클릭하면 내용 미리보기`"
+                          @click.stop="openPreview(p)">{{ refChipLabel(p) }}</button>
                         <span v-if="item.mappedPolicies.length > 2"
                           class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
                           +{{ item.mappedPolicies.length - 2 }}
@@ -147,50 +150,73 @@
                   <tr v-if="expandedRows.has(item.id)">
                     <td colspan="6" class="bg-blue-50 px-5 py-4 border-b border-blue-100">
                       <div class="flex gap-6">
-                        <!-- Left: current mappings -->
+                        <!-- Left: current mappings — 장(章) 으로 묶고 그 아래 조(條) 를 나열 -->
                         <div class="flex-1 min-w-0">
                           <p class="text-xs font-semibold text-gray-600 mb-2">매핑된 정책</p>
-                          <div v-if="item.mappedPolicies && item.mappedPolicies.length" class="space-y-1.5">
-                            <div v-for="p in item.mappedPolicies" :key="p.id"
-                              class="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-blue-100 group">
-                              <button class="flex items-center gap-2 min-w-0 text-left group/preview"
-                                title="정책 내용 미리보기"
-                                @click.stop="openPreview(p)">
-                                <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
-                                  :class="policyStatusBadge(p.status)">{{ policyStatusLabel(p.status) }}</span>
-                                <span class="text-xs text-gray-800 truncate group-hover/preview:text-blue-700 group-hover/preview:underline">{{ p.title }}</span>
-                                <span class="text-[10px] text-gray-400 flex-shrink-0">[{{ categoryLabel(p.category) }}]</span>
-                                <svg class="w-3.5 h-3.5 text-gray-300 flex-shrink-0 group-hover/preview:text-blue-600"
-                                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                              </button>
-                              <button
-                                v-if="canEdit"
-                                class="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                :disabled="unmappingId === `${item.id}_${p.id}`"
-                                @click.stop="removeMapping(item, p)"
-                                title="매핑 해제">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                              </button>
+                          <div v-if="mappedGroups(item).length" class="space-y-1.5">
+                            <div v-for="g in mappedGroups(item)" :key="g.policyId"
+                              class="px-3 py-2 bg-white rounded-lg border border-blue-100">
+                              <!-- 장 -->
+                              <div class="flex items-center justify-between gap-2 group">
+                                <button class="flex items-center gap-2 min-w-0 text-left group/preview"
+                                  title="정책 내용 미리보기"
+                                  @click.stop="openPreview(g.whole || g.articles[0])">
+                                  <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
+                                    :class="policyStatusBadge(g.status)">{{ policyStatusLabel(g.status) }}</span>
+                                  <span class="text-xs text-gray-800 truncate group-hover/preview:text-blue-700 group-hover/preview:underline">{{ g.title }}</span>
+                                  <span v-if="g.whole"
+                                    class="text-[10px] px-1 py-0.5 rounded bg-indigo-100 text-indigo-700 font-semibold flex-shrink-0">장 전체</span>
+                                  <span class="text-[10px] text-gray-400 flex-shrink-0">[{{ categoryLabel(g.category) }}]</span>
+                                  <svg class="w-3.5 h-3.5 text-gray-300 flex-shrink-0 group-hover/preview:text-blue-600"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  v-if="canEdit && g.whole"
+                                  class="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                  :disabled="unmappingId === refKeyOf(item, g.whole)"
+                                  @click.stop="removeMapping(item, g.whole)"
+                                  title="장 전체 매핑 해제">
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                  </svg>
+                                </button>
+                              </div>
+                              <!-- 조 -->
+                              <div v-if="g.articles.length" class="flex flex-wrap gap-1 mt-1.5">
+                                <span v-for="a in g.articles" :key="a.articleId"
+                                  class="inline-flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded bg-amber-50 border border-amber-200">
+                                  <button class="text-[10px] text-amber-800 hover:underline max-w-[220px] truncate"
+                                    :title="`${a.articleDisplayName} — 클릭하면 조 본문 미리보기`"
+                                    @click.stop="openPreview(a)">{{ a.articleDisplayName }}</button>
+                                  <button v-if="canEdit"
+                                    class="text-amber-400 hover:text-red-500 transition-colors"
+                                    :disabled="unmappingId === refKeyOf(item, a)"
+                                    @click.stop="removeArticleMapping(item, a)"
+                                    title="조 매핑 해제">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                  </button>
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <p v-else class="text-xs text-gray-400 py-2">매핑된 정책이 없습니다</p>
                         </div>
 
-                        <!-- Right: add policy -->
-                        <div v-if="canEdit" class="w-72 flex-shrink-0">
+                        <!-- Right: add policy — 장 전체 또는 조 단위로 매핑 -->
+                        <div v-if="canEdit" class="w-80 flex-shrink-0">
                           <p class="text-xs font-semibold text-gray-600 mb-2">정책 추가</p>
                           <div class="relative">
                             <input
                               v-model="searchQuery[item.id]"
                               class="input text-xs w-full pr-8"
-                              placeholder="정책명 검색..."
+                              placeholder="지침·장·조문 검색..."
                               @focus="openPicker(item.id)"
                               @click.stop
                             />
@@ -200,28 +226,71 @@
                                 d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
                             </svg>
                           </div>
-                          <div v-if="activePicker === item.id && availablePolicies(item).length > 0"
-                            class="mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                          <div v-if="activePicker === item.id && candidatePolicies(item).length > 0"
+                            class="mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto"
                             @click.stop>
-                            <p class="sticky top-0 px-3 py-1.5 bg-gray-50 border-b border-gray-100 text-[10px] text-gray-500">
-                              매핑 가능한 정책 {{ availablePolicies(item).length }}건
+                            <p class="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 border-b border-gray-100 text-[10px] text-gray-500">
+                              정책(장) {{ candidatePolicies(item).length }}건 — 장 전체를 누르거나 <b class="text-amber-700">조</b> 를 펼쳐 조문만 매핑
                             </p>
-                            <button
-                              v-for="p in availablePolicies(item)" :key="p.id"
-                              class="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
-                              :disabled="mappingId === `${item.id}_${p.id}`"
-                              @click.stop="addMapping(item, p)">
-                              <div class="flex items-center gap-2">
-                                <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
-                                  :class="policyStatusBadge(p.status)">{{ policyStatusLabel(p.status) }}</span>
-                                <span class="text-xs text-gray-800 truncate">{{ p.title }}</span>
+                            <div v-for="p in candidatePolicies(item)" :key="p.id"
+                              class="border-b border-gray-50 last:border-0">
+                              <div class="flex items-stretch">
+                                <button
+                                  class="flex-1 min-w-0 text-left px-3 py-2 hover:bg-blue-50 transition-colors disabled:hover:bg-transparent disabled:opacity-60"
+                                  :disabled="isWholeMapped(item, p) || mappingId === `${item.id}_${p.id}`"
+                                  :title="isWholeMapped(item, p) ? '이미 장 전체가 매핑되어 있습니다' : '장 전체 매핑'"
+                                  @click.stop="addMapping(item, p)">
+                                  <div class="flex items-center gap-2">
+                                    <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
+                                      :class="policyStatusBadge(p.status)">{{ policyStatusLabel(p.status) }}</span>
+                                    <span class="text-xs text-gray-800 truncate">{{ p.title }}</span>
+                                    <span v-if="isWholeMapped(item, p)"
+                                      class="text-[10px] text-green-600 font-semibold flex-shrink-0">매핑됨</span>
+                                  </div>
+                                  <p class="text-[10px] text-gray-400 mt-0.5">
+                                    {{ categoryLabel(p.category) }}
+                                    <span v-if="mappedArticleCount(item, p)" class="text-amber-600">
+                                      · 조 {{ mappedArticleCount(item, p) }}건 매핑됨
+                                    </span>
+                                  </p>
+                                </button>
+                                <button v-if="p.articleCount"
+                                  class="px-2 flex items-center gap-0.5 border-l border-gray-50 text-[10px] font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                                  :title="`조 ${p.articleCount}개 펼치기`"
+                                  @click.stop="toggleArticleList(p)">
+                                  조 {{ p.articleCount }}
+                                  <svg class="w-3 h-3 transition-transform" :class="openArticleList === p.id ? 'rotate-180' : ''"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                  </svg>
+                                </button>
                               </div>
-                              <p class="text-[10px] text-gray-400 mt-0.5">{{ categoryLabel(p.category) }}</p>
-                            </button>
+
+                              <!-- 조 목록 -->
+                              <div v-if="openArticleList === p.id"
+                                class="bg-amber-50/50 border-t border-amber-100 max-h-48 overflow-y-auto">
+                                <p v-if="articleLoading === p.id" class="px-3 py-2 text-[10px] text-gray-400">조문 불러오는 중...</p>
+                                <p v-else-if="!(articleCache[p.id] || []).length" class="px-3 py-2 text-[10px] text-gray-400">
+                                  세분화된 조가 없습니다
+                                </p>
+                                <button v-for="a in articleCache[p.id] || []" :key="a.id"
+                                  class="w-full text-left px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:hover:bg-transparent"
+                                  :disabled="isArticleMapped(item, a) || mappingId === `${item.id}_a${a.id}`"
+                                  :title="isArticleMapped(item, a) ? '이미 매핑된 조입니다' : '이 조만 매핑'"
+                                  @click.stop="addArticleMapping(item, p, a)">
+                                  <span class="text-[10px] px-1 py-0.5 rounded bg-amber-200 text-amber-900 font-bold flex-shrink-0">
+                                    {{ a.articleLabel }}
+                                  </span>
+                                  <span class="text-[11px] text-gray-700 truncate">{{ a.title || '(제목 없음)' }}</span>
+                                  <span v-if="isArticleMapped(item, a)"
+                                    class="text-[10px] text-green-600 font-semibold ml-auto flex-shrink-0">매핑됨</span>
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <p v-else-if="activePicker === item.id && availablePolicies(item).length === 0"
+                          <p v-else-if="activePicker === item.id"
                             class="mt-1 text-xs text-gray-400 text-center py-2">
-                            {{ searchQuery[item.id] ? '검색 결과가 없습니다' : '추가할 수 있는 정책이 없습니다' }}
+                            {{ searchQuery[item.id] ? '검색 결과가 없습니다' : '등록된 정책이 없습니다' }}
                           </p>
                         </div>
                       </div>
@@ -242,7 +311,8 @@
     </div>
 
     <!-- 매핑 정책 내용 미리보기 -->
-    <PolicyDetailModal :open="showPreview" :item-id="previewPolicyId" readonly @close="showPreview = false" />
+    <PolicyDetailModal :open="showPreview" :item-id="previewPolicyId" :focus-article-id="previewArticleId"
+      readonly @close="showPreview = false" />
   </div>
 </template>
 
@@ -288,7 +358,7 @@ onMounted(async () => {
 })
 
 // close picker on outside click
-function onDocClick() { activePicker.value = null }
+function onDocClick() { activePicker.value = null; openArticleList.value = null }
 onMounted(() => document.addEventListener('click', onDocClick))
 onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
@@ -353,7 +423,7 @@ function toggleExpand(id) {
   const next = new Set(expandedRows.value)
   if (next.has(id)) {
     next.delete(id)
-    if (activePicker.value === id) activePicker.value = null
+    if (activePicker.value === id) { activePicker.value = null; openArticleList.value = null }
   } else {
     next.add(id)
   }
@@ -363,29 +433,66 @@ function toggleExpand(id) {
 // ── 정책 미리보기 ─────────────────────────────────────────────
 const showPreview = ref(false)
 const previewPolicyId = ref(null)
+const previewArticleId = ref(null)
 
-function openPreview(policy) {
-  previewPolicyId.value = policy.id
+/** 조 매핑을 누르면 소속 장을 열고 그 조를 펼친 채로 보여준다. */
+function openPreview(ref_) {
+  previewPolicyId.value = ref_.id
+  previewArticleId.value = ref_.articleId || null
   showPreview.value = true
   activePicker.value = null
 }
 
+// ── 매핑 표시 (장 > 조) ───────────────────────────────────────
+
+/** 매핑 1건의 고유 키 — 같은 장에 조가 여러 건 걸릴 수 있어 정책 id 만으로는 부족하다. */
+function refKey(r) {
+  return r.articleId ? `a${r.articleId}` : `p${r.id}`
+}
+function refKeyOf(item, r) {
+  return `${item.id}_${refKey(r)}`
+}
+function refChipLabel(r) {
+  return r.articleId ? `${r.chapterLabel || ''} ${r.articleLabel}`.trim() : r.title
+}
+function refTooltip(r) {
+  return r.articleId ? `${r.title} ${r.articleDisplayName}` : r.title
+}
+
+/** 매핑 목록을 장(정책) 기준으로 묶는다. 장 전체 매핑은 whole, 조 매핑은 articles 로 나뉜다. */
+function mappedGroups(item) {
+  const groups = new Map()
+  for (const r of item.mappedPolicies || []) {
+    if (!groups.has(r.id)) {
+      groups.set(r.id, {
+        policyId: r.id, title: r.title, status: r.status, category: r.category,
+        whole: null, articles: []
+      })
+    }
+    const g = groups.get(r.id)
+    if (r.articleId) g.articles.push(r)
+    else g.whole = r
+  }
+  return Array.from(groups.values())
+}
+
 // ── Policy picker ─────────────────────────────────────────────
+const articleCache = ref({})       // policyId → 조 목록
+const openArticleList = ref(null)  // 조 목록을 펼친 정책 id
+const articleLoading = ref(null)
+
 function openPicker(itemId) {
   activePicker.value = itemId
 }
 
 /**
- * 매핑 후보 정책 — 이미 매핑된 건을 뺀 전체를 돌려준다.
- * 목록 자체가 스크롤되므로 건수를 잘라내지 않는다(잘라내면 뒤쪽 지침이 아예 보이지 않는다).
+ * 매핑 후보 정책(장) — 검색어로만 거른 전체를 돌려준다.
+ * 장 전체가 이미 매핑됐어도 그 안의 조를 따로 매핑할 수 있어야 하므로 목록에서 빼지 않고
+ * "매핑됨" 으로 표시만 한다. 목록 자체가 스크롤되므로 건수도 자르지 않는다.
  */
-function availablePolicies(item) {
-  const mappedIds = new Set((item.mappedPolicies || []).map(p => p.id))
+function candidatePolicies(item) {
   const q = (searchQuery.value[item.id] || '').trim().toLowerCase()
-  return allPolicies.value.filter(p =>
-    !mappedIds.has(p.id) &&
-    (!q || matchesQuery(p, q))
-  )
+  return allPolicies.value.filter(p => !q || matchesQuery(p, q))
 }
 
 /** 제목뿐 아니라 지침명·장 제목으로도 찾을 수 있게 한다. */
@@ -394,7 +501,37 @@ function matchesQuery(p, q) {
     .some(v => v && v.toLowerCase().includes(q))
 }
 
+function isWholeMapped(item, policy) {
+  return (item.mappedPolicies || []).some(r => r.id === policy.id && !r.articleId)
+}
+function isArticleMapped(item, article) {
+  return (item.mappedPolicies || []).some(r => r.articleId === article.id)
+}
+function mappedArticleCount(item, policy) {
+  return (item.mappedPolicies || []).filter(r => r.id === policy.id && r.articleId).length
+}
+
+async function toggleArticleList(policy) {
+  if (openArticleList.value === policy.id) {
+    openArticleList.value = null
+    return
+  }
+  openArticleList.value = policy.id
+  if (articleCache.value[policy.id]) return
+
+  articleLoading.value = policy.id
+  try {
+    articleCache.value = { ...articleCache.value, [policy.id]: (await policyApi.articlesOf(policy.id)).data || [] }
+  } catch {
+    articleCache.value = { ...articleCache.value, [policy.id]: [] }
+  } finally {
+    articleLoading.value = null
+  }
+}
+
 // ── Mapping actions ───────────────────────────────────────────
+
+/** 장(章) 전체 매핑 */
 async function addMapping(item, policy) {
   const key = `${item.id}_${policy.id}`
   if (mappingId.value === key) return
@@ -406,10 +543,13 @@ async function addMapping(item, policy) {
       id: policy.id,
       title: policy.title,
       status: policy.status,
-      category: policy.category
+      category: policy.category,
+      guidelineName: policy.guidelineName,
+      chapterLabel: policy.chapterLabel,
+      chapterTitle: policy.chapterTitle,
+      articleId: null
     })
-    searchQuery.value[item.id] = ''
-    activePicker.value = null
+    // 조를 이어서 고를 수 있도록 검색창·목록은 닫지 않는다.
   } catch {
     // silent fail
   } finally {
@@ -417,13 +557,56 @@ async function addMapping(item, policy) {
   }
 }
 
-async function removeMapping(item, policy) {
-  const key = `${item.id}_${policy.id}`
+/** 조(條) 단위 매핑 */
+async function addArticleMapping(item, policy, article) {
+  const key = `${item.id}_a${article.id}`
+  if (mappingId.value === key) return
+  mappingId.value = key
+  try {
+    await ismsApi.mapArticle(item.id, article.id)
+    if (!item.mappedPolicies) item.mappedPolicies = []
+    item.mappedPolicies.push({
+      id: policy.id,
+      title: policy.title,
+      status: policy.status,
+      category: policy.category,
+      guidelineName: policy.guidelineName,
+      chapterLabel: policy.chapterLabel,
+      chapterTitle: policy.chapterTitle,
+      articleId: article.id,
+      articleLabel: article.articleLabel,
+      articleTitle: article.title,
+      articleDisplayName: article.displayName
+    })
+  } catch {
+    // silent fail
+  } finally {
+    mappingId.value = null
+  }
+}
+
+/** 장 전체 매핑만 해제한다(같은 장의 조 매핑은 그대로). */
+async function removeMapping(item, policyRef) {
+  const key = refKeyOf(item, policyRef)
   if (unmappingId.value === key) return
   unmappingId.value = key
   try {
-    await ismsApi.unmapPolicy(item.id, policy.id)
-    item.mappedPolicies = item.mappedPolicies.filter(p => p.id !== policy.id)
+    await ismsApi.unmapPolicy(item.id, policyRef.id)
+    item.mappedPolicies = item.mappedPolicies.filter(r => !(r.id === policyRef.id && !r.articleId))
+  } catch {
+    // silent fail
+  } finally {
+    unmappingId.value = null
+  }
+}
+
+async function removeArticleMapping(item, articleRef) {
+  const key = refKeyOf(item, articleRef)
+  if (unmappingId.value === key) return
+  unmappingId.value = key
+  try {
+    await ismsApi.unmapArticle(item.id, articleRef.articleId)
+    item.mappedPolicies = item.mappedPolicies.filter(r => r.articleId !== articleRef.articleId)
   } catch {
     // silent fail
   } finally {

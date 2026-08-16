@@ -6,6 +6,9 @@ COPY frontend/ .
 # 도움말 메뉴에서 서빙되는 사용자 매뉴얼 — docs/ 가 단일 원본
 COPY docs/user-manual.md ./public/help/user-manual.md
 COPY docs/images/ ./public/help/images/
+# 알기쉬운 보안사례집 — docs/ 가 단일 원본
+COPY docs/security-cases-basic.md ./public/help/security-cases-basic.md
+COPY docs/security-cases-executive.md ./public/help/security-cases-executive.md
 RUN npm run build
 
 FROM debian:bookworm-slim

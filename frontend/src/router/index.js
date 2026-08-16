@@ -232,6 +232,11 @@ const routes = [
         component: () => import('@/views/glossary/GlossaryView.vue')
       },
       {
+        path: 'security-cases',
+        name: 'SecurityCases',
+        component: () => import('@/views/cases/SecurityCasesView.vue')
+      },
+      {
         path: 'related-sites',
         name: 'RelatedSites',
         component: () => import('@/views/relatedsite/RelatedSiteView.vue')

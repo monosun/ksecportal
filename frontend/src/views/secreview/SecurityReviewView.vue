@@ -51,7 +51,7 @@
     </div>
 
     <!-- 목록 -->
-    <div class="card p-0 overflow-hidden">
+    <div ref="listEl" class="card p-0 overflow-hidden">
       <div v-if="loading" class="p-10 text-center text-gray-400">불러오는 중...</div>
       <div v-else-if="!reviews.length" class="p-10 text-center text-gray-400">등록된 심의가 없습니다</div>
       <div v-else class="overflow-x-auto"><table class="w-full text-sm">
@@ -315,6 +315,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { securityReviewApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import DepartmentInput from '@/components/DepartmentInput.vue'
@@ -404,10 +405,15 @@ function fmtDate(dt) {
   return dt ? new Date(dt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'
 }
 
+// 한 페이지 건수는 화면 높이에 맞춘다(창 크기가 바뀌면 보던 위치를 유지한 채 재조회).
+const { listEl, pageSize, refine: refinePageSize } = useFitPageSize({
+  onChange: (size, prev) => { page.value = keepFirstRow(page.value, prev, size); load() }
+})
+
 async function load() {
   loading.value = true
   try {
-    const params = { page: page.value, size: 20 }
+    const params = { page: page.value, size: pageSize.value }
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.reviewType) params.reviewType = filters.value.reviewType
     if (filters.value.keyword) params.keyword = filters.value.keyword
@@ -541,5 +547,5 @@ async function removeReview() {
   load()
 }
 
-onMounted(load)
+onMounted(async () => { await load(); refinePageSize() })
 </script>

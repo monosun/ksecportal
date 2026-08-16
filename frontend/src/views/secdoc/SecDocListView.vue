@@ -281,6 +281,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { estimateRows } from '@/composables/useFitPageSize'
 import { secDocApi, codeApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDebounceFn } from '@vueuse/core'
@@ -294,7 +295,8 @@ const CATEGORIES = ['GUIDE', 'POLICY', 'PROCEDURE', 'STANDARD', 'CHECKLIST', 'TE
 const docs = ref([])
 const loading = ref(true)
 const page = ref(0)
-const pageSize = ref(20)
+// 기본값은 화면 높이에 맞춰 잡고, 사용자가 직접 바꾸면 그 값을 따른다.
+const pageSize = ref(estimateRows({ top: 400, max: 100 }))
 const totalPages = ref(0)
 const filters = ref({ category: '', keyword: '', field: 'ALL' })
 const orgCodes = ref([])
