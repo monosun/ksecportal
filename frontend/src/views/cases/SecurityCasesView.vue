@@ -136,17 +136,23 @@ const filteredItems = computed(() => {
   return doc.value.items.filter(i => i.keywords.includes(q))
 })
 
-/** 카드를 그룹(Part 등) 단위로 묶는다. 그룹이 없는 문서는 한 덩어리로 나온다. */
+/**
+ * 카드를 그룹(Part 등) 단위로 묶는다. 그룹이 없는 문서는 한 덩어리로 나온다.
+ *
+ * <p>같은 이름끼리 모으지 않고 <b>이어진 항목만</b> 묶는다. 그룹이 없는 항목(Part 5·6 처럼
+ * 하위 머리글이 없는 장)을 이름으로 모으면 문서 뒤쪽 내용이 맨 앞 무그룹 묶음으로 끌려 올라가
+ * Part 순서가 뒤바뀐다.
+ */
 const groupedItems = computed(() => {
   const groups = []
   for (const item of filteredItems.value) {
     const title = item.group || ''
-    let g = groups.find(x => x.title === title)
-    if (!g) {
-      g = { title, intro: doc.value.groupIntros[title] || '', items: [] }
-      groups.push(g)
+    const last = groups[groups.length - 1]
+    if (!last || last.title !== title) {
+      groups.push({ title, intro: doc.value.groupIntros[title] || '', items: [item] })
+    } else {
+      last.items.push(item)
     }
-    g.items.push(item)
   }
   return groups
 })
