@@ -124,7 +124,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: SecPortal ${{ steps.version.outputs.VERSION }}
+          # 이 값이 gh release create --title 로 지정한 제목을 덮어쓴다.
+          # 제품명이 KSecPortal 로 바뀐 뒤에도 여기가 남아 v1.28.1~v1.35.1 제목이 옛 이름으로 올라갔다.
+          name: KSecPortal ${{ steps.version.outputs.VERSION }}
           body_path: release/${{ steps.version.outputs.VERSION }}/RELEASE_NOTES.md
           files: secportal-${{ steps.version.outputs.VERSION }}.tar.gz
           fail_on_unmatched_files: true
