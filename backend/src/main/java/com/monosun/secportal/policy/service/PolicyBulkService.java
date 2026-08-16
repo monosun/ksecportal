@@ -23,6 +23,7 @@ import java.util.List;
 public class PolicyBulkService {
 
     private final PolicyRepository policyRepository;
+    private final PolicyArticleService articleService;
     private final AuditLogService auditLogService;
 
     private static final String[] HEADERS = {
@@ -99,7 +100,8 @@ public class PolicyBulkService {
                 if (row == null || isEmptyRow(row)) continue;
                 total++;
                 try {
-                    policyRepository.save(parseRow(row, author));
+                    // 업로드한 본문도 곧바로 지침/장/조로 세분화해 둔다.
+                    articleService.sync(policyRepository.save(parseRow(row, author)));
                     success++;
                 } catch (Exception e) {
                     errors.add(new AssetBulkUploadResult.RowError(i + 1, e.getMessage()));

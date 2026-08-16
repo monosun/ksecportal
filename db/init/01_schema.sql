@@ -29,9 +29,33 @@ CREATE TABLE IF NOT EXISTS policies (
     version VARCHAR(20) NOT NULL DEFAULT '1.0',
     effective_date DATE,
     author_id BIGINT NOT NULL,
+    -- 문서 구조(지침 > 장) — 제목 "개인정보보호 지침 - 제1장 총칙" 에서 파생되어 저장 시 자동 반영
+    guideline_name VARCHAR(200) NULL COMMENT '지침명',
+    chapter_no INT NULL COMMENT '장 번호 (부칙 등은 NULL)',
+    chapter_label VARCHAR(50) NULL COMMENT '장 표기 (제1장 / 부칙)',
+    chapter_title VARCHAR(200) NULL COMMENT '장 제목',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_policies_guideline (guideline_name, chapter_no),
     FOREIGN KEY (author_id) REFERENCES users(id)
+);
+
+-- Policy Articles — 장(章) 아래로 세분화된 조(條). 본문 파싱 결과이며 백엔드가 채운다.
+CREATE TABLE IF NOT EXISTS policy_articles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    policy_id BIGINT NOT NULL,
+    article_no INT NULL COMMENT '조 번호 (전문은 NULL)',
+    article_sub_no INT NULL COMMENT '가지번호 — 제3조의2 의 2',
+    article_label VARCHAR(50) NOT NULL COMMENT '조 표기 (제1조 / 제3조의2 / 전문)',
+    title VARCHAR(300) NOT NULL DEFAULT '' COMMENT '조 제목',
+    note VARCHAR(200) NULL COMMENT '조 꼬리말 (<개정 2024.5.28>)',
+    content LONGTEXT NULL COMMENT '조 본문',
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NULL,
+    updated_at DATETIME NULL,
+    KEY idx_policy_article_policy (policy_id),
+    KEY idx_policy_article_no (article_no),
+    CONSTRAINT fk_policy_article_policy FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE
 );
 
 -- Policy Acknowledgments

@@ -72,12 +72,16 @@
       "id": 1, "title": "정보보안 기본 정책", "category": "GENERAL",
       "status": "PUBLISHED", "version": "1.0",
       "effectiveDate": "2025-01-01", "authorName": "System Admin",
+      "guidelineName": "개인정보보호 지침", "chapterNo": 1,
+      "chapterLabel": "제1장", "chapterTitle": "총칙", "articleCount": 4,
       "acknowledgmentCount": 5, "createdAt": "2025-01-01 09:00:00"
     }
   ],
   "totalElements": 10, "totalPages": 1
 }
 ```
+
+`guidelineName` / `chapter*` 는 제목(`"개인정보보호 지침 - 제1장 총칙"`)에서 파생되어 저장 시 자동으로 채워집니다.
 
 ### POST /policies *(MANAGER+)*
 
@@ -112,6 +116,74 @@
 ### POST /policies/:id/acknowledge
 
 정책 수신 확인. 중복 확인 시 409 반환.
+
+---
+
+## 보안 정책 조문 (Policy Article)
+
+정책은 **지침 &gt; 장(章) &gt; 조(條)** 계층으로 다룹니다. 정책 1건이 장 하나이고,
+본문의 `### 제N조(제목)` 머리글이 조 단위 레코드로 세분화되어 저장됩니다.
+조는 본문의 파생 데이터라 정책을 저장할 때마다 다시 만들어집니다.
+
+### GET /policies/articles
+
+지침 &gt; 장 &gt; 조 계층 검색. 정렬은 지침 → 장 번호 → 조 순서 고정(번호 없는 부칙은 맨 뒤).
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `keyword` | String | 검색어 |
+| `scope` | String | 검색 범위 — `ALL`(기본, 제목+본문+지침+장+조표기), `TITLE`(조 제목), `CONTENT`(본문·개정표기), `GUIDELINE`(지침명), `CHAPTER`(장 표기·제목), `ARTICLE`(조 표기) |
+| `guideline` | String | 지침명 완전일치 |
+| `chapterNo` | int | 장 번호 |
+| `policyId` | Long | 특정 장(정책 id)으로 한정 |
+| `articleNo` | int | 조 번호 |
+| `status` | String | 정책 상태 |
+| `category` | String | 정책 카테고리 |
+| `page` / `size` | int | 페이징 (기본 20) |
+
+```json
+// Response (Page)
+{
+  "content": [
+    {
+      "id": 12, "policyId": 77, "policyTitle": "개인정보보호 지침 - 제8장 개인정보의 안전성 확보조치",
+      "guidelineName": "개인정보보호 지침", "chapterNo": 8,
+      "chapterLabel": "제8장", "chapterTitle": "개인정보의 안전성 확보조치",
+      "articleNo": 31, "articleSubNo": null, "articleLabel": "제31조",
+      "title": "접속기록의 보관 및 점검", "displayName": "제31조(접속기록의 보관 및 점검)",
+      "note": "<개정 2024.5.28>", "content": "- 시스템 운영담당자는 …",
+      "category": "DATA_PROTECTION", "status": "PUBLISHED", "version": "1.2"
+    }
+  ],
+  "totalElements": 139, "totalPages": 7
+}
+```
+
+### GET /policies/articles/facets
+
+검색 필터 드롭다운용 지침 &gt; 장 목록.
+
+```json
+{
+  "guidelines": [
+    { "name": "개인정보보호 지침",
+      "chapters": [
+        { "policyId": 70, "chapterNo": 1, "chapterLabel": "제1장",
+          "chapterTitle": "총칙", "label": "제1장 총칙" }
+      ] }
+  ],
+  "totalArticles": 139
+}
+```
+
+### GET /policies/:id/articles
+
+특정 장에 속한 조 목록 (정렬 순서대로).
+
+### POST /policies/articles/resync *(MANAGER+)*
+
+전체 정책 본문을 다시 파싱해 조를 재등록하고 등록 건수를 반환합니다.
+본문을 DB에서 직접 손봤거나 파싱 규칙이 바뀐 뒤에 사용합니다.
 
 ### GET /policies/bulk/template *(MANAGER+)*
 

@@ -33,6 +33,21 @@
       </div>
     </div>
 
+    <!-- 보기 전환 — 장(章) 목록 / 조(條) 검색 -->
+    <div class="flex gap-1 mb-5 border-b border-gray-200">
+      <button v-for="t in tabs" :key="t.value" @click="tab = t.value"
+        :class="['px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+                 tab === t.value
+                   ? 'border-primary-600 text-primary-700'
+                   : 'border-transparent text-gray-500 hover:text-gray-700']">
+        {{ t.label }}
+      </button>
+    </div>
+
+    <!-- 조문 검색 -->
+    <PolicyArticleSearch v-if="tab === 'articles'" @open-policy="openDetailById" />
+
+    <template v-else>
     <BulkImportModal
       v-if="showBulkModal"
       ref="bulkModalRef"
@@ -90,7 +105,9 @@
                 :checked="allSelected" :indeterminate.prop="someSelected && !allSelected"
                 @change="toggleAll" title="현재 페이지 전체 선택" />
             </th>
-            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.title') }}</th>
+            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">지침</th>
+            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">장</th>
+            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">조</th>
             <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('policy.category') }}</th>
             <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('common.status') }}</th>
             <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $t('policy.version') }}</th>
@@ -105,7 +122,15 @@
               <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                 :checked="isSelected(p.id)" @change="toggleOne(p.id)" :title="p.title" />
             </td>
-            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ p.title }}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ p.guidelineName || p.title }}</td>
+            <td class="px-6 py-4 text-sm text-gray-700">
+              <span v-if="p.chapterLabel" class="font-medium">{{ p.chapterLabel }}</span>
+              <span v-if="p.chapterTitle" class="text-gray-500 ml-1">{{ p.chapterTitle }}</span>
+              <span v-if="!p.chapterLabel && !p.chapterTitle" class="text-gray-300">-</span>
+            </td>
+            <td class="px-6 py-4">
+              <span :class="p.articleCount ? 'badge-blue' : 'badge-gray'">{{ p.articleCount }}개 조</span>
+            </td>
             <td class="px-6 py-4"><span class="badge-blue">{{ $t(`policy.category_label.${p.category}`) }}</span></td>
             <td class="px-6 py-4"><span :class="statusBadgeClass(p.status)">{{ $t(`policy.status.${p.status}`) }}</span></td>
             <td class="px-6 py-4 text-sm text-gray-500">v{{ p.version }}</td>
@@ -154,6 +179,7 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- 정책 상세 모달 -->
     <PolicyDetailModal :open="showDetailModal" :item-id="detailId"
@@ -172,6 +198,14 @@ import { useDebounceFn } from '@vueuse/core'
 import BulkImportModal from '@/components/BulkImportModal.vue'
 import PolicyFormModal from './PolicyFormModal.vue'
 import PolicyDetailModal from './PolicyDetailModal.vue'
+import PolicyArticleSearch from './PolicyArticleSearch.vue'
+
+// 장(章) 목록 ↔ 조(條) 검색 전환
+const tabs = [
+  { value: 'chapters', label: '장 목록' },
+  { value: 'articles', label: '조문 검색' }
+]
+const tab = ref('chapters')
 
 const auth = useAuthStore()
 const isManager = auth.isManager
@@ -254,6 +288,8 @@ function onFormSaved() { showFormModal.value = false; page.value = 0; loadPolici
 const showDetailModal = ref(false)
 const detailId = ref(null)
 function openDetail(p) { detailId.value = p.id; showDetailModal.value = true }
+/** 조문 검색 결과에서 "소속 장 전체 보기"로 넘어올 때 */
+function openDetailById(id) { detailId.value = id; showDetailModal.value = true }
 function onDetailEdit(id) { showDetailModal.value = false; editId.value = id; showFormModal.value = true }
 const csvLoading = ref(false)
 const pdfLoading = ref(false)

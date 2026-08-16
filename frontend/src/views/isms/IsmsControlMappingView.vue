@@ -201,8 +201,11 @@
                             </svg>
                           </div>
                           <div v-if="activePicker === item.id && availablePolicies(item).length > 0"
-                            class="mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto"
+                            class="mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
                             @click.stop>
+                            <p class="sticky top-0 px-3 py-1.5 bg-gray-50 border-b border-gray-100 text-[10px] text-gray-500">
+                              매핑 가능한 정책 {{ availablePolicies(item).length }}건
+                            </p>
                             <button
                               v-for="p in availablePolicies(item)" :key="p.id"
                               class="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
@@ -216,9 +219,9 @@
                               <p class="text-[10px] text-gray-400 mt-0.5">{{ categoryLabel(p.category) }}</p>
                             </button>
                           </div>
-                          <p v-else-if="activePicker === item.id && availablePolicies(item).length === 0 && searchQuery[item.id]"
+                          <p v-else-if="activePicker === item.id && availablePolicies(item).length === 0"
                             class="mt-1 text-xs text-gray-400 text-center py-2">
-                            검색 결과가 없습니다
+                            {{ searchQuery[item.id] ? '검색 결과가 없습니다' : '추가할 수 있는 정책이 없습니다' }}
                           </p>
                         </div>
                       </div>
@@ -372,13 +375,23 @@ function openPicker(itemId) {
   activePicker.value = itemId
 }
 
+/**
+ * 매핑 후보 정책 — 이미 매핑된 건을 뺀 전체를 돌려준다.
+ * 목록 자체가 스크롤되므로 건수를 잘라내지 않는다(잘라내면 뒤쪽 지침이 아예 보이지 않는다).
+ */
 function availablePolicies(item) {
   const mappedIds = new Set((item.mappedPolicies || []).map(p => p.id))
-  const q = (searchQuery.value[item.id] || '').toLowerCase()
+  const q = (searchQuery.value[item.id] || '').trim().toLowerCase()
   return allPolicies.value.filter(p =>
     !mappedIds.has(p.id) &&
-    (!q || p.title.toLowerCase().includes(q))
-  ).slice(0, 10)
+    (!q || matchesQuery(p, q))
+  )
+}
+
+/** 제목뿐 아니라 지침명·장 제목으로도 찾을 수 있게 한다. */
+function matchesQuery(p, q) {
+  return [p.title, p.guidelineName, p.chapterLabel, p.chapterTitle]
+    .some(v => v && v.toLowerCase().includes(q))
 }
 
 // ── Mapping actions ───────────────────────────────────────────

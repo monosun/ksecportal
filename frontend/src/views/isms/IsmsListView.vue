@@ -223,9 +223,15 @@
     :item-code="evidenceItem?.itemCode"
     :item-name="evidenceItem?.itemName"
     :year="selectedYear"
+    :position="evidenceIndex + 1"
+    :total="filteredItems.length"
+    :has-prev="evidenceIndex > 0"
+    :has-next="evidenceIndex >= 0 && evidenceIndex < filteredItems.length - 1"
     @close="evidenceOpen = false"
     @changed="loadItems"
     @update:year="onModalYearChange"
+    @prev="moveItem(-1)"
+    @next="moveItem(1)"
   />
 
   <!-- 전년도 증적 가져오기 확인 모달 -->
@@ -423,6 +429,16 @@ const evidenceItem = ref(null)
 function openItem(item) {
   evidenceItem.value = item
   evidenceOpen.value = true
+}
+
+// 팝업에서 현재 필터가 걸린 목록 순서대로 앞뒤 항목으로 이동한다.
+const evidenceIndex = computed(() =>
+  evidenceItem.value ? filteredItems.value.findIndex(i => i.id === evidenceItem.value.id) : -1)
+
+function moveItem(step) {
+  const next = evidenceIndex.value + step
+  if (evidenceIndex.value < 0 || next < 0 || next >= filteredItems.value.length) return
+  evidenceItem.value = filteredItems.value[next]
 }
 
 // 팝업 안에서 연도를 바꾸면 목록의 연도도 맞춰 다시 읽는다.

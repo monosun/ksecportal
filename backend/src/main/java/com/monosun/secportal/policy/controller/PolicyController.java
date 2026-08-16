@@ -3,8 +3,10 @@ package com.monosun.secportal.policy.controller;
 import com.monosun.secportal.asset.dto.AssetBulkUploadResult;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.response.ApiResponse;
+import com.monosun.secportal.policy.dto.PolicyArticleDto;
 import com.monosun.secportal.policy.dto.PolicyDto;
 import com.monosun.secportal.policy.entity.Policy;
+import com.monosun.secportal.policy.service.PolicyArticleService;
 import com.monosun.secportal.policy.service.PolicyBulkService;
 import com.monosun.secportal.policy.service.PolicyService;
 import jakarta.validation.Valid;
@@ -31,6 +33,7 @@ public class PolicyController {
 
     private final PolicyService policyService;
     private final PolicyBulkService policyBulkService;
+    private final PolicyArticleService policyArticleService;
 
     @GetMapping
     public ApiResponse<Page<PolicyDto.Summary>> list(
@@ -39,6 +42,48 @@ public class PolicyController {
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20) Pageable pageable) {
         return ApiResponse.ok(policyService.list(status, category, keyword, pageable));
+    }
+
+    // ── 조문(條) 세분화 검색 ──────────────────────────────────────────────────
+    // "/articles" 는 "/{id}" 보다 먼저 선언해 경로 충돌을 피한다.
+
+    /**
+     * 지침 &gt; 장 &gt; 조 계층 검색.
+     *
+     * @param scope 검색 범위 — ALL(전체) · TITLE(조 제목) · CONTENT(본문) · GUIDELINE(지침) · CHAPTER(장) · ARTICLE(조 표기)
+     */
+    @GetMapping("/articles")
+    public ApiResponse<Page<PolicyArticleDto.Response>> searchArticles(
+            @RequestParam(required = false) String guideline,
+            @RequestParam(required = false) Integer chapterNo,
+            @RequestParam(required = false) Long policyId,
+            @RequestParam(required = false) Integer articleNo,
+            @RequestParam(required = false) Policy.Status status,
+            @RequestParam(required = false) Policy.Category category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) PolicyArticleService.Scope scope,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(policyArticleService.search(
+                guideline, chapterNo, policyId, articleNo, status, category, keyword, scope, pageable));
+    }
+
+    /** 검색 필터 드롭다운용 지침 · 장 목록 */
+    @GetMapping("/articles/facets")
+    public ApiResponse<PolicyArticleDto.Facets> articleFacets() {
+        return ApiResponse.ok(policyArticleService.facets());
+    }
+
+    /** 전체 정책 본문을 다시 파싱해 조를 재등록한다. */
+    @PostMapping("/articles/resync")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<Integer> resyncArticles() {
+        return ApiResponse.ok(policyArticleService.syncAll());
+    }
+
+    /** 특정 장에 속한 조 목록 */
+    @GetMapping("/{id}/articles")
+    public ApiResponse<List<PolicyArticleDto.Response>> articlesOf(@PathVariable Long id) {
+        return ApiResponse.ok(policyArticleService.listByPolicy(id));
     }
 
     @GetMapping("/{id}")

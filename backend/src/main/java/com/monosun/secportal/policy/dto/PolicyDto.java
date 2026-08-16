@@ -45,6 +45,10 @@ public class PolicyDto {
         private LocalDate effectiveDate;
         private String authorName;
         private Long authorId;
+        private String guidelineName;
+        private Integer chapterNo;
+        private String chapterLabel;
+        private String chapterTitle;
         private long acknowledgmentCount;
         private boolean acknowledgedByMe;
         private LocalDateTime createdAt;
@@ -55,6 +59,10 @@ public class PolicyDto {
                     .id(policy.getId())
                     .title(policy.getTitle())
                     .content(policy.getContent())
+                    .guidelineName(policy.getGuidelineName())
+                    .chapterNo(policy.getChapterNo())
+                    .chapterLabel(policy.getChapterLabel())
+                    .chapterTitle(policy.getChapterTitle())
                     .category(policy.getCategory().name())
                     .status(policy.getStatus().name())
                     .version(policy.getVersion())
@@ -79,9 +87,15 @@ public class PolicyDto {
         private String version;
         private LocalDate effectiveDate;
         private String authorName;
+        private String guidelineName;
+        private Integer chapterNo;
+        private String chapterLabel;
+        private String chapterTitle;
+        /** 이 장에 세분화 등록된 조 개수 */
+        private long articleCount;
         private LocalDateTime updatedAt;
 
-        public static Summary from(Policy policy) {
+        public static Summary from(Policy policy, long articleCount) {
             return Summary.builder()
                     .id(policy.getId())
                     .title(policy.getTitle())
@@ -90,6 +104,11 @@ public class PolicyDto {
                     .version(policy.getVersion())
                     .effectiveDate(policy.getEffectiveDate())
                     .authorName(policy.getAuthor().getName())
+                    .guidelineName(policy.getGuidelineName())
+                    .chapterNo(policy.getChapterNo())
+                    .chapterLabel(policy.getChapterLabel())
+                    .chapterTitle(policy.getChapterTitle())
+                    .articleCount(articleCount)
                     .updatedAt(policy.getUpdatedAt())
                     .build();
         }

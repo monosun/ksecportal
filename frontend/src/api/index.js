@@ -82,7 +82,12 @@ export const policyApi = {
   update: (id, data) => api.patch(`/policies/${id}`, data),
   delete: (id) => api.delete(`/policies/${id}`),
   deleteBulk: (ids) => api.delete('/policies', { params: { ids: ids.join(',') } }),
-  acknowledge: (id) => api.post(`/policies/${id}/acknowledge`)
+  acknowledge: (id) => api.post(`/policies/${id}/acknowledge`),
+  // 지침 > 장 > 조 세분화 조회·검색
+  articles: (params) => api.get('/policies/articles', { params }),
+  articleFacets: () => api.get('/policies/articles/facets'),
+  articlesOf: (id) => api.get(`/policies/${id}/articles`),
+  resyncArticles: () => api.post('/policies/articles/resync')
 }
 
 export const vulnApi = {
