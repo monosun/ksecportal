@@ -140,7 +140,8 @@ const scopes = [
   { value: 'TITLE',     label: '조 제목' },
   { value: 'GUIDELINE', label: '지침명' },
   { value: 'CHAPTER',   label: '장 제목' },
-  { value: 'ARTICLE',   label: '조 표기 (제N조)' }
+  { value: 'ARTICLE',   label: '조 표기 (제N조)' },
+  { value: 'HEADING',   label: '조 표기 + 조 제목' }
 ]
 const statuses = ['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED']
 const categories = ['GENERAL', 'ACCESS_CONTROL', 'DATA_PROTECTION', 'INCIDENT_RESPONSE', 'NETWORK', 'PHYSICAL', 'VENDOR', 'OTHER']

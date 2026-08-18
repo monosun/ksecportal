@@ -4,10 +4,12 @@ import com.monosun.secportal.asset.dto.AssetBulkUploadResult;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.policy.dto.PolicyArticleDto;
+import com.monosun.secportal.policy.dto.PolicyDocumentDto;
 import com.monosun.secportal.policy.dto.PolicyDto;
 import com.monosun.secportal.policy.entity.Policy;
 import com.monosun.secportal.policy.service.PolicyArticleService;
 import com.monosun.secportal.policy.service.PolicyBulkService;
+import com.monosun.secportal.policy.service.PolicyDocumentImportService;
 import com.monosun.secportal.policy.service.PolicyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class PolicyController {
     private final PolicyService policyService;
     private final PolicyBulkService policyBulkService;
     private final PolicyArticleService policyArticleService;
+    private final PolicyDocumentImportService policyDocumentImportService;
 
     @GetMapping
     public ApiResponse<Page<PolicyDto.Summary>> list(
@@ -149,5 +152,31 @@ public class PolicyController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal User user) throws IOException {
         return ApiResponse.ok(policyBulkService.upload(file, user));
+    }
+
+    // ── 문서 파일(PDF/DOCX/TXT/MD)로 등록 ────────────────────────────────
+
+    /**
+     * 개별 정책 등록용 — 문서에서 제목·본문 초안만 뽑는다. 저장하지 않는다.
+     * 화면에서 사용자가 확인·수정한 뒤 평소대로 저장한다.
+     */
+    @PostMapping(value = "/documents/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<PolicyDocumentDto.ExtractResult> extractDocument(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return ApiResponse.ok(policyDocumentImportService.extractSingle(file));
+    }
+
+    /**
+     * 지침 문서를 장(章)별 정책으로 등록한다 — 조(條)까지 자동 세분화된다.
+     * {@code dryRun=true} 면 저장하지 않고 등록될 내용만 돌려준다(미리보기).
+     */
+    @PostMapping(value = "/documents/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<PolicyDocumentDto.ImportResult> importDocument(
+            @RequestParam("file") MultipartFile file,
+            @ModelAttribute PolicyDocumentDto.ImportOptions options,
+            @AuthenticationPrincipal User user) throws IOException {
+        return ApiResponse.ok(policyDocumentImportService.importGuideline(file, options, user.getId()));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PolicyRepository extends JpaRepository<Policy, Long> {
 
@@ -30,4 +31,7 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
            "CASE WHEN p.chapterNo IS NULL THEN 1 ELSE 0 END ASC, " +   // 부칙 등 번호 없는 장은 맨 뒤
            "p.chapterNo ASC, p.id ASC")
     List<Object[]> findChapterFacets();
+
+    /** 지침 문서 등록 시 같은 장이 이미 있는지 제목으로 찾는다(있으면 본문만 갱신해 조·매핑을 살린다). */
+    Optional<Policy> findFirstByTitle(String title);
 }

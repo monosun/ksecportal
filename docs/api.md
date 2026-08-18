@@ -206,6 +206,74 @@
 }
 ```
 
+### POST /policies/documents/extract *(MANAGER+, multipart/form-data)*
+
+개별 정책 등록용 — 문서 파일에서 **제목·본문 초안만** 뽑는다. **저장하지 않는다.**
+화면(정책 등록 팝업 > `문서 파일로 등록`)에서 사용자가 확인·수정한 뒤 평소대로 `POST /policies` 로 저장한다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `file` | File | `.pdf`, `.docx`, `.txt`, `.md` |
+
+```json
+// Response
+{
+  "title": "정보보호 지침",
+  "content": "## 제1장 총칙
+
+### 제1조(목적)
+…",
+  "articleCount": 8,
+  "chapterCount": 4,
+  "warnings": ["문서에서 장(章) 4개를 찾았습니다. …"]
+}
+```
+
+### POST /policies/documents/import *(MANAGER+, multipart/form-data)*
+
+지침 문서를 **장(章)별 정책으로 등록**한다. 장마다 정책 1건을 만들고 제목을
+`"<지침명> - 제N장 <장제목>"` 으로 맞추므로, 저장 시 기존 경로와 똑같이 지침명·장 컬럼과
+**조(條) 레코드가 자동 세분화**된다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `file` | File | `.pdf`, `.docx`, `.txt`, `.md` (스캔 이미지 PDF 는 글자가 없어 실패) |
+| `guidelineName` | String | 비우면 문서 제목 줄 또는 파일명에서 추측 |
+| `category` | Enum | 장별 정책에 공통 적용 (기본 `GENERAL`) |
+| `status` | Enum | 공통 적용 (기본 `DRAFT`) |
+| `version` | String | 공통 적용 (기본 `1.0`) |
+| `effectiveDate` | Date | `YYYY-MM-DD` |
+| `dryRun` | Boolean | `true` 면 저장하지 않고 등록될 내용만 돌려준다(미리보기) |
+
+```json
+// Response
+{
+  "guidelineName": "정보보호 지침", "fileName": "정보보호지침.pdf", "dryRun": false,
+  "created": 3, "updated": 1, "articleCount": 8,
+  "chapters": [
+    { "title": "정보보호 지침 - 제1장 총칙", "chapterLabel": "제1장", "chapterTitle": "총칙",
+      "articleCount": 4, "contentLength": 1820, "existing": false, "existingPolicyId": null }
+  ],
+  "warnings": []
+}
+```
+
+**같은 제목의 장이 이미 있으면 본문만 갱신한다.** 조 레코드는 조 표기 기준으로 재사용되므로
+ISMS-P 통제항목에 걸어둔 **조 단위 매핑이 유지**된다.
+
+문서 정리 규칙: 쪽번호(`- 12 -` 등)와 절반 이상의 쪽에 되풀이되는 머리말·꼬리말, 그리고 **목차**를 걷어내고,
+`제N조(제목)` 줄을 `### 제N조(제목)` 마크다운 머리글로 올린다(장 머리글은 `## `).
+본문 문장의 "제3조의 규정에 따라 …" 같은 표현은 제목 괄호가 없어 조로 잡히지 않는다.
+
+**목차 제외** — 목차를 남기면 차례의 "제1장 …", "제1조(…)" 가 본문의 장·조로 잡혀 빈 장이 등록되므로 두 갈래로 걷어낸다.
+
+1. `목 차` · `차례` · `CONTENTS` 머리글부터, **목차에 실린 장·조 머리글이 본문에서 다시 나오는 지점**까지
+   (쪽번호가 없는 차례도 이 규칙으로 걸러진다)
+2. `제1조(목적) ……… 3` 처럼 **점선이나 쪽번호가 붙은 줄** — 목차 머리글이 없는 문서에서도 제외
+
+제외한 줄 수는 `warnings` 에 `"목차로 보이는 N줄을 제외했습니다."` 로 실려 온다.
+끝에 숫자가 붙어도 **장·조 머리글이면서 60자 이하일 때만** 목차로 보므로 본문 문장은 지워지지 않는다.
+
 ---
 
 ## 취약점 (Vulnerability)

@@ -87,7 +87,24 @@ export const policyApi = {
   articles: (params) => api.get('/policies/articles', { params }),
   articleFacets: () => api.get('/policies/articles/facets'),
   articlesOf: (id) => api.get(`/policies/${id}/articles`),
-  resyncArticles: () => api.post('/policies/articles/resync')
+  resyncArticles: () => api.post('/policies/articles/resync'),
+
+  // 문서 파일(PDF/DOCX/TXT/MD)로 등록
+  /** 개별 정책 — 문서에서 제목·본문 초안만 뽑는다(저장 안 함) */
+  extractDocument: (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/policies/documents/extract', fd)
+  },
+  /** 지침 문서 — 장별 정책으로 등록. dryRun 이면 미리보기만 */
+  importDocument: (file, options = {}) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    Object.entries(options).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '') fd.append(k, v)
+    })
+    return api.post('/policies/documents/import', fd)
+  }
 }
 
 export const vulnApi = {

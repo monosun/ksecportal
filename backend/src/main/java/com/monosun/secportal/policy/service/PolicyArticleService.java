@@ -35,7 +35,12 @@ import java.util.Set;
 public class PolicyArticleService {
 
     /** 검색 범위 — 프론트 드롭다운과 1:1 대응 */
-    public enum Scope { ALL, TITLE, CONTENT, GUIDELINE, CHAPTER, ARTICLE }
+    /**
+     * 검색 범위. {@code HEADING} 은 조 표기(제N조)와 조 제목을 함께 보는 범위로,
+     * 본문까지 훑는 {@code ALL} 과 달리 조를 이름으로 찾을 때 쓴다
+     * (ISMS-P 통제항목 매핑의 정책 추가 검색).
+     */
+    public enum Scope { ALL, TITLE, CONTENT, GUIDELINE, CHAPTER, ARTICLE, HEADING }
 
     private final PolicyArticleRepository articleRepository;
     private final PolicyRepository policyRepository;
@@ -131,11 +136,11 @@ public class PolicyArticleService {
 
         return articleRepository.search(
                 blankToNull(guideline), chapterNo, policyId, articleNo, status, category, kw,
-                all || s == Scope.TITLE,
+                all || s == Scope.TITLE || s == Scope.HEADING,
                 all || s == Scope.CONTENT,
                 all || s == Scope.GUIDELINE,
                 all || s == Scope.CHAPTER,
-                all || s == Scope.ARTICLE,
+                all || s == Scope.ARTICLE || s == Scope.HEADING,
                 paging
         ).map(PolicyArticleDto.Response::from);
     }

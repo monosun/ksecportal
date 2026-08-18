@@ -13,6 +13,26 @@
       </div>
 
       <form id="policyForm" @submit.prevent="handleSubmit" class="px-5 py-4 overflow-y-auto flex-1 space-y-4">
+        <!-- 문서 파일로 등록 — 제목·본문을 문서에서 뽑아 폼에 채운다 -->
+        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-700">문서 파일로 등록</p>
+              <p class="text-xs text-gray-500 mt-0.5">
+                PDF · DOCX · TXT · MD 를 올리면 제목과 본문을 채웁니다. 조(條)는 저장할 때 자동 세분화됩니다.
+              </p>
+            </div>
+            <button type="button" @click="docInput?.click()" :disabled="docLoading"
+              class="btn-secondary text-sm whitespace-nowrap disabled:opacity-50">
+              {{ docLoading ? '읽는 중...' : '파일 선택' }}
+            </button>
+            <input ref="docInput" type="file" accept=".pdf,.docx,.txt,.md" class="hidden" @change="onDocSelected" />
+          </div>
+          <p v-if="docName" class="text-xs text-gray-600 mt-2 truncate">불러온 파일: {{ docName }}</p>
+          <p v-for="(w, i) in docWarnings" :key="i" class="text-xs text-amber-700 mt-1">· {{ w }}</p>
+          <p v-if="docError" class="text-xs text-red-600 mt-1 whitespace-pre-line">{{ docError }}</p>
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ $t('common.title') }} *</label>
           <input v-model="form.title" type="text" class="input w-full" required />
@@ -80,9 +100,52 @@ const form = ref(emptyForm())
 const loading = ref(false)
 const error = ref('')
 
+// ── 문서 파일로 등록 ───────────────────────────────────────────────────
+const MAX_DOC_MB = 20
+const docInput = ref(null)
+const docLoading = ref(false)
+const docName = ref('')
+const docError = ref('')
+const docWarnings = ref([])
+
+async function onDocSelected(e) {
+  const file = e.target.files?.[0]
+  if (docInput.value) docInput.value.value = ''   // 같은 파일 다시 고를 수 있게
+  if (!file) return
+
+  docError.value = ''
+  docWarnings.value = []
+  if (file.size > MAX_DOC_MB * 1024 * 1024) {
+    docError.value = `파일이 너무 큽니다 (최대 ${MAX_DOC_MB}MB).`
+    return
+  }
+  // 이미 쓴 내용을 말없이 덮지 않는다.
+  if (form.value.content?.trim() &&
+      !window.confirm('이미 입력한 제목·내용을 문서에서 읽은 내용으로 바꿉니다. 계속할까요?')) {
+    return
+  }
+
+  docLoading.value = true
+  try {
+    const r = (await policyApi.extractDocument(file)).data
+    form.value.title = r.title || form.value.title
+    form.value.content = r.content || ''
+    docName.value = file.name
+    docWarnings.value = r.warnings || []
+    if (r.articleCount) docWarnings.value.unshift(`조(條) ${r.articleCount}개를 찾았습니다.`)
+  } catch (err) {
+    docError.value = typeof err === 'string' ? err : '문서를 읽지 못했습니다.'
+  } finally {
+    docLoading.value = false
+  }
+}
+
 watch(() => props.open, async (open) => {
   if (!open) return
   error.value = ''
+  docName.value = ''
+  docError.value = ''
+  docWarnings.value = []
   if (props.editId) {
     try {
       const p = (await policyApi.get(props.editId)).data

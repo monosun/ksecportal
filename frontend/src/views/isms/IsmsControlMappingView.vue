@@ -216,8 +216,9 @@
                             <input
                               v-model="searchQuery[item.id]"
                               class="input text-xs w-full pr-8"
-                              placeholder="지침·장·조문 검색..."
+                              placeholder="지침·장·조 번호·조 제목 검색..."
                               @focus="openPicker(item.id)"
+                              @input="onSearchInput(item.id)"
                               @click.stop
                             />
                             <svg class="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
@@ -226,10 +227,41 @@
                                 d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
                             </svg>
                           </div>
-                          <div v-if="activePicker === item.id && candidatePolicies(item).length > 0"
+                          <div v-if="activePicker === item.id && (candidatePolicies(item).length > 0 || articleHits.length > 0 || articleSearching)"
                             class="mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto"
                             @click.stop>
-                            <p class="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 border-b border-gray-100 text-[10px] text-gray-500">
+                            <!-- 조 검색 결과 — 검색어와 조 표기·조 제목이 맞는 조를 바로 매핑 -->
+                            <template v-if="articleSearching || articleHits.length">
+                              <p class="sticky top-0 z-10 px-3 py-1.5 bg-amber-50 border-b border-amber-100 text-[10px] text-amber-800">
+                                <template v-if="articleSearching">조 검색 중...</template>
+                                <template v-else>
+                                  <b>조 검색 결과 {{ articleHits.length }}건</b><span v-if="articleHitsTruncated"> (상위 {{ ARTICLE_HIT_LIMIT }}건)</span>
+                                  — 누르면 그 조만 바로 매핑됩니다
+                                </template>
+                              </p>
+                              <button v-for="a in articleHits" :key="`hit-${a.id}`"
+                                class="w-full text-left px-3 py-2 border-b border-amber-50 last:border-0 hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+                                :disabled="isArticleMapped(item, a) || mappingId === `${item.id}_a${a.id}`"
+                                :title="isArticleMapped(item, a) ? '이미 매핑된 조입니다' : '이 조만 매핑'"
+                                @click.stop="addArticleFromSearch(item, a)">
+                                <div class="flex items-center gap-1.5">
+                                  <span class="text-[10px] px-1 py-0.5 rounded bg-amber-200 text-amber-900 font-bold flex-shrink-0">
+                                    {{ a.articleLabel }}
+                                  </span>
+                                  <span class="text-[11px] text-gray-800 truncate">{{ a.title || '(제목 없음)' }}</span>
+                                  <span v-if="isArticleMapped(item, a)"
+                                    class="text-[10px] text-green-600 font-semibold ml-auto flex-shrink-0">매핑됨</span>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-0.5 truncate">
+                                  {{ a.guidelineName || '(지침 미분류)' }}
+                                  <span v-if="a.chapterLabel"> &gt; {{ a.chapterLabel }}</span>
+                                  <span v-if="a.chapterTitle"> {{ a.chapterTitle }}</span>
+                                </p>
+                              </button>
+                            </template>
+
+                            <p v-if="candidatePolicies(item).length > 0"
+                              class="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 border-b border-gray-100 text-[10px] text-gray-500">
                               정책(장) {{ candidatePolicies(item).length }}건 — 장 전체를 누르거나 <b class="text-amber-700">조</b> 를 펼쳐 조문만 매핑
                             </p>
                             <div v-for="p in candidatePolicies(item)" :key="p.id"
@@ -290,7 +322,7 @@
                           </div>
                           <p v-else-if="activePicker === item.id"
                             class="mt-1 text-xs text-gray-400 text-center py-2">
-                            {{ searchQuery[item.id] ? '검색 결과가 없습니다' : '등록된 정책이 없습니다' }}
+                            {{ searchQuery[item.id] ? '지침·장·조에서 검색 결과가 없습니다' : '등록된 정책이 없습니다' }}
                           </p>
                         </div>
                       </div>
@@ -358,9 +390,9 @@ onMounted(async () => {
 })
 
 // close picker on outside click
-function onDocClick() { activePicker.value = null; openArticleList.value = null }
+function onDocClick() { activePicker.value = null; openArticleList.value = null; resetArticleHits() }
 onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
+onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); resetArticleHits() })
 
 // ── Domain / Section grouping ─────────────────────────────────
 const sections = computed(() => {
@@ -423,7 +455,7 @@ function toggleExpand(id) {
   const next = new Set(expandedRows.value)
   if (next.has(id)) {
     next.delete(id)
-    if (activePicker.value === id) { activePicker.value = null; openArticleList.value = null }
+    if (activePicker.value === id) { activePicker.value = null; openArticleList.value = null; resetArticleHits() }
   } else {
     next.add(id)
   }
@@ -481,8 +513,81 @@ const articleCache = ref({})       // policyId → 조 목록
 const openArticleList = ref(null)  // 조 목록을 펼친 정책 id
 const articleLoading = ref(null)
 
+// ── 조 검색 — 검색어를 조 표기(제N조)·조 제목에 맞춰 서버에서 찾는다 ──
+// 장을 펼치지 않고도 조를 한 번에 매핑할 수 있게 하는 것이 목적이라, 결과는
+// 정책(장) 목록 위에 따로 띄우고 클릭 한 번으로 그 조만 매핑한다.
+const ARTICLE_HIT_LIMIT = 30
+const articleHits = ref([])
+const articleHitsTruncated = ref(false)
+const articleSearching = ref(false)
+let articleSearchTimer = null
+let articleSearchSeq = 0
+
+function onSearchInput(itemId) {
+  activePicker.value = itemId
+  const q = (searchQuery.value[itemId] || '').trim()
+  clearTimeout(articleSearchTimer)
+  // 한 글자로는 조 전체가 걸려 의미가 없으므로 2자부터 찾는다.
+  if (q.length < 2) {
+    articleHits.value = []
+    articleHitsTruncated.value = false
+    articleSearching.value = false
+    return
+  }
+  articleSearching.value = true
+  articleSearchTimer = setTimeout(() => searchArticles(q), 250)
+}
+
+async function searchArticles(q) {
+  const seq = ++articleSearchSeq
+  try {
+    const res = await policyApi.articles({
+      keyword: q, scope: 'HEADING', page: 0, size: ARTICLE_HIT_LIMIT
+    })
+    if (seq !== articleSearchSeq) return   // 뒤늦게 도착한 이전 요청은 버린다
+    const page = res.data || {}
+    articleHits.value = page.content || []
+    articleHitsTruncated.value = (page.totalElements || 0) > articleHits.value.length
+  } catch {
+    if (seq !== articleSearchSeq) return
+    articleHits.value = []
+    articleHitsTruncated.value = false
+  } finally {
+    if (seq === articleSearchSeq) articleSearching.value = false
+  }
+}
+
+function resetArticleHits() {
+  clearTimeout(articleSearchTimer)
+  articleSearchSeq++
+  articleHits.value = []
+  articleHitsTruncated.value = false
+  articleSearching.value = false
+}
+
 function openPicker(itemId) {
   activePicker.value = itemId
+  // 다른 항목의 검색 결과가 남아 보이지 않도록 현재 검색어 기준으로 다시 맞춘다.
+  const q = (searchQuery.value[itemId] || '').trim()
+  if (q.length < 2) resetArticleHits()
+  else if (!articleHits.value.length && !articleSearching.value) onSearchInput(itemId)
+}
+
+/** 조 검색 결과 1건을 그대로 조 단위 매핑으로 넘긴다. */
+function addArticleFromSearch(item, hit) {
+  return addArticleMapping(
+    item,
+    {
+      id: hit.policyId,
+      title: hit.policyTitle,
+      status: hit.status,
+      category: hit.category,
+      guidelineName: hit.guidelineName,
+      chapterLabel: hit.chapterLabel,
+      chapterTitle: hit.chapterTitle
+    },
+    { id: hit.id, articleLabel: hit.articleLabel, title: hit.title, displayName: hit.displayName }
+  )
 }
 
 /**
