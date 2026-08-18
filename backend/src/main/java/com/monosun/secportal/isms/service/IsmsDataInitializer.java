@@ -47,6 +47,7 @@ public class IsmsDataInitializer implements CommandLineRunner {
                             .guide(s.guide)
                             .defaultEvidenceTitle(s.evidenceTitle)
                             .defaultEvidenceContent(s.evidenceContent)
+                            .evidenceExamples(joinExamples(s.evidenceExamples))
                             .sortOrder(i + 1)
                             .build());
                 } else {
@@ -63,6 +64,10 @@ public class IsmsDataInitializer implements CommandLineRunner {
                     if (isBlank(item.getDefaultEvidenceContent()) && notBlank(s.evidenceContent)) {
                         item.setDefaultEvidenceContent(s.evidenceContent); changed = true;
                     }
+                    String examples = joinExamples(s.evidenceExamples);
+                    if (isBlank(item.getEvidenceExamples()) && notBlank(examples)) {
+                        item.setEvidenceExamples(examples); changed = true;
+                    }
                     if (changed) toBackfill.add(item);
                 }
             }
@@ -76,6 +81,13 @@ public class IsmsDataInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.error("Failed to seed ISMS-P items: {}", e.getMessage());
         }
+    }
+
+    /** 시드의 예시 증적자료명 배열을 줄바꿈 구분 문자열로 합친다. */
+    private static String joinExamples(List<String> examples) {
+        if (examples == null || examples.isEmpty()) return null;
+        return examples.stream().filter(IsmsDataInitializer::notBlank)
+                .map(String::trim).collect(java.util.stream.Collectors.joining("\n"));
     }
 
     private static boolean isBlank(String s) { return s == null || s.isBlank(); }
@@ -93,5 +105,6 @@ public class IsmsDataInitializer implements CommandLineRunner {
         String guide;
         String evidenceTitle;
         String evidenceContent;
+        List<String> evidenceExamples;
     }
 }

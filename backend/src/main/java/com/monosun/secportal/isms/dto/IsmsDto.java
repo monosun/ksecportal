@@ -55,6 +55,7 @@ public class IsmsDto {
         private String guide;
         private String defaultEvidenceTitle;
         private String defaultEvidenceContent;
+        private String evidenceExamples;
         private int sortOrder;
         private long evidenceCount;
         private String latestStatus;
@@ -73,6 +74,7 @@ public class IsmsDto {
                     .guide(item.getGuide())
                     .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
                     .defaultEvidenceContent(item.getDefaultEvidenceContent())
+                    .evidenceExamples(item.getEvidenceExamples())
                     .sortOrder(item.getSortOrder())
                     .mappedPolicies(List.of())
                     .build();
@@ -92,6 +94,7 @@ public class IsmsDto {
                     .guide(item.getGuide())
                     .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
                     .defaultEvidenceContent(item.getDefaultEvidenceContent())
+                    .evidenceExamples(item.getEvidenceExamples())
                     .sortOrder(item.getSortOrder())
                     .evidenceCount(evidenceCount)
                     .latestStatus(latestStatus)
@@ -235,6 +238,7 @@ public class IsmsDto {
     public static class ItemDefaultsRequest {
         private String defaultEvidenceTitle;
         private String defaultEvidenceContent;
+        private String evidenceExamples;
         private String guide;
     }
 

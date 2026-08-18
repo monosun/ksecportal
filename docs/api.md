@@ -323,6 +323,7 @@ ISMS-P 인증 항목 목록 조회.
   "guide": "…이행가이드…",
   "defaultEvidenceTitle": "경영진의 참여 증적",
   "defaultEvidenceContent": "…증적예시…",
+  "evidenceExamples": "정보보호위원회 회의록\n경영진 정보보호 현황 보고자료\n…",
   "evidenceCount": 2, "latestStatus": "COMPLIANT",
   "mappedPolicies": [
     { "id": 96, "title": "개인정보보호 지침 - 제1장 총칙", "status": "PUBLISHED", "category": "DATA_PROTECTION",
@@ -336,7 +337,9 @@ ISMS-P 인증 항목 목록 조회.
 }
 ```
 
-`guide` / `defaultEvidenceTitle` / `defaultEvidenceContent` 는 항목별 기본값(연도 무관)으로, 일괄등록 템플릿의 기본값이자 관리 > 코드관리 `ISMS-P 101항목` 탭에서 편집한다.
+`guide` / `defaultEvidenceTitle` / `defaultEvidenceContent` / `evidenceExamples` 는 항목별 기본값(연도 무관)으로, 일괄등록 템플릿의 기본값이자 관리 > 코드관리 `ISMS-P 101항목` 탭에서 편집한다.
+
+`evidenceExamples` 는 **예시 증적자료명** 목록이다 — 줄바꿈(`\n`)으로 구분된 한 줄이 자료명 하나이며, 증적관리 화면의 이행 가이드 영역에 함께 표시된다. 101개 항목 모두 기본값을 시드하며, 비어 있는 항목에만 채워지므로(seed-when-empty) 사용자가 고친 값은 유지된다.
 
 `mappedPolicies` 는 **지침 &gt; 장 &gt; 조** 계층을 그대로 싣는다. `articleId` 가 `null` 이면 **장(章) 전체** 매핑,
 값이 있으면 그 장 안의 **조(條) 단위** 매핑이다. 같은 장에 장 전체와 여러 조가 함께 걸릴 수 있으므로
@@ -349,10 +352,10 @@ ISMS-P 인증 항목 목록 조회.
 
 ### PATCH /isms/items/:id/defaults *(MANAGER+)*
 
-항목별 기본 증적제목·증적내용·이행가이드 수정 (관리 > 코드관리 `ISMS-P 101항목` 탭).
+항목별 기본 증적제목·증적내용·이행가이드·예시 증적자료명 수정 (관리 > 코드관리 `ISMS-P 101항목` 탭).
 
 ```json
-{ "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "guide": "…" }
+{ "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "evidenceExamples": "자료명1\n자료명2", "guide": "…" }
 ```
 
 ### 통제항목 × 정책 매핑
@@ -524,7 +527,7 @@ ISMS-P 인증 항목 목록 조회.
 ### GET /isms/import/template *(MANAGER+)*
 
 일괄 등록용 엑셀 템플릿 다운로드 (`.xlsx`, 3개 시트: `증적입력` / `입력규칙` / `항목목록(참고)`).
-`증적입력` 시트 열: **항목코드 · 증적제목 · 증적내용 · 이행가이드 · 파일명/경로 · 준수상태**. 항목별로 한 행씩 미리 채워져 제공되며, `이행가이드` 열에는 해당 항목의 이행가이드(증적예시 포함)가 들어 있다(가이드 없는 항목은 빈 칸 — **이행가이드는 선택 입력**). 업로드 시 `이행가이드` 값이 있으면 해당 항목의 가이드를 갱신한다. 증적제목·증적내용·파일명·준수상태가 모두 빈 행(미작성 행)은 건너뛴다.
+`증적입력` 시트 열: **항목코드 · 증적제목 · 증적내용 · 이행가이드 · 파일명/경로 · 준수상태 · 예시 증적자료(참고)**. 항목별로 한 행씩 미리 채워져 제공되며, `이행가이드` 열에는 해당 항목의 이행가이드(증적예시 포함)가 들어 있다(가이드 없는 항목은 빈 칸 — **이행가이드는 선택 입력**). 업로드 시 `이행가이드` 값이 있으면 해당 항목의 가이드를 갱신한다. 증적제목·증적내용·파일명·준수상태가 모두 빈 행(미작성 행)은 건너뛴다. 맨 뒤 `예시 증적자료(참고)` 열은 항목의 예시 증적자료명을 채워 내려주는 **읽기 전용 참고 열**로 업로드 시 읽지 않으며, 0~5 열의 순서를 바꾸지 않았으므로 이전에 내려받은 템플릿도 그대로 올릴 수 있다. `항목목록(참고)` 시트에도 항목별 예시 증적자료 열이 있다.
 
 ### POST /isms/import *(MANAGER+, multipart/form-data)*
 

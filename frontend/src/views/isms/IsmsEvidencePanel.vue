@@ -53,13 +53,29 @@
         <template v-else>
           <p v-if="item?.guide" class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ item.guide }}</p>
           <p v-else class="text-sm text-gray-400">아직 작성된 가이드가 없습니다.</p>
-          <div class="flex justify-end mt-2">
-            <button @click="startEditGuide"
-              class="text-xs text-gray-500 hover:text-primary-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
-              {{ item?.guide ? $t('common.edit') : '가이드 작성' }}
-            </button>
-          </div>
         </template>
+
+        <!-- 예시 증적자료명 (항목 속성 · 코드관리에서 편집) -->
+        <div v-if="evidenceExampleList.length" class="mt-4 pt-4 border-t border-dashed border-gray-200">
+          <p class="text-xs font-medium text-gray-500 mb-2">
+            📄 예시 증적자료
+            <span class="font-normal text-gray-400">— 이 인증기준에서 통상 요구되는 자료입니다</span>
+          </p>
+          <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+            <li v-for="(ex, i) in evidenceExampleList" :key="i"
+              class="text-sm text-gray-600 flex items-start gap-1.5">
+              <span class="text-gray-300 shrink-0">•</span>
+              <span>{{ ex }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="!editingGuide" class="flex justify-end mt-2">
+          <button @click="startEditGuide"
+            class="text-xs text-gray-500 hover:text-primary-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
+            {{ item?.guide ? $t('common.edit') : '가이드 작성' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -421,6 +437,10 @@ const selectedRef = ref(null)
 
 // 이행 가이드(항목 단위) / 현재상태·의견(연도 단위)
 const guideOpen = ref(false)
+/** 예시 증적자료명 — 줄바꿈으로 구분된 한 줄이 자료명 하나 */
+const evidenceExampleList = computed(() =>
+  (item.value?.evidenceExamples || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+)
 const editingGuide = ref(false)
 const guideForm = ref('')
 const note = ref({})

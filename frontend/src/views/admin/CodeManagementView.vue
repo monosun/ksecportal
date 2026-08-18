@@ -675,6 +675,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">기본 증적제목</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">기본 증적내용</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이행가이드</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">예시 증적자료</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-16">관리</th>
             </tr>
           </thead>
@@ -685,6 +686,9 @@
               <td class="px-4 py-3 text-gray-700 text-xs max-w-xs truncate" :title="it.defaultEvidenceTitle">{{ it.defaultEvidenceTitle || '-' }}</td>
               <td class="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" :title="it.defaultEvidenceContent">{{ it.defaultEvidenceContent || '-' }}</td>
               <td class="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" :title="it.guide">{{ it.guide || '-' }}</td>
+              <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap" :title="it.evidenceExamples">
+                {{ ismsExampleCount(it) ? ismsExampleCount(it) + '건' : '-' }}
+              </td>
               <td class="px-4 py-3 text-right">
                 <button @click="openIsmsItemModal(it)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">수정</button>
               </td>
@@ -1106,6 +1110,15 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">이행가이드</label>
             <textarea v-model="ismsItemModal.form.guide" class="input w-full" rows="4"
               placeholder="이 인증기준을 충족하기 위해 무엇을 준비해야 하는지 기재"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              예시 증적자료명
+              <span class="text-xs font-normal text-gray-400 ml-1">한 줄에 자료명 하나</span>
+            </label>
+            <textarea v-model="ismsItemModal.form.evidenceExamples" class="input w-full font-mono text-xs" rows="6"
+              placeholder="정보보호위원회 회의록&#10;경영진 정보보호 현황 보고자료&#10;정보보호 활동 결재문서"></textarea>
+            <p class="text-xs text-gray-400 mt-1">증적관리 화면의 이행 가이드와 일괄등록 템플릿에 함께 표시됩니다.</p>
           </div>
         </div>
         <p v-if="ismsItemModal.error" class="mt-3 text-sm text-red-600">{{ ismsItemModal.error }}</p>
@@ -2129,8 +2142,12 @@ const ISMS_PAGE_SIZE = 20
 const ismsItemModal = reactive({
   show: false, saving: false, error: '',
   editId: null, itemCode: '', itemName: '',
-  form: { defaultEvidenceTitle: '', defaultEvidenceContent: '', guide: '' }
+  form: { defaultEvidenceTitle: '', defaultEvidenceContent: '', evidenceExamples: '', guide: '' }
 })
+
+function ismsExampleCount(it) {
+  return (it.evidenceExamples || '').split(/\r?\n/).filter(v => v.trim()).length
+}
 
 const filteredIsmsItems = computed(() => {
   const kw = searchIsmsKeyword.value.trim().toLowerCase()
@@ -2171,6 +2188,7 @@ function openIsmsItemModal(it) {
   ismsItemModal.form = {
     defaultEvidenceTitle: it.defaultEvidenceTitle || '',
     defaultEvidenceContent: it.defaultEvidenceContent || '',
+    evidenceExamples: it.evidenceExamples || '',
     guide: it.guide || ''
   }
   ismsItemModal.show = true

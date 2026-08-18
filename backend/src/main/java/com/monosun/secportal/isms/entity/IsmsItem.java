@@ -55,6 +55,12 @@ public class IsmsItem {
     @Column(columnDefinition = "TEXT")
     private String defaultEvidenceContent;
 
+    /** 예시 증적자료명 — 이 인증기준에서 통상 요구되는 증적 문서의 이름 목록.
+     *  줄바꿈으로 구분된 한 줄 = 자료명 하나이며, 이행 가이드와 함께 표시한다.
+     *  연도와 무관한 항목 속성이다. */
+    @Column(columnDefinition = "TEXT")
+    private String evidenceExamples;
+
     @Column(nullable = false)
     private int sortOrder;
 

@@ -194,6 +194,7 @@ public class IsmsService {
                 .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
         item.setDefaultEvidenceTitle(req.getDefaultEvidenceTitle());
         item.setDefaultEvidenceContent(req.getDefaultEvidenceContent());
+        item.setEvidenceExamples(req.getEvidenceExamples());
         item.setGuide(req.getGuide());
         return IsmsDto.ItemResponse.from(itemRepository.save(item));
     }
@@ -585,8 +586,10 @@ public class IsmsService {
             hf.setColor(IndexedColors.WHITE.getIndex());
             headerStyle.setFont(hf);
 
-            String[] headers = {"항목코드", "증적제목", "증적내용", "이행가이드", "파일명/경로", "준수상태"};
-            int[] colWidths = {3000, 8000, 16000, 20000, 10000, 4000};
+            // '예시 증적자료'는 참고용 열이며 일괄등록 시 읽지 않는다.
+            // 기존에 내려받은 템플릿도 그대로 올릴 수 있도록 0~5 열 순서는 바꾸지 않는다.
+            String[] headers = {"항목코드", "증적제목", "증적내용", "이행가이드", "파일명/경로", "준수상태", "예시 증적자료(참고)"};
+            int[] colWidths = {3000, 8000, 16000, 20000, 10000, 4000, 16000};
             XSSFRow hRow = input.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 XSSFCell cell = hRow.createCell(i);
@@ -616,6 +619,9 @@ public class IsmsService {
                 guideCell.setCellStyle(guideCellStyle);
                 row.createCell(4).setCellValue("docs/isms/" + it.getItemCode() + "_증적.pdf");
                 row.createCell(5).setCellValue("COMPLIANT");
+                XSSFCell examplesCell = row.createCell(6);
+                examplesCell.setCellValue(it.getEvidenceExamples() != null ? it.getEvidenceExamples() : "");
+                examplesCell.setCellStyle(guideCellStyle);
             }
 
             // ── 준수상태 안내 시트 ─────────────────────────────────────────────
@@ -639,16 +645,22 @@ public class IsmsService {
             refH.createCell(0).setCellValue("항목코드");
             refH.createCell(1).setCellValue("항목명");
             refH.createCell(2).setCellValue("도메인");
+            refH.createCell(3).setCellValue("예시 증적자료");
 
             for (int i = 0; i < items.size(); i++) {
                 XSSFRow row = ref.createRow(i + 1);
                 row.createCell(0).setCellValue(items.get(i).getItemCode());
                 row.createCell(1).setCellValue(items.get(i).getItemName());
                 row.createCell(2).setCellValue(items.get(i).getDomainName());
+                XSSFCell refExamples = row.createCell(3);
+                refExamples.setCellValue(items.get(i).getEvidenceExamples() != null
+                        ? items.get(i).getEvidenceExamples() : "");
+                refExamples.setCellStyle(guideCellStyle);
             }
             ref.setColumnWidth(0, 3000);
             ref.setColumnWidth(1, 10000);
             ref.setColumnWidth(2, 10000);
+            ref.setColumnWidth(3, 16000);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             wb.write(baos);

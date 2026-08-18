@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS isms_items (
     guide TEXT COMMENT '이행 가이드 (연도 무관)',
     default_evidence_title TEXT COMMENT '기본 증적제목',
     default_evidence_content TEXT COMMENT '기본 증적내용(증적예시)',
+    evidence_examples TEXT COMMENT '예시 증적자료명 (줄바꿈 구분)',
     sort_order INT NOT NULL DEFAULT 0
 );
 
