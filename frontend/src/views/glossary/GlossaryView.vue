@@ -24,6 +24,10 @@
             <input v-model="keyword" type="text" class="input pl-9 w-full"
               placeholder="용어·영문·약어·정의·키워드 검색 (예: MFA, 암호화, phishing)" />
           </div>
+          <button @click="expandAll = !expandAll" class="btn-secondary text-sm px-3 whitespace-nowrap"
+            :title="expandAll ? '긴 정의를 4줄로 줄여 한눈에 봅니다' : '긴 정의를 모두 펼쳐서 봅니다'">
+            {{ expandAll ? '정의 접기' : '정의 펼치기' }}
+          </button>
           <button v-if="keyword || category" @click="resetFilter" class="btn-secondary text-sm px-3">초기화</button>
           <span class="flex items-center text-sm text-gray-500 whitespace-nowrap">{{ filtered.length }}건</span>
         </div>
@@ -76,25 +80,37 @@
             <h2 class="text-xs font-bold text-gray-700">{{ g.category }}</h2>
             <span class="text-[11px] text-gray-400 tabular-nums">{{ g.items.length }}개</span>
           </div>
-          <div class="divide-y divide-gray-100">
-            <div v-for="t in g.items" :key="t.id" class="px-4 py-3 hover:bg-gray-50/60">
-              <div class="flex items-baseline gap-2 flex-wrap">
+          <!--
+            정의는 화면 폭이 넓을수록 단 수를 늘려 채운다.
+            한 줄로 길게 늘어놓으면 넓은 모니터에서 오른쪽이 비고 한 줄이 너무 길어져 읽기 어렵다.
+          -->
+          <div class="p-3 grid gap-2 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <article v-for="t in g.items" :key="t.id"
+              class="flex flex-col rounded-lg border border-gray-100 px-3 py-2.5 hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+              <div class="flex items-baseline gap-1.5 flex-wrap">
                 <span class="text-sm font-bold text-gray-900">{{ t.name }}</span>
                 <span v-if="t.abbreviation"
                   class="px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-mono font-semibold">
                   {{ t.abbreviation }}
                 </span>
-                <span v-if="t.nameEn" class="text-xs text-gray-400">{{ t.nameEn }}</span>
+                <span v-if="t.nameEn" class="text-xs text-gray-400 break-all">{{ t.nameEn }}</span>
               </div>
-              <p v-if="t.definition" class="text-sm text-gray-600 mt-1 leading-relaxed">{{ t.definition }}</p>
-              <div v-if="keywordList(t).length" class="flex flex-wrap gap-1 mt-1.5">
+              <p v-if="t.definition"
+                :class="['text-[13px] text-gray-600 mt-1.5 leading-relaxed break-words',
+                  isOpen(t) ? '' : 'line-clamp-4']">{{ t.definition }}</p>
+              <button v-if="t.definition && isLong(t.definition)" type="button"
+                class="self-start mt-1 text-[11px] text-primary-600 hover:underline"
+                @click="toggleDefinition(t.id)">
+                {{ isOpen(t) ? '접기' : '더보기' }}
+              </button>
+              <div v-if="keywordList(t).length" class="flex flex-wrap gap-1 mt-auto pt-2">
                 <button v-for="k in keywordList(t)" :key="k"
                   class="px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100 text-[11px] text-gray-500 hover:bg-gray-100"
                   @click="keyword = k">
                   {{ k }}
                 </button>
               </div>
-            </div>
+            </article>
           </div>
         </section>
       </div>
@@ -121,6 +137,23 @@ const summary = ref(null)
 const loading = ref(true)
 const keyword = ref('')
 const category = ref('')
+/** 긴 정의는 기본 4줄까지만 보여 카드 높이를 맞추고, 필요할 때만 펼친다 */
+const expandAll = ref(false)
+const expanded = ref(new Set())
+
+/** 4줄(카드 폭 기준 대략 100자)을 넘길 때만 더보기 버튼을 붙인다 */
+function isLong(definition) {
+  return (definition || '').length > 100
+}
+
+function isOpen(t) {
+  return expandAll.value || expanded.value.has(t.id)
+}
+
+function toggleDefinition(id) {
+  if (expanded.value.has(id)) expanded.value.delete(id)
+  else expanded.value.add(id)
+}
 
 const categories = computed(() => summary.value?.byCategory || [])
 
@@ -158,6 +191,7 @@ function keywordList(t) {
 function resetFilter() {
   keyword.value = ''
   category.value = ''
+  expanded.value.clear()
 }
 
 async function load() {

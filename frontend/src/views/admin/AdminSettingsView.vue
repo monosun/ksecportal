@@ -423,6 +423,7 @@
                             class="flex-shrink-0 text-[10px] px-2 py-0.5 rounded bg-primary-100 text-primary-700 hover:bg-primary-200 font-semibold">추가</button>
                         </div>
                       </div>
+                      <p v-else-if="lawSearchError" class="text-[11px] text-red-500 mt-2 text-center py-2 leading-relaxed">{{ lawSearchError }}</p>
                       <p v-else-if="lawSearchDone && !lawSearching" class="text-[11px] text-gray-400 mt-2 text-center py-2">검색 결과가 없습니다.</p>
                     </div>
                   </div>
@@ -1645,6 +1646,7 @@ const lawSearchQuery   = ref('')
 const lawSearchResults = ref([])
 const lawSearching     = ref(false)
 const lawSearchDone    = ref(false)
+const lawSearchError   = ref('')
 
 function openLawSearch(indId) {
   if (lawSearchFor.value === indId) { lawSearchFor.value = null; return }
@@ -1652,16 +1654,19 @@ function openLawSearch(indId) {
   lawSearchQuery.value = ''
   lawSearchResults.value = []
   lawSearchDone.value = false
+  lawSearchError.value = ''
 }
 
 async function runLawSearch() {
   const q = lawSearchQuery.value.trim()
   if (!q) return
-  lawSearching.value = true; lawSearchDone.value = false
+  lawSearching.value = true; lawSearchDone.value = false; lawSearchError.value = ''
   try {
     lawSearchResults.value = await searchLaws(q)
-  } catch {
+  } catch (e) {
+    // 연결 실패를 "검색 결과 없음" 으로 보여주면 원인을 알 수 없다
     lawSearchResults.value = []
+    lawSearchError.value = e?.message || '법제처 검색에 실패했습니다.'
   } finally {
     lawSearching.value = false; lawSearchDone.value = true
   }

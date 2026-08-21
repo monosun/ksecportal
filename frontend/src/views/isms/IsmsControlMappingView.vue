@@ -210,7 +210,7 @@
                         </div>
 
                         <!-- Right: add policy — 장 전체 또는 조 단위로 매핑 -->
-                        <div v-if="canEdit" class="w-80 flex-shrink-0">
+                        <div v-if="canEdit" class="w-[30rem] flex-shrink-0">
                           <p class="text-xs font-semibold text-gray-600 mb-2">정책 추가</p>
                           <div class="relative">
                             <input
@@ -244,15 +244,15 @@
                                 :disabled="isArticleMapped(item, a) || mappingId === `${item.id}_a${a.id}`"
                                 :title="isArticleMapped(item, a) ? '이미 매핑된 조입니다' : '이 조만 매핑'"
                                 @click.stop="addArticleFromSearch(item, a)">
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex items-start gap-1.5">
                                   <span class="text-[10px] px-1 py-0.5 rounded bg-amber-200 text-amber-900 font-bold flex-shrink-0">
                                     {{ a.articleLabel }}
                                   </span>
-                                  <span class="text-[11px] text-gray-800 truncate">{{ a.title || '(제목 없음)' }}</span>
+                                  <span class="text-[11px] text-gray-800 break-words leading-snug">{{ a.title || '(제목 없음)' }}</span>
                                   <span v-if="isArticleMapped(item, a)"
                                     class="text-[10px] text-green-600 font-semibold ml-auto flex-shrink-0">매핑됨</span>
                                 </div>
-                                <p class="text-[10px] text-gray-400 mt-0.5 truncate">
+                                <p class="text-[10px] text-gray-400 mt-0.5 break-words leading-snug">
                                   {{ a.guidelineName || '(지침 미분류)' }}
                                   <span v-if="a.chapterLabel"> &gt; {{ a.chapterLabel }}</span>
                                   <span v-if="a.chapterTitle"> {{ a.chapterTitle }}</span>
@@ -272,10 +272,10 @@
                                   :disabled="isWholeMapped(item, p) || mappingId === `${item.id}_${p.id}`"
                                   :title="isWholeMapped(item, p) ? '이미 장 전체가 매핑되어 있습니다' : '장 전체 매핑'"
                                   @click.stop="addMapping(item, p)">
-                                  <div class="flex items-center gap-2">
+                                  <div class="flex items-start gap-2">
                                     <span class="text-[10px] px-1 py-0.5 rounded font-semibold flex-shrink-0"
                                       :class="policyStatusBadge(p.status)">{{ policyStatusLabel(p.status) }}</span>
-                                    <span class="text-xs text-gray-800 truncate">{{ p.title }}</span>
+                                    <span class="text-xs text-gray-800 break-words leading-snug">{{ p.title }}</span>
                                     <span v-if="isWholeMapped(item, p)"
                                       class="text-[10px] text-green-600 font-semibold flex-shrink-0">매핑됨</span>
                                   </div>
@@ -306,14 +306,14 @@
                                   세분화된 조가 없습니다
                                 </p>
                                 <button v-for="a in articleCache[p.id] || []" :key="a.id"
-                                  class="w-full text-left px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:hover:bg-transparent"
+                                  class="w-full text-left px-3 py-1.5 hover:bg-amber-100 transition-colors flex items-start gap-1.5 disabled:opacity-50 disabled:hover:bg-transparent"
                                   :disabled="isArticleMapped(item, a) || mappingId === `${item.id}_a${a.id}`"
                                   :title="isArticleMapped(item, a) ? '이미 매핑된 조입니다' : '이 조만 매핑'"
                                   @click.stop="addArticleMapping(item, p, a)">
                                   <span class="text-[10px] px-1 py-0.5 rounded bg-amber-200 text-amber-900 font-bold flex-shrink-0">
                                     {{ a.articleLabel }}
                                   </span>
-                                  <span class="text-[11px] text-gray-700 truncate">{{ a.title || '(제목 없음)' }}</span>
+                                  <span class="text-[11px] text-gray-700 break-words leading-snug">{{ a.title || '(제목 없음)' }}</span>
                                   <span v-if="isArticleMapped(item, a)"
                                     class="text-[10px] text-green-600 font-semibold ml-auto flex-shrink-0">매핑됨</span>
                                 </button>

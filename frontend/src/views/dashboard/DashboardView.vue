@@ -263,8 +263,15 @@
                 <div v-else-if="legalKeyMissing" class="py-8 text-center text-xs text-gray-400">
                   <RouterLink to="/settings" class="text-primary-600 hover:underline">설정관리 &gt; API 연동</RouterLink>에서 법제처 API 키를 등록하세요
                 </div>
-                <div v-else-if="legalError" class="py-8 text-center text-xs text-red-400">{{ legalError }}</div>
+                <div v-else-if="legalError" class="py-6 px-3 text-center text-xs text-red-500">
+                  <p class="font-semibold mb-1">법제처(law.go.kr) 연결 오류</p>
+                  <p class="text-red-400 leading-relaxed">{{ legalError }}</p>
+                </div>
                 <template v-else>
+                  <div v-if="legalWarning"
+                    class="mb-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                    {{ legalWarning }}
+                  </div>
                   <div v-if="legalItems.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ legalPeriodLabel }}간 개정·공포된 법령이 없습니다</div>
                   <div v-else class="divide-y divide-gray-50">
                     <a v-for="item in legalItems.slice(0,8)" :key="item.name"
@@ -288,10 +295,20 @@
               <!-- ── RSS 탭 (취약점 정보 · 보안공지) ── -->
               <template v-else>
                 <div v-if="rssLoading" class="py-8 text-center text-xs text-gray-400">불러오는 중...</div>
-                <div v-else-if="rssError" class="py-8 text-center text-xs text-red-400">{{ rssError }}</div>
+                <div v-else-if="rssError" class="py-6 px-3 text-center text-xs text-red-500">
+                  <p class="font-semibold mb-1">RSS 조회 오류</p>
+                  <p class="text-red-400 leading-relaxed">{{ rssError }}</p>
+                </div>
                 <template v-else>
-                  <div v-if="filteredRss.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssEmptyLabel }}간 게시물이 없습니다</div>
-                  <div v-else class="divide-y divide-gray-50">
+                  <!-- 피드 접속 실패 — "게시물 없음" 과 구분해 사유를 그대로 보여준다 -->
+                  <div v-if="activeFeedErrors.length"
+                    class="mb-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 space-y-1">
+                    <p v-for="err in activeFeedErrors" :key="err.url" class="text-[11px] text-red-600 leading-relaxed">
+                      <span class="font-semibold">{{ err.label }}</span> 접속 오류 — {{ err.message }}
+                    </p>
+                  </div>
+                  <div v-if="filteredRss.length === 0 && activeFeedErrors.length === 0" class="py-8 text-center text-xs text-gray-400">최근 {{ rssEmptyLabel }}간 게시물이 없습니다</div>
+                  <div v-else-if="filteredRss.length" class="divide-y divide-gray-50">
                     <!-- 요약이 감춰지는 피드(구글 뉴스 등)는 제목 한 줄만 남으므로 행 여백을 더 좁힌다 -->
                     <a v-for="item in filteredRss" :key="item.link"
                       :href="item.link" target="_blank" rel="noopener noreferrer"
@@ -540,6 +557,8 @@ function fmtTime(dt) {
 const rssItems = ref([])
 const rssLoading = ref(false)
 const rssError = ref('')
+// 피드별 접속 실패 사유 — 일부만 실패해도 "게시물 없음" 으로 오해하지 않도록 화면에 표시한다
+const rssFeedErrors = ref([])
 const rssTab = ref('vuln')
 // 취약점·보안공지는 갱신 주기가 달라 조회 기간을 탭별로 따로 관리한다.
 const vulnDays = ref(30)    // 취약점: 월 단위 프리셋 (기본 1개월)
@@ -582,6 +601,11 @@ const rssTitle = computed(() => {
   return 'KRCERT ' + (t?.label || '')
 })
 
+// 현재 탭에 해당하는 피드 오류 (카테고리 정보가 없는 오류는 모든 탭에 보여준다)
+const activeFeedErrors = computed(() =>
+  rssFeedErrors.value.filter(e => !e.category || e.category === rssTab.value)
+)
+
 // 날짜 필터는 백엔드(rss.days/days 파라미터)가 수행하므로 여기서는 탭(카테고리)만 분류
 const filteredRss = computed(() =>
   rssItems.value.filter(item => item.category === rssTab.value)
@@ -613,11 +637,15 @@ function fmtRssDate(pubDate) {
 async function loadRss() {
   rssLoading.value = true
   rssError.value = ''
+  rssFeedErrors.value = []
   try {
     const res = await rssApi.krcert(activeRssDays.value)
-    rssItems.value = res.data || []
-  } catch {
-    rssError.value = 'RSS 데이터를 불러오지 못했습니다'
+    // 응답: { items, errors } — errors 는 접속 실패한 피드의 사유
+    const data = res.data || {}
+    rssItems.value = data.items || []
+    rssFeedErrors.value = data.errors || []
+  } catch (e) {
+    rssError.value = typeof e === 'string' ? e : 'RSS 데이터를 불러오지 못했습니다'
   } finally {
     rssLoading.value = false
   }
@@ -656,6 +684,8 @@ async function loadRssSettings() {
 const legalItems   = ref([])
 const legalLoading = ref(false)
 const legalError   = ref('')
+// 일부 법령만 조회 실패한 경우의 안내 (목록은 그대로 보여준다)
+const legalWarning = ref('')
 const legalLoaded  = ref(false)
 const legalKeyMissing   = ref(false)
 const legalDays    = ref(30)
@@ -699,12 +729,15 @@ function cutoffYmd(days) {
 async function loadLegal() {
   legalLoaded.value = true
   legalError.value = ''
+  legalWarning.value = ''
   legalKeyMissing.value = false
   const laws = legalLaws.value
   if (laws.length === 0) { legalItems.value = []; return }
   if (!lawKeyPresent.value) { legalKeyMissing.value = true; legalItems.value = []; return }
 
   legalLoading.value = true
+  let legalFailCount = 0
+  let legalFailReason = ''
   try {
     let cache = {}
     try { cache = JSON.parse(localStorage.getItem(LEGAL_CACHE_KEY) || '{}') } catch {}
@@ -725,8 +758,11 @@ async function loadLegal() {
           try {
             meta = await fetchLawMeta(law.name)
             cache[law.name] = { meta, ts: now }
-          } catch {
+          } catch (e) {
+            // 조회 실패는 사유를 모아 화면에 알린다 (조용히 넘기면 "개정 없음" 으로 보인다)
             meta = null
+            legalFailCount++
+            if (!legalFailReason) legalFailReason = e?.message || '법제처 조회에 실패했습니다.'
           }
         }
         if (meta) results.push({ ...law, ...meta })
@@ -739,8 +775,15 @@ async function loadLegal() {
     legalItems.value = results
       .filter(r => r.promulgationRaw && r.promulgationRaw >= cutoff)
       .sort((a, b) => b.promulgationRaw.localeCompare(a.promulgationRaw))
-  } catch {
-    legalError.value = '법령 정보를 불러오지 못했습니다'
+
+    // 전부 실패했으면 오류 화면, 일부만 실패했으면 경고 줄로 알린다
+    if (legalFailCount > 0 && legalFailCount >= laws.length) {
+      legalError.value = legalFailReason
+    } else if (legalFailCount > 0) {
+      legalWarning.value = `법령 ${legalFailCount}건을 조회하지 못했습니다 — ${legalFailReason}`
+    }
+  } catch (e) {
+    legalError.value = (typeof e === 'string' ? e : e?.message) || '법령 정보를 불러오지 못했습니다'
   } finally {
     legalLoading.value = false
   }

@@ -17,6 +17,26 @@ const STORAGE_KEY = 'lawApiKeySet'
 export function getLawApiKeySet()  { return localStorage.getItem(STORAGE_KEY) === 'true' }
 export function setLawApiKeySet(v) { localStorage.setItem(STORAGE_KEY, v ? 'true' : 'false') }
 
+/**
+ * 법제처 프록시 오류 → 화면에 그대로 보여줄 한 문장.
+ * 백엔드(/api/law-proxy)가 연결 실패·OC 코드 오류를 502 + { message } 로 내려준다.
+ */
+export function lawErrorMessage(e) {
+  const data = e?.response?.data
+  const fromBody = (typeof data === 'string' && data.trim().startsWith('{'))
+    ? (() => { try { return JSON.parse(data) } catch { return null } })()
+    : data
+  const msg = fromBody?.message || fromBody?.error
+  if (msg) return msg
+  const status = e?.response?.status
+  if (status === 401) return '로그인이 만료되었습니다. 다시 로그인한 뒤 조회해주세요.'
+  if (status === 403) return '법령 조회 권한이 없습니다.'
+  if (status) return `법제처 조회 실패 (HTTP ${status})`
+  if (e?.code === 'ECONNABORTED') return '법제처 조회 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+  if (e?.message === 'Network Error') return '서버에 연결하지 못했습니다. 네트워크 상태를 확인해주세요.'
+  return e?.message || '법제처 조회에 실패했습니다.'
+}
+
 // null/undefined/string/array → array
 function toArr(val) {
   if (!val) return []
@@ -325,20 +345,23 @@ export async function searchLaws(query) {
     const url = `https://www.law.go.kr/${target === 'admrul' ? '행정규칙' : '법령'}/${nm.replace(/\s+/g, '')}`
     out.push({ name: nm, type: mapLawType(rawType, target), ministry: (ministry || '').trim(), url })
   }
+  let failure = null
   // 법령(법률·시행령·시행규칙)
   try {
     const { data } = await axios.get(PROXY + '/search', { params: { query: q, target: 'law' }, headers: authHeaders() })
     for (const l of toArr(data?.LawSearch?.law)) {
       add(l.법령명한글, l.법령구분명, l.소관부처명, 'law')
     }
-  } catch { /* 무시 — admrul 결과라도 반환 */ }
+  } catch (e) { failure = lawErrorMessage(e) }   // admrul 결과라도 있으면 그대로 반환
   // 행정규칙(고시·규정·훈령·예규·지침)
   try {
     const { data } = await axios.get(PROXY + '/search', { params: { query: q, target: 'admrul' }, headers: authHeaders() })
     for (const r of toArr(data?.AdmRulSearch?.admrul)) {
       add(r.행정규칙명, r.행정규칙종류, r.소관부처명, 'admrul')
     }
-  } catch { /* 무시 */ }
+  } catch (e) { failure = failure || lawErrorMessage(e) }
+  // 양쪽 다 실패했고 건진 결과도 없으면 "검색 결과 없음" 이 아니라 연결 오류다
+  if (!out.length && failure) throw new Error(failure)
   return out
 }
 
@@ -351,7 +374,12 @@ export async function searchLaws(query) {
 async function searchHit(lawName, target) {
   // 검색어에서 괄호 주석 제거 — "... 법률 (AML)" 형태는 그대로 검색하면 0건
   const query = lawName.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
-  const { data } = await axios.get(PROXY + '/search', { params: { query, target }, headers: authHeaders() })
+  let data
+  try {
+    ({ data } = await axios.get(PROXY + '/search', { params: { query, target }, headers: authHeaders() }))
+  } catch (e) {
+    throw new Error(lawErrorMessage(e))
+  }
   const 목록 = target === 'admrul'
     ? toArr(data?.AdmRulSearch?.admrul).map(r => ({
         법령명한글:   r.행정규칙명,
@@ -403,13 +431,14 @@ export async function fetchLawByName(lawName) {
 // 호출부(대시보드)가 실패까지 "개정 없음"으로 캐시해 12시간 동안 숨겨버리지 않도록.
 export async function fetchLawMeta(lawName) {
   let hit = null
-  let failed = false
-  try { hit = await searchHit(lawName, 'law') } catch { failed = true }
+  let failure = null
+  try { hit = await searchHit(lawName, 'law') } catch (e) { failure = lawErrorMessage(e) }
   if (!hit) {
-    try { hit = await searchHit(lawName, 'admrul') } catch { failed = true }
+    try { hit = await searchHit(lawName, 'admrul') } catch (e) { failure = failure || lawErrorMessage(e) }
   }
   if (!hit) {
-    if (failed) throw new Error(`법령 조회 실패: ${lawName}`)
+    // 실패 사유를 그대로 올려 호출부(대시보드)가 화면에 표시할 수 있게 한다
+    if (failure) throw new Error(failure)
     return null
   }
 
@@ -431,10 +460,16 @@ export async function fetchLawMeta(lawName) {
 
 // 법령명으로 조문 + 메타정보 가져오기 (법령검토 모달용)
 export async function fetchLawFull(lawName) {
-  let hit = await searchHitSafe(lawName, 'law')
   let target = 'law'
-  if (!hit) { hit = await searchHitSafe(lawName, 'admrul'); target = 'admrul' }
-  if (!hit) return { articles: null, meta: null }
+  let hit = null
+  let error = null
+  try { hit = await searchHit(lawName, 'law') } catch (e) { error = lawErrorMessage(e) }
+  if (!hit) {
+    target = 'admrul'
+    try { hit = await searchHit(lawName, 'admrul') } catch (e) { error = error || lawErrorMessage(e) }
+  }
+  // 조회 결과가 없는 것(정상)과 연결 실패(error)를 구분해 돌려준다
+  if (!hit) return { articles: null, meta: null, error }
 
   // 검색 결과에서 1차 메타 추출
   const rawLink = hit.법령링크 || null
@@ -449,7 +484,13 @@ export async function fetchLawFull(lawName) {
   }
 
   const mst = hit.법령일련번호
-  const { data: contentData } = await axios.get(PROXY + '/content', { params: { mst, target }, headers: authHeaders() })
+  let contentData
+  try {
+    ({ data: contentData } = await axios.get(PROXY + '/content', { params: { mst, target }, headers: authHeaders() }))
+  } catch (e) {
+    // 검색은 됐지만 전문 조회가 실패한 경우 — 메타만이라도 살려서 사유와 함께 돌려준다
+    return { articles: null, meta, error: lawErrorMessage(e) }
+  }
   const root = contentData?.법령 ?? contentData?.행정규칙 ?? contentData?.AdmRulService
 
   // 전문(content) 기본정보에서 날짜 재추출 — 검색 결과보다 정확
@@ -458,5 +499,6 @@ export async function fetchLawFull(lawName) {
   return {
     articles: parseContentData(contentData),
     meta,
+    error: null,
   }
 }

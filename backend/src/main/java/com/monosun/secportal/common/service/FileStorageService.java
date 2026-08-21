@@ -87,6 +87,13 @@ public class FileStorageService {
         return rootDir.relativize(target).toString().replace('\\', '/');
     }
 
+    /** 업로드 루트 기준 상대 경로를 실제 경로로 바꾼다 (루트 밖으로 나가는 경로는 거부) */
+    public Path resolvePath(String relativePath) {
+        Path file = rootDir.resolve(relativePath).normalize();
+        if (!file.startsWith(rootDir)) throw new SecurityException("잘못된 파일 경로");
+        return file;
+    }
+
     public Resource load(String relativePath) {
         try {
             Path file = rootDir.resolve(relativePath).normalize();

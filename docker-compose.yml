@@ -55,6 +55,10 @@ services:
       PI_ENCRYPTION_KEY: ${PI_ENCRYPTION_KEY:-}
       PI_ENCRYPTION_KEY_FILE: ${PI_ENCRYPTION_KEY_FILE:-}
       PI_COLUMN_ENCRYPTION_ENABLED: ${PI_COLUMN_ENCRYPTION_ENABLED:-true}
+      # 보안문서 오피스 파일(PPT·DOC 등) 미리보기용 PDF 변환 서버. 비우면 변환 미리보기가 꺼진다.
+      DOC_CONVERT_URL: ${DOC_CONVERT_URL:-http://gotenberg:3000}
+      DOC_CONVERT_TIMEOUT: ${DOC_CONVERT_TIMEOUT:-120}
+      DOC_CONVERT_MAX_MB: ${DOC_CONVERT_MAX_MB:-80}
       JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
       # JMX 모니터링이 필요한 경우: docker exec -it secportal-backend sh 후 로컬에서 접속
     volumes:
@@ -69,6 +73,30 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      gotenberg:
+        condition: service_started
+
+  # 오피스 문서(PPT·DOC 등)를 PDF 로 변환해 보안문서 미리보기에 쓰는 변환 서버
+  gotenberg:
+    build:
+      context: ./gotenberg
+      dockerfile: Dockerfile
+    container_name: secportal-gotenberg
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+    # 대용량 발표자료 변환이 기본 제한(30초)에 걸리지 않도록 여유를 둔다
+    command:
+      - gotenberg
+      - --api-timeout=180s
+      - --libreoffice-restart-after=10
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # 포트는 외부에 노출하지 않는다 — 백엔드에서 컨테이너 네트워크로만 접근한다
 
   frontend:
     build:

@@ -275,6 +275,7 @@
     <!-- 파일 미리보기 -->
     <FilePreviewModal :open="!!preview" :file-name="preview?.fileName" :title="preview?.title"
       :loader="() => secDocApi.fetchBlob(preview.id)"
+      :pdf-loader="() => secDocApi.fetchPreviewPdf(preview.id)"
       @close="preview = null" @download="previewDownload" />
   </div>
 </template>
@@ -497,7 +498,9 @@ async function download(doc) {
   }
 }
 
-// 파일명을 누르면 내려받지 않고 팝업으로 먼저 보여준다 (PDF·이미지·엑셀/CSV·텍스트)
+// 파일명을 누르면 내려받지 않고 팝업으로 먼저 보여준다.
+// PDF·이미지·엑셀/CSV·텍스트는 화면에서 바로, PPT·DOC 등은 서버가 PDF 로 변환해 보여준다.
+
 function openPreview(doc) {
   preview.value = { id: doc.id, fileName: doc.fileName, title: doc.title || '' }
 }

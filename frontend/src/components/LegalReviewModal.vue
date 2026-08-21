@@ -134,10 +134,18 @@
             <p class="text-sm text-gray-500">법령 조문 전체 조회 중...</p>
           </div>
           <div v-else-if="activeIdx >= 0 && !activeTabLoading && activeArticles.length === 0"
-            class="flex items-center justify-center py-20 text-sm text-gray-400">
-            조문 데이터를 불러올 수 없습니다.
+            class="flex flex-col items-center justify-center py-20 px-8 gap-1.5 text-center">
+            <p class="text-sm text-gray-500">조문 데이터를 불러올 수 없습니다.</p>
+            <p v-if="activeError" class="text-xs text-red-500 leading-relaxed">{{ activeError }}</p>
           </div>
           <div v-else class="px-6 py-4 space-y-1.5">
+            <!-- 실시간 조회 실패 — 내장 조문으로 표시 중임을 알린다 -->
+            <div v-if="activeError"
+              class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800 mb-3">
+              <span class="font-semibold">법제처 실시간 조회 실패</span> — {{ activeError }}
+              <span class="block mt-0.5 text-amber-700">최신 조문이 아닐 수 있어 내장된 조문으로 표시합니다.</span>
+            </div>
+
             <!-- 이전 검토 대비 변경 배너 -->
             <div v-if="activeDiff" class="rounded-xl border px-4 py-2.5 text-xs mb-3"
               :class="activeDiffHasChanges
@@ -368,6 +376,8 @@ onMounted(() => {
 // ── 탭 상태 ──────────────────────────────────────────
 const activeIdx   = ref(-1)
 const tabStates   = ref({})
+// 법령별 실시간 조회 실패 사유 — 내장(정적) 조문으로 대체했음을 화면에 알린다
+const tabErrors   = ref({})
 const tabArticles = ref({})
 const tabMeta     = ref({})
 
@@ -375,6 +385,9 @@ const activeLawName = computed(() => props.laws[activeIdx.value]?.name ?? null)
 const activeLaw     = computed(() => props.laws[activeIdx.value] ?? null)
 const activeTabLoading = computed(() =>
   activeIdx.value >= 0 && tabStates.value[activeLawName.value] === 'loading'
+)
+const activeError = computed(() =>
+  activeIdx.value >= 0 ? (tabErrors.value[activeLawName.value] ?? '') : ''
 )
 const activeArticles = computed(() =>
   activeIdx.value >= 0 ? (tabArticles.value[activeLawName.value] ?? []) : []
@@ -423,14 +436,17 @@ async function loadLaw(lawName) {
   if (tabStates.value[lawName]) return  // 이미 조회 중이거나 완료
   tabStates.value = { ...tabStates.value, [lawName]: 'loading' }
   try {
-    const { articles, meta } = await fetchLawFull(lawName)
+    const { articles, meta, error } = await fetchLawFull(lawName)
     tabArticles.value = {
       ...tabArticles.value,
       [lawName]: articles?.length ? articles : (LAW_ARTICLES[lawName] ?? [])
     }
     if (meta) tabMeta.value = { ...tabMeta.value, [lawName]: meta }
-  } catch {
+    // 연결 실패로 내장 조문을 쓰게 된 경우 사유를 남긴다 (조회 결과만 없는 경우는 오류가 아님)
+    if (error) tabErrors.value = { ...tabErrors.value, [lawName]: error }
+  } catch (e) {
     tabArticles.value = { ...tabArticles.value, [lawName]: LAW_ARTICLES[lawName] ?? [] }
+    tabErrors.value = { ...tabErrors.value, [lawName]: e?.message || '법제처 조회에 실패했습니다.' }
   }
   tabStates.value = { ...tabStates.value, [lawName]: 'loaded' }
   loadDrafts(lawName)

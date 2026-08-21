@@ -3,18 +3,26 @@ package com.monosun.secportal.rss.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monosun.secportal.rss.dto.RssItemDto;
+import com.monosun.secportal.rss.dto.RssResultDto;
 import com.monosun.secportal.setting.service.AppSettingService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import javax.net.ssl.SSLException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -22,6 +30,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
+@Slf4j
 @Service
 public class RssService {
 
@@ -48,12 +57,12 @@ public class RssService {
         this.objectMapper = objectMapper;
     }
 
-    public List<RssItemDto> fetchKrcert() {
+    public RssResultDto fetchKrcert() {
         return fetchKrcert(null);
     }
 
     /** daysOverride 가 있으면 그 기간(1~366일)으로, 없으면 설정관리의 rss.days 로 필터링 */
-    public List<RssItemDto> fetchKrcert(Integer daysOverride) {
+    public RssResultDto fetchKrcert(Integer daysOverride) {
         int days = (daysOverride != null)
                 ? Math.max(1, Math.min(366, daysOverride))
                 : resolveDays();
@@ -61,15 +70,28 @@ public class RssService {
         List<Map<String, String>> feeds = resolveFeeds();
 
         List<RssItemDto> result = new ArrayList<>();
+        List<RssResultDto.FeedError> errors = new ArrayList<>();
         for (Map<String, String> feed : feeds) {
             String url = feed.get("url");
+            if (url == null || url.isBlank()) continue;
             String category = feed.getOrDefault("category", "other");
-            if (url != null && !url.isBlank()) {
+            String label = feed.getOrDefault("label", category);
+            try {
                 result.addAll(fetchFeed(url, category, cutoff));
+            } catch (Exception e) {
+                // 피드 하나가 죽어도 나머지는 보여준다. 다만 조용히 빈 목록을 돌려주면
+                // 화면에 "게시물이 없습니다" 로 보이므로 실패 사유를 함께 올린다.
+                log.warn("RSS 조회 실패 ({} / {}): {}", label, url, e.toString());
+                errors.add(RssResultDto.FeedError.builder()
+                        .label(label)
+                        .category(category)
+                        .url(url)
+                        .message(describeFailure(url, e))
+                        .build());
             }
         }
         result.sort(Comparator.comparing(RssItemDto::getPubDate).reversed());
-        return result;
+        return RssResultDto.builder().items(result).errors(errors).build();
     }
 
     private int resolveDays() {
@@ -98,14 +120,38 @@ public class RssService {
         }
     }
 
+    /** 피드 하나를 읽어 항목으로 바꾼다. 접속·형식 오류는 사유를 알 수 있게 호출부로 던진다. */
     private List<RssItemDto> fetchFeed(String url, String category, LocalDate cutoff) {
+        String xml = restTemplate.getForObject(url, String.class);
+        if (xml == null || xml.isBlank()) throw new IllegalStateException("응답이 비어 있습니다");
+        return parseRss(xml, category, cutoff);
+    }
+
+    /** 실패 원인을 사용자가 읽고 조치할 수 있는 한 문장으로 바꾼다 */
+    private String describeFailure(String url, Exception e) {
+        String host = hostOf(url);
+        if (e instanceof HttpStatusCodeException he) {
+            return host + " 응답 오류 " + he.getStatusCode().value() + " — 피드 주소를 확인하세요";
+        }
+        Throwable cause = (e instanceof ResourceAccessException && e.getCause() != null) ? e.getCause() : e;
+        if (cause instanceof UnknownHostException) return host + " 주소를 찾을 수 없습니다 (DNS 조회 실패)";
+        if (cause instanceof SocketTimeoutException) return host + " 응답 시간이 초과되었습니다";
+        if (cause instanceof ConnectException) return host + " 에 접속하지 못했습니다 (연결 거부·차단)";
+        if (cause instanceof SSLException) return host + " SSL 연결에 실패했습니다";
+        if (e instanceof IllegalStateException) return host + " — " + e.getMessage();
+        String msg = cause.getMessage();
+        return host + " 조회 실패" + (msg == null || msg.isBlank() ? "" : ": " + msg);
+    }
+
+    private String hostOf(String url) {
         try {
-            String xml = restTemplate.getForObject(url, String.class);
-            return parseRss(xml, category, cutoff);
+            String host = java.net.URI.create(url).getHost();
+            return (host != null && !host.isBlank()) ? host : url;
         } catch (Exception e) {
-            return List.of();
+            return url;
         }
     }
+
 
     private List<RssItemDto> parseRss(String xml, String category, LocalDate cutoff) {
         List<RssItemDto> items = new ArrayList<>();
@@ -147,7 +193,11 @@ public class RssService {
                         .category(category)
                         .build());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            // XML 이 깨졌거나 RSS 가 아닌 응답(오류 페이지 등)을 받은 경우 —
+            // 빈 목록을 돌려주면 화면에 "게시물 없음" 으로 보이므로 사유를 호출부로 올린다.
+            throw new IllegalStateException("RSS 형식을 해석하지 못했습니다", e);
+        }
         return items;
     }
 

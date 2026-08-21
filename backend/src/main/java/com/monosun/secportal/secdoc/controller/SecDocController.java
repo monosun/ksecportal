@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -86,6 +87,20 @@ public class SecDocController {
     public ApiResponse<Void> deleteVersion(@PathVariable Long id) throws IOException {
         service.deleteVersion(id);
         return ApiResponse.ok(null);
+    }
+
+    /**
+     * 오피스 문서(PPT·DOC 등) 미리보기 — 서버에서 PDF 로 변환해 그대로 내려준다.
+     * 브라우저 내장 PDF 뷰어로 바로 열 수 있도록 inline 으로 보낸다.
+     */
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<Resource> preview(@PathVariable Long id) {
+        Resource pdf = service.previewPdf(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=300")
+                .body(pdf);
     }
 
     @GetMapping("/{id}/download")

@@ -32,9 +32,18 @@
       </div>
 
       <div class="flex-1 min-h-0 overflow-auto bg-gray-50">
-        <div v-if="loading" class="h-full flex items-center justify-center text-gray-400 text-sm">불러오는 중...</div>
+        <div v-if="loading" class="h-full flex flex-col items-center justify-center gap-1.5 text-sm text-gray-400">
+          <span>{{ loadingText }}</span>
+          <span v-if="kind === 'office'" class="text-xs text-gray-300">
+            처음 여는 문서는 변환에 시간이 걸릴 수 있습니다
+          </span>
+        </div>
         <div v-else-if="error" class="h-full flex flex-col items-center justify-center gap-2 text-center px-6">
-          <p class="text-sm text-gray-600">{{ error }}</p>
+          <svg class="w-8 h-8 text-amber-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M12 9v3.5m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <p class="text-sm text-gray-600 max-w-xl leading-relaxed">{{ error }}</p>
           <button @click="$emit('download')" class="btn-secondary text-sm mt-1">파일 다운로드</button>
         </div>
 
@@ -79,12 +88,18 @@ const props = defineProps({
   title: { type: String, default: '' },
   /** Blob 을 돌려주는 로더 — 화면마다 다른 API 를 쓰므로 주입받는다 */
   loader: { type: Function, default: null },
+  /**
+   * PPT·DOC 등 브라우저가 직접 못 여는 문서를 PDF Blob 으로 돌려주는 로더.
+   * 서버 변환을 지원하는 화면만 넘기면 되고, 없으면 해당 형식은 다운로드 안내를 보여준다.
+   */
+  pdfLoader: { type: Function, default: null },
 })
 const emit = defineEmits(['close', 'download'])
 
 const MAX_ROWS = 300
 
 const loading = ref(false)
+const loadingText = ref('불러오는 중...')
 const error = ref('')
 const kind = ref('')          // pdf | image | sheet | text
 const blobUrl = ref('')
@@ -95,6 +110,12 @@ const activeSheet = ref('')
 const sheetRows = ref([])
 const truncated = ref(false)
 
+/** 서버에서 PDF 로 변환해 보여주는 오피스 문서 (백엔드 DocumentPreviewService 와 같은 목록) */
+const OFFICE_EXTS = [
+  'ppt', 'pptx', 'pptm', 'pps', 'ppsx', 'ppsm', 'pot', 'potx', 'odp',
+  'doc', 'docx', 'odt', 'rtf',
+]
+
 /** 확장자로 미리보기 방식을 정한다 (서버 허용 확장자 기준) */
 function detectKind(name) {
   const ext = (name || '').split('.').pop()?.toLowerCase() || ''
@@ -102,6 +123,7 @@ function detectKind(name) {
   if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image'
   if (['xlsx', 'xls', 'csv'].includes(ext)) return 'sheet'
   if (ext === 'txt') return 'text'
+  if (OFFICE_EXTS.includes(ext)) return 'office'
   return ''
 }
 
@@ -141,7 +163,11 @@ watch(() => [props.open, props.fileName], async ([open]) => {
   reset()
   kind.value = detectKind(props.fileName)
   if (!kind.value) {
-    error.value = '이 형식은 미리보기를 지원하지 않습니다. 다운로드해서 확인해 주세요.'
+    error.value = `${fileExt().toUpperCase()} 형식은 미리보기를 지원하지 않습니다. 다운로드해서 확인해 주세요.`
+    return
+  }
+  if (kind.value === 'office' && !props.pdfLoader) {
+    error.value = `${fileExt().toUpperCase()} 문서는 이 화면에서 미리보기 변환을 지원하지 않습니다. 다운로드해서 확인해 주세요.`
     return
   }
   if (!props.loader) {
@@ -150,7 +176,15 @@ watch(() => [props.open, props.fileName], async ([open]) => {
   }
 
   loading.value = true
+  loadingText.value = kind.value === 'office' ? 'PDF로 변환하는 중...' : '불러오는 중...'
   try {
+    if (kind.value === 'office') {
+      // 서버가 PDF 로 변환해 주므로 이후는 PDF 미리보기와 똑같이 다룬다
+      const pdf = await props.pdfLoader()
+      blobUrl.value = URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }))
+      kind.value = 'pdf'
+      return
+    }
     const blob = await props.loader()
     if (kind.value === 'pdf' || kind.value === 'image') {
       // 서버가 octet-stream 으로 내려주므로 미리보기용 MIME 을 붙여 준다
@@ -169,11 +203,26 @@ watch(() => [props.open, props.fileName], async ([open]) => {
       textContent.value = await blob.text()
     }
   } catch (e) {
-    error.value = typeof e === 'string' ? e : '파일을 불러오지 못했습니다.'
+    // 백엔드는 실패 사유를 문자열로 돌려준다(변환 서버 미설정·연결 실패·형식 미지원·용량 초과 등).
+    // 사유가 없을 때만 형식별 기본 안내를 보여 준다.
+    if (typeof e === 'string' && e.trim()) {
+      error.value = e
+    } else if (kind.value === 'office') {
+      error.value = `${fileExt().toUpperCase()} 문서를 PDF로 변환하지 못했습니다(서버 오류). `
+        + '잠시 후 다시 시도하거나 파일을 다운로드해 확인해 주세요.'
+    } else if (kind.value === 'sheet') {
+      error.value = '파일을 표로 읽지 못했습니다. 파일이 손상되었을 수 있으니 다운로드해 확인해 주세요.'
+    } else {
+      error.value = '파일을 불러오지 못했습니다. 잠시 후 다시 시도하거나 파일을 다운로드해 확인해 주세요.'
+    }
   } finally {
     loading.value = false
   }
 }, { immediate: true })
+
+function fileExt() {
+  return (props.fileName || '').split('.').pop()?.toLowerCase() || '문서'
+}
 
 function guessImageType() {
   const ext = (props.fileName || '').split('.').pop()?.toLowerCase()

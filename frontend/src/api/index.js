@@ -570,7 +570,10 @@ export const secDocApi = {
   deleteVersion: (id) => api.delete(`/sec-docs/${id}/version`),
   download: (id, fileName) => downloadBlob(`/sec-docs/${id}/download`, fileName),
   // 미리보기용 — 내려받지 않고 Blob 그대로 받는다
-  fetchBlob: (id) => api.get(`/sec-docs/${id}/download`, { responseType: 'blob' })
+  fetchBlob: (id) => api.get(`/sec-docs/${id}/download`, { responseType: 'blob' }),
+  // PPT·DOC 등 브라우저가 직접 못 여는 문서를 서버에서 PDF 로 변환해 받는다.
+  // 첫 변환은 수십 초가 걸릴 수 있어 기본 timeout(30초)을 늘린다.
+  fetchPreviewPdf: (id) => api.get(`/sec-docs/${id}/preview`, { responseType: 'blob', timeout: 180000 })
 }
 
 export const committeeApi = {

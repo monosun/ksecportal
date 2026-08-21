@@ -26,6 +26,7 @@ public class SecDocService {
 
     private final SecDocRepository repository;
     private final FileStorageService fileStorageService;
+    private final com.monosun.secportal.common.service.DocumentPreviewService documentPreviewService;
     private final com.monosun.secportal.audit.service.AuditLogService auditLogService;
 
     private static final java.util.Set<String> SEARCH_FIELDS =
@@ -151,7 +152,10 @@ public class SecDocService {
         SecDoc doc = find(id);
         List<SecDoc> versions = repository.findByDocumentKeyOrderByCreatedAtDesc(doc.getDocumentKey());
         for (SecDoc v : versions) {
-            if (v.getFilePath() != null) fileStorageService.delete(v.getFilePath());
+            if (v.getFilePath() != null) {
+                documentPreviewService.deleteCache(v.getFilePath());
+                fileStorageService.delete(v.getFilePath());
+            }
         }
         // 문서가 없어졌을 때 누가·언제 지웠는지 추적할 수 있도록 남긴다
         auditLogService.log("SEC_DOC_DELETED", "SEC_DOC", id,
@@ -162,7 +166,10 @@ public class SecDocService {
     @Transactional
     public void deleteVersion(Long id) throws IOException {
         SecDoc doc = find(id);
-        if (doc.getFilePath() != null) fileStorageService.delete(doc.getFilePath());
+        if (doc.getFilePath() != null) {
+            documentPreviewService.deleteCache(doc.getFilePath());
+            fileStorageService.delete(doc.getFilePath());
+        }
         auditLogService.log("SEC_DOC_VERSION_DELETED", "SEC_DOC", id,
                 doc.getTitle() + " v" + doc.getVersion());
 
@@ -179,6 +186,16 @@ public class SecDocService {
         SecDoc doc = find(id);
         if (doc.getFilePath() == null) throw new BusinessException("첨부파일이 없습니다.");
         return fileStorageService.load(doc.getFilePath());
+    }
+
+    /**
+     * 브라우저에서 바로 열 수 없는 오피스 문서(PPT·DOC 등)를 PDF 로 변환해 돌려준다.
+     * 변환 결과는 캐시되므로 같은 문서를 다시 열 때는 즉시 응답한다.
+     */
+    public org.springframework.core.io.Resource previewPdf(Long id) {
+        SecDoc doc = find(id);
+        if (doc.getFilePath() == null) throw new BusinessException("첨부파일이 없습니다.");
+        return documentPreviewService.toPdf(doc.getFilePath(), doc.getFileName());
     }
 
     private SecDoc find(Long id) {
