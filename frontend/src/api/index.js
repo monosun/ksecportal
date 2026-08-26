@@ -175,6 +175,19 @@ export const adminApi = {
   deleteCodeValue: (groupCode, id) => api.delete(`/admin/codes/${groupCode}/values/${id}`)
 }
 
+export const errorLogApi = {
+  list: (params) => api.get('/admin/error-logs', { params }),
+  get: (id) => api.get(`/admin/error-logs/${id}`),
+  stats: () => api.get('/admin/error-logs/stats'),
+  handle: (id, data) => api.patch(`/admin/error-logs/${id}`, data),
+  delete: (id) => api.delete(`/admin/error-logs/${id}`),
+  purge: (days) => api.delete('/admin/error-logs', { params: { days } }),
+  purgeHandled: () => api.delete('/admin/error-logs/handled'),
+  export: (params) => downloadBlob('/admin/error-logs/export', `에러로그-${today()}.xlsx`, params),
+  // 화면(JS)에서 발생한 오류 보고 — 실패해도 사용자 흐름을 막지 않는다
+  report: (data) => api.post('/error-logs/client', data)
+}
+
 export const codeApi = {
   getValues: (groupCode) => api.get(`/codes/${groupCode}`),
   // 목록 화면의 개인정보 마스킹 기준(관리 > 코드관리 > 개인정보 유형별 항목관리)

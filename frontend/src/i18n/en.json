@@ -337,6 +337,7 @@
     "users": "User Management",
     "rbac": "Access Control",
     "auditLogs": "Audit Logs",
+    "errorLogs": "Error Logs",
     "performance": "Performance",
     "notices": "Notice Management",
     "role": "Role",

@@ -176,6 +176,12 @@ const routes = [
         meta: { adminOnly: true }
       },
       {
+        path: 'admin/error-logs',
+        name: 'AdminErrorLogs',
+        component: () => import('@/views/admin/ErrorLogView.vue'),
+        meta: { adminOnly: true }
+      },
+      {
         path: 'admin/performance',
         name: 'AdminPerformance',
         component: () => import('@/views/admin/PerformanceView.vue'),

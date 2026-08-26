@@ -58,6 +58,11 @@ notification:
 relatedsite:
   refresh-cron: ${RELATED_SITE_CRON:0 10 7 * * *}
 
+# 에러 로그 보관 정책 (관리 > 에러 로그 관리)
+errorlog:
+  retention-days: ${ERROR_LOG_RETENTION_DAYS:90}
+  purge-cron: ${ERROR_LOG_PURGE_CRON:0 40 4 * * *}
+
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080/api}
   upload:

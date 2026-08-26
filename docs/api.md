@@ -1090,6 +1090,95 @@ CycloneDX JSON 파일을 업로드해 SBOM을 가져옵니다. syft·cdxgen·tri
 
 ---
 
+## 에러 로그 관리 (Error Logs)
+
+프로그램 처리 중 발생한 오류를 수집·조회·정리합니다. 조회·관리는 모두 **ADMIN** 권한이 필요합니다.
+
+수집 대상은 ① 서버 예외(전역 예외 처리기에서 잡힌 500 오류, 업로드 실패·용량 초과·잘못된 요청 값은 경고), ② 화면(JS) 오류, ③ 스케줄러 작업 실패입니다. 입력값 검증 실패·권한 오류·없는 경로 요청처럼 안내 문구로 처리되는 경우는 적재하지 않습니다. 기록은 별도 트랜잭션(`REQUIRES_NEW`)에서 수행하며 실패해도 원래 요청에 영향을 주지 않습니다.
+
+### GET /admin/error-logs
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `level` | String | `ERROR` \| `WARN` |
+| `source` | String | `BACKEND` \| `FRONTEND` \| `SCHEDULER` |
+| `status` | String | `NEW` \| `IN_PROGRESS` \| `RESOLVED` \| `IGNORED` |
+| `keyword` | String | 오류 종류·메시지·요청 경로·사용자명 통합 검색 |
+| `dateFrom` / `dateTo` | String | 발생 일시 범위 (ISO 8601) |
+| `page` / `size` | Number | 페이징 (기본 size=50) |
+
+```json
+// 응답 항목 (content[])
+{
+  "id": 12, "occurredAt": "2026-08-27 00:22:03", "level": "ERROR",
+  "source": "BACKEND", "status": "NEW",
+  "exceptionType": "java.lang.NullPointerException",
+  "message": "Cannot invoke \"...\"",
+  "httpMethod": "POST", "requestUri": "/api/assets", "httpStatus": 500,
+  "userName": "홍길동", "ipAddress": "10.0.0.5",
+  "fingerprint": "9aaf6340...", "note": null,
+  "handledByName": null, "handledAt": null
+}
+```
+
+### GET /admin/error-logs/stats
+
+```json
+{
+  "total": 128, "newCount": 7, "inProgress": 2, "resolved": 110, "ignored": 9,
+  "last24h": 5, "last7d": 21, "errorLast24h": 3,
+  "top": [{ "exceptionType": "...", "requestUri": "/api/assets", "count": 12,
+            "lastOccurredAt": "2026-08-26 18:02:11" }]
+}
+```
+
+최근 7일간 같은 원인(`fingerprint`)으로 반복된 오류 상위 5건을 `top` 에 담아 줍니다. `fingerprint` 는 예외 타입·메시지(숫자 제거)·최상단 스택 프레임·요청 경로의 SHA-256 해시입니다.
+
+### GET /admin/error-logs/{id}
+
+목록 항목(`summary`)에 `stackTrace`·`userAgent` 를 더한 상세를 돌려줍니다.
+
+### PATCH /admin/error-logs/{id}
+
+```json
+{ "status": "RESOLVED", "note": "조회 쿼리 NULL 처리 수정" }
+```
+
+처리자·처리 일시가 함께 기록되며(상태를 `NEW` 로 되돌리면 처리 이력 삭제), 감사 로그에 `ERROR_LOG_STATUS_CHANGED` 가 남습니다.
+
+### DELETE /admin/error-logs/{id}
+
+오류 로그 1건 삭제. 감사 로그 `ERROR_LOG_DELETED`.
+
+### DELETE /admin/error-logs
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `days` | Number | 이 일수보다 오래된 로그 삭제 (기본 90, `0` 이면 전체 삭제) |
+
+삭제 건수를 `data` 로 돌려줍니다. 감사 로그 `ERROR_LOG_PURGED`.
+
+### DELETE /admin/error-logs/handled
+
+`RESOLVED`·`IGNORED` 상태의 로그를 모두 삭제합니다.
+
+### GET /admin/error-logs/export
+
+조회 조건(`level`·`source`·`status`·`keyword`·기간)을 그대로 적용해 최대 5,000건을 xlsx 로 내려받습니다.
+
+### POST /error-logs/client
+
+화면(JS)에서 발생한 오류 보고. **로그인한 사용자**면 호출할 수 있고 응답은 `204 No Content` 입니다.
+
+```json
+{ "name": "TypeError", "message": "x is not a function",
+  "stack": "TypeError: ...", "url": "/assets" }
+```
+
+> 보관 기간이 지난 로그는 매일 정해진 시각에 자동 삭제됩니다. 기본값은 90일 / `0 40 4 * * *` 이며 `ERROR_LOG_RETENTION_DAYS`·`ERROR_LOG_PURGE_CRON` 으로 조정합니다.
+
+---
+
 ## 성능관리 (Performance, v1.26.0)
 
 지연 기준(기본 3초)을 넘긴 화면 요청·SQL 기록. 모두 **ADMIN** 권한이 필요합니다.
