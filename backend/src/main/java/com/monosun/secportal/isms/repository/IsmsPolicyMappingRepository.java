@@ -14,6 +14,11 @@ public interface IsmsPolicyMappingRepository extends JpaRepository<IsmsPolicyMap
            "WHERE m.ismsItem.id IN :itemIds")
     List<IsmsPolicyMapping> findByIsmsItemIdIn(@Param("itemIds") List<Long> itemIds);
 
+    /** 매핑 일괄 내보내기용 — 항목·정책·조를 한 번에 읽는다. */
+    @Query("SELECT m FROM IsmsPolicyMapping m JOIN FETCH m.ismsItem JOIN FETCH m.policy " +
+           "LEFT JOIN FETCH m.policyArticle")
+    List<IsmsPolicyMapping> findAllWithRefs();
+
     // ── 장(章) 전체 매핑 ─────────────────────────────────────────────────────
 
     boolean existsByIsmsItemIdAndPolicyIdAndPolicyArticleIsNull(Long ismsItemId, Long policyId);

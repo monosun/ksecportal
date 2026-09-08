@@ -769,6 +769,418 @@ public class IsmsService {
                 .build();
     }
 
+    // ── 통제항목 ↔ 정책 매핑 일괄 다운로드/업로드 ───────────────────────────────────
+
+    /**
+     * 매핑 시트의 열 순서. 내보내기·템플릿·업로드가 모두 이 순서를 공유하므로
+     * 내려받은 파일을 그대로 고쳐 다시 올릴 수 있다.
+     */
+    private static final String[] MAPPING_HEADERS = {
+            "항목코드", "항목명(참고)", "도메인(참고)", "지침명", "정책(장) 제목",
+            "조 표기", "조 제목(참고)", "정책ID(선택)", "조ID(선택)"
+    };
+    private static final int[] MAPPING_COL_WIDTHS = {3000, 12000, 8000, 9000, 14000, 3500, 12000, 3000, 3000};
+
+    private static final int MAP_ITEM_CODE     = 0;
+    private static final int MAP_GUIDELINE     = 3;
+    private static final int MAP_POLICY_TITLE  = 4;
+    private static final int MAP_ARTICLE_LABEL = 5;
+    private static final int MAP_POLICY_ID     = 7;
+    private static final int MAP_ARTICLE_ID    = 8;
+
+    /** 장 전체 매핑이 각 장의 맨 앞에 오도록 정렬한다(화면 표시 순서와 같다). */
+    private static final Comparator<IsmsPolicyMapping> MAPPING_ROW_ORDER =
+            Comparator.<IsmsPolicyMapping, Long>comparing(m -> m.getPolicy().getId())
+                    .thenComparingInt(m -> m.getPolicyArticle() == null ? 0 : 1)
+                    .thenComparingInt(m -> m.getPolicyArticle() == null ? 0 : m.getPolicyArticle().getSortOrder());
+
+    /** 업로드 파일에서 읽은 한 행 — 오류 안내에 실제 엑셀 행 번호를 쓰기 위해 함께 싣는다. */
+    private record SheetRow(int number, String[] cols) {}
+
+    /** 현재 등록된 매핑 전체를 엑셀로 내보낸다. 매핑이 없는 항목도 빈 행으로 실어 그대로 고쳐 올릴 수 있다. */
+    @Transactional(readOnly = true)
+    public byte[] exportMappings() throws IOException {
+        return buildMappingWorkbook(true);
+    }
+
+    /** 일괄 업로드용 빈 템플릿 — 항목 행만 채우고 정책 열은 비워 둔다. */
+    @Transactional(readOnly = true)
+    public byte[] getMappingTemplate() throws IOException {
+        return buildMappingWorkbook(false);
+    }
+
+    private byte[] buildMappingWorkbook(boolean withData) throws IOException {
+        List<IsmsItem> items = itemRepository.findAllByOrderBySortOrderAsc();
+        Map<Long, List<IsmsPolicyMapping>> byItem = withData
+                ? policyMappingRepository.findAllWithRefs().stream()
+                        .collect(Collectors.groupingBy(m -> m.getIsmsItem().getId()))
+                : Collections.emptyMap();
+
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            XSSFCellStyle headerStyle = mappingHeaderStyle(wb);
+
+            XSSFSheet sheet = wb.createSheet(withData ? "매핑목록" : "매핑입력");
+            XSSFRow hRow = sheet.createRow(0);
+            for (int i = 0; i < MAPPING_HEADERS.length; i++) {
+                XSSFCell cell = hRow.createCell(i);
+                cell.setCellValue(MAPPING_HEADERS[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, MAPPING_COL_WIDTHS[i]);
+            }
+            sheet.createFreezePane(0, 1);
+
+            int r = 1;
+            for (IsmsItem item : items) {
+                List<IsmsPolicyMapping> mappings = new ArrayList<>(
+                        byItem.getOrDefault(item.getId(), Collections.emptyList()));
+                mappings.sort(MAPPING_ROW_ORDER);
+                if (mappings.isEmpty()) {
+                    writeMappingRow(sheet.createRow(r++), item, null);
+                } else {
+                    for (IsmsPolicyMapping m : mappings) writeMappingRow(sheet.createRow(r++), item, m);
+                }
+            }
+
+            writeMappingRuleSheet(wb);
+            writeMappingReferenceSheet(wb, headerStyle);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            wb.write(baos);
+            return baos.toByteArray();
+        }
+    }
+
+    private static XSSFCellStyle mappingHeaderStyle(XSSFWorkbook wb) {
+        XSSFCellStyle style = wb.createCellStyle();
+        style.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        XSSFFont font = wb.createFont();
+        font.setBold(true);
+        font.setColor(IndexedColors.WHITE.getIndex());
+        style.setFont(font);
+        return style;
+    }
+
+    /** 매핑 1건 = 1행. {@code mapping} 이 null 이면 매핑이 없는 항목 행이다(정책 열은 빈 칸). */
+    private static void writeMappingRow(XSSFRow row, IsmsItem item, IsmsPolicyMapping mapping) {
+        row.createCell(0).setCellValue(item.getItemCode());
+        row.createCell(1).setCellValue(item.getItemName());
+        row.createCell(2).setCellValue(item.getDomainName() != null ? item.getDomainName() : "");
+        if (mapping == null) return;
+
+        Policy p = mapping.getPolicy();
+        PolicyArticle a = mapping.getPolicyArticle();
+        row.createCell(3).setCellValue(p.getGuidelineName() != null ? p.getGuidelineName() : "");
+        row.createCell(4).setCellValue(p.getTitle());
+        row.createCell(5).setCellValue(a != null ? a.getArticleLabel() : "");
+        row.createCell(6).setCellValue(a != null && a.getTitle() != null ? a.getTitle() : "");
+        row.createCell(7).setCellValue(p.getId().doubleValue());
+        if (a != null) row.createCell(8).setCellValue(a.getId().doubleValue());
+    }
+
+    private void writeMappingRuleSheet(XSSFWorkbook wb) {
+        XSSFSheet guide = wb.createSheet("입력규칙");
+        guide.setColumnWidth(0, 1500);
+        guide.setColumnWidth(1, 26000);
+        guide.createRow(0).createCell(0).setCellValue("매핑 일괄 업로드 입력 규칙");
+
+        String[] rules = {
+                "항목코드는 필수입니다. ISMS-P 통제항목 코드(예: 1.1.1)를 그대로 씁니다.",
+                "한 행이 매핑 1건입니다. 한 통제항목에 여러 정책·조를 걸려면 항목코드를 반복해 여러 행으로 적습니다.",
+                "'조 표기'가 비어 있으면 장(章) 전체 매핑, 값이 있으면(예: 제12조) 그 조(條) 단위 매핑입니다.",
+                "'정책ID(선택)'·'조ID(선택)'을 채우면 제목 대신 ID로 정확히 찾습니다. 내보낸 파일에는 자동으로 채워집니다.",
+                "같은 제목의 장이 여러 건이면 '지침명'을 함께 적거나 '정책ID'를 채워야 합니다.",
+                "정책 열(지침명·정책제목·조 표기·ID)이 모두 빈 행은 '매핑 없음'으로 보고 건너뜁니다.",
+                "'기존 매핑 대체'로 올리면 파일에 나온 항목코드의 기존 매핑을 모두 지운 뒤 파일 내용으로 다시 등록합니다.",
+                "이미 등록된 매핑은 중복 등록하지 않고 건너뜁니다.",
+                ".xlsx 와 .csv 를 지원하며, 열 순서는 첫 시트의 헤더와 같아야 합니다.",
+                "'정책·조 목록(참고)' 시트에서 정책ID·조ID를 찾아 복사해 쓸 수 있습니다."
+        };
+        for (int i = 0; i < rules.length; i++) {
+            XSSFRow row = guide.createRow(i + 1);
+            row.createCell(0).setCellValue(i + 1);
+            row.createCell(1).setCellValue(rules[i]);
+        }
+    }
+
+    /** 정책ID·조ID를 찾아 쓸 수 있게 현재 등록된 장·조를 그대로 싣는다. */
+    private void writeMappingReferenceSheet(XSSFWorkbook wb, XSSFCellStyle headerStyle) {
+        XSSFSheet ref = wb.createSheet("정책·조 목록(참고)");
+        String[] headers = {"지침명", "정책ID", "정책(장) 제목", "조ID", "조 표기", "조 제목"};
+        int[] widths = {9000, 3000, 14000, 3000, 3500, 12000};
+        XSSFRow hRow = ref.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            XSSFCell cell = hRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+            ref.setColumnWidth(i, widths[i]);
+        }
+        ref.createFreezePane(0, 1);
+
+        Map<Long, List<Object[]>> articlesByPolicy = policyArticleRepository.findMappingRefs().stream()
+                .collect(Collectors.groupingBy(a -> (Long) a[0], LinkedHashMap::new, Collectors.toList()));
+
+        int r = 1;
+        for (Object[] p : policyRepository.findMappingRefs()) {
+            Long policyId = (Long) p[0];
+            String guideline = p[1] != null ? (String) p[1] : "";
+            String title = p[2] != null ? (String) p[2] : "";
+
+            XSSFRow chapterRow = ref.createRow(r++);
+            chapterRow.createCell(0).setCellValue(guideline);
+            chapterRow.createCell(1).setCellValue(policyId.doubleValue());
+            chapterRow.createCell(2).setCellValue(title);
+
+            for (Object[] a : articlesByPolicy.getOrDefault(policyId, Collections.emptyList())) {
+                XSSFRow row = ref.createRow(r++);
+                row.createCell(0).setCellValue(guideline);
+                row.createCell(1).setCellValue(policyId.doubleValue());
+                row.createCell(2).setCellValue(title);
+                row.createCell(3).setCellValue(((Long) a[1]).doubleValue());
+                row.createCell(4).setCellValue(a[2] != null ? (String) a[2] : "");
+                row.createCell(5).setCellValue(a[3] != null ? (String) a[3] : "");
+            }
+        }
+    }
+
+    /**
+     * 매핑 일괄 업로드.
+     *
+     * @param replace true 면 파일에 나온 항목코드의 기존 매핑을 모두 지운 뒤 파일 내용으로 다시 등록한다
+     *                (내보낸 파일에서 행을 지워 매핑을 없애는 편집이 그대로 반영된다).
+     *                false 면 새 매핑만 더한다.
+     */
+    @Transactional
+    public IsmsDto.MappingImportResult importMappings(MultipartFile file, boolean replace) throws IOException {
+        List<SheetRow> rows = readMappingRows(file);
+
+        // ── 제목·조 표기로도 찾을 수 있게 색인을 미리 만든다(본문은 읽지 않는 경량 조회) ──
+        Map<String, List<Long>> policyIdsByTitle = new HashMap<>();
+        Map<Long, String> guidelineByPolicyId = new HashMap<>();
+        for (Object[] p : policyRepository.findMappingRefs()) {
+            Long id = (Long) p[0];
+            guidelineByPolicyId.put(id, p[1] != null ? (String) p[1] : "");
+            policyIdsByTitle.computeIfAbsent(normalizeKey((String) p[2]), k -> new ArrayList<>()).add(id);
+        }
+        Map<Long, Map<String, Long>> articleIdByPolicy = new HashMap<>();
+        for (Object[] a : policyArticleRepository.findMappingRefs()) {
+            articleIdByPolicy.computeIfAbsent((Long) a[0], k -> new HashMap<>())
+                    .putIfAbsent(normalizeKey((String) a[2]), (Long) a[1]);
+        }
+
+        // ── 1) 파일에 나온 항목코드만 조회한다 ──
+        Map<String, IsmsItem> itemByCode = new HashMap<>();
+        Set<String> lookedUp = new HashSet<>();
+        LinkedHashSet<Long> touchedItemIds = new LinkedHashSet<>();
+        for (SheetRow row : rows) {
+            String code = cell(row, MAP_ITEM_CODE);
+            if (code.isBlank() || !lookedUp.add(code)) continue;
+            itemRepository.findByItemCode(code).ifPresent(item -> {
+                itemByCode.put(code, item);
+                touchedItemIds.add(item.getId());
+            });
+        }
+
+        // ── 2) 대체 모드 — 파일에 나온 항목의 기존 매핑을 먼저 비운다 ──
+        int removed = 0, clearedItems = 0;
+        if (replace && !touchedItemIds.isEmpty()) {
+            List<IsmsPolicyMapping> existing =
+                    policyMappingRepository.findByIsmsItemIdIn(new ArrayList<>(touchedItemIds));
+            removed = existing.size();
+            clearedItems = (int) existing.stream().map(m -> m.getIsmsItem().getId()).distinct().count();
+            policyMappingRepository.deleteAll(existing);
+            policyMappingRepository.flush();   // 아래 중복 검사·저장이 삭제 결과를 보도록 먼저 반영한다
+        }
+
+        // ── 3) 행별 매핑 등록 ──
+        int total = 0, success = 0, skipped = 0, failed = 0;
+        List<IsmsDto.BulkImportResult.RowError> errors = new ArrayList<>();
+        Map<Long, Policy> policyCache = new HashMap<>();
+        Map<Long, PolicyArticle> articleCache = new HashMap<>();
+        Set<String> seen = new HashSet<>();
+
+        for (SheetRow row : rows) {
+            String code         = cell(row, MAP_ITEM_CODE);
+            String guideline    = cell(row, MAP_GUIDELINE);
+            String policyTitle  = cell(row, MAP_POLICY_TITLE);
+            String articleLabel = cell(row, MAP_ARTICLE_LABEL);
+            Long policyIdCol    = parseId(cell(row, MAP_POLICY_ID));
+            Long articleIdCol   = parseId(cell(row, MAP_ARTICLE_ID));
+
+            boolean hasTarget = !policyTitle.isBlank() || !articleLabel.isBlank()
+                    || policyIdCol != null || articleIdCol != null;
+            if (!hasTarget) continue;   // 매핑 없음 행 — 대체 모드에서는 위에서 이미 비웠다
+            total++;
+
+            if (code.isBlank()) {
+                errors.add(rowError(row, code, "항목코드가 비어있습니다"));
+                failed++;
+                continue;
+            }
+            IsmsItem item = itemByCode.get(code);
+            if (item == null) {
+                errors.add(rowError(row, code, "존재하지 않는 항목코드: " + code));
+                failed++;
+                continue;
+            }
+
+            Policy policy;
+            PolicyArticle article = null;
+
+            if (articleIdCol != null) {
+                // 조ID가 있으면 소속 장까지 조에서 따라간다 — 가장 정확한 지정 방법
+                article = articleCache.computeIfAbsent(articleIdCol,
+                        id -> policyArticleRepository.findById(id).orElse(null));
+                if (article == null) {
+                    errors.add(rowError(row, code, "존재하지 않는 조ID: " + articleIdCol));
+                    failed++;
+                    continue;
+                }
+                policy = article.getPolicy();
+            } else {
+                if (policyIdCol != null) {
+                    policy = policyCache.computeIfAbsent(policyIdCol,
+                            id -> policyRepository.findById(id).orElse(null));
+                    if (policy == null) {
+                        errors.add(rowError(row, code, "존재하지 않는 정책ID: " + policyIdCol));
+                        failed++;
+                        continue;
+                    }
+                } else if (!policyTitle.isBlank()) {
+                    List<Long> candidates = policyIdsByTitle.getOrDefault(normalizeKey(policyTitle), List.of());
+                    if (candidates.size() > 1 && !guideline.isBlank()) {
+                        candidates = candidates.stream()
+                                .filter(id -> guideline.equals(guidelineByPolicyId.get(id)))
+                                .collect(Collectors.toList());
+                    }
+                    if (candidates.isEmpty()) {
+                        errors.add(rowError(row, code, "정책(장)을 찾을 수 없습니다: " + policyTitle));
+                        failed++;
+                        continue;
+                    }
+                    if (candidates.size() > 1) {
+                        errors.add(rowError(row, code,
+                                "같은 제목의 정책(장)이 여러 건입니다. 지침명 또는 정책ID 열을 채워주세요: " + policyTitle));
+                        failed++;
+                        continue;
+                    }
+                    Long pid = candidates.get(0);
+                    policy = policyCache.computeIfAbsent(pid, id -> policyRepository.findById(id).orElse(null));
+                    if (policy == null) {
+                        errors.add(rowError(row, code, "정책(장)을 찾을 수 없습니다: " + policyTitle));
+                        failed++;
+                        continue;
+                    }
+                } else {
+                    errors.add(rowError(row, code, "정책(장) 제목이 비어있습니다"));
+                    failed++;
+                    continue;
+                }
+
+                if (!articleLabel.isBlank()) {
+                    Long aid = articleIdByPolicy.getOrDefault(policy.getId(), Collections.emptyMap())
+                            .get(normalizeKey(articleLabel));
+                    if (aid == null) {
+                        errors.add(rowError(row, code,
+                                "'" + policy.getTitle() + "'에서 조를 찾을 수 없습니다: " + articleLabel));
+                        failed++;
+                        continue;
+                    }
+                    article = articleCache.computeIfAbsent(aid,
+                            id -> policyArticleRepository.findById(id).orElse(null));
+                    if (article == null) {
+                        errors.add(rowError(row, code, "존재하지 않는 조: " + articleLabel));
+                        failed++;
+                        continue;
+                    }
+                }
+            }
+
+            String key = item.getId() + ":" + policy.getId() + ":" + (article == null ? "-" : article.getId());
+            boolean duplicate = !seen.add(key) || (article == null
+                    ? policyMappingRepository.existsByIsmsItemIdAndPolicyIdAndPolicyArticleIsNull(item.getId(), policy.getId())
+                    : policyMappingRepository.existsByIsmsItemIdAndPolicyArticleId(item.getId(), article.getId()));
+            if (duplicate) {
+                skipped++;
+                continue;
+            }
+
+            policyMappingRepository.save(IsmsPolicyMapping.builder()
+                    .ismsItem(item).policy(policy).policyArticle(article).build());
+            success++;
+        }
+
+        return IsmsDto.MappingImportResult.builder()
+                .total(total)
+                .success(success)
+                .skipped(skipped)
+                .failed(failed)
+                .removed(removed)
+                .clearedItems(clearedItems)
+                .errors(errors)
+                .build();
+    }
+
+    private List<SheetRow> readMappingRows(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        List<SheetRow> rows = new ArrayList<>();
+
+        if (filename.endsWith(".xlsx")) {
+            try (XSSFWorkbook wb = new XSSFWorkbook(file.getInputStream())) {
+                XSSFSheet sheet = wb.getSheetAt(0);
+                for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                    XSSFRow row = sheet.getRow(i);
+                    if (row == null) continue;
+                    String[] cols = new String[MAPPING_HEADERS.length];
+                    for (int c = 0; c < cols.length; c++) cols[c] = xlsxCell(row, c);
+                    rows.add(new SheetRow(i + 1, cols));
+                }
+            }
+        } else if (filename.endsWith(".csv")) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                int lineNo = 0;
+                while ((line = reader.readLine()) != null) {
+                    lineNo++;
+                    if (lineNo == 1) continue;   // 헤더 건너뜀
+                    if (line.isBlank()) continue;
+                    String[] parsed = parseCsvLine(line);
+                    String[] cols = new String[MAPPING_HEADERS.length];
+                    for (int c = 0; c < cols.length; c++) cols[c] = safeGet(parsed, c);
+                    rows.add(new SheetRow(lineNo, cols));
+                }
+            }
+        } else {
+            throw new IllegalArgumentException(".xlsx 또는 .csv 파일만 지원합니다.");
+        }
+        return rows;
+    }
+
+    private static String cell(SheetRow row, int idx) {
+        String[] cols = row.cols();
+        return idx < cols.length && cols[idx] != null ? cols[idx].trim() : "";
+    }
+
+    /** 제목·조 표기 비교용 정규화 — 공백·대소문자 차이만으로 못 찾는 일을 막는다. */
+    private static String normalizeKey(String s) {
+        return s == null ? "" : s.replaceAll("\\s+", "").toLowerCase();
+    }
+
+    private static Long parseId(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return Long.parseLong(s.trim());
+        } catch (NumberFormatException e) {
+            return null;   // 숫자가 아니면 ID 지정이 없는 것으로 보고 제목으로 찾는다
+        }
+    }
+
+    private static IsmsDto.BulkImportResult.RowError rowError(SheetRow row, String itemCode, String message) {
+        return IsmsDto.BulkImportResult.RowError.builder()
+                .row(row.number()).itemCode(itemCode).message(message).build();
+    }
+
     // ── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
     private static boolean notBlank(String s) { return s != null && !s.isBlank(); }

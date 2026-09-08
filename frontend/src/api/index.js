@@ -465,6 +465,22 @@ export const ismsApi = {
     return downloadBlob(`/isms/export/csv?year=${year}`, name)
   },
   importTemplate: () => downloadBlob('/isms/import/template', 'isms_import_template.xlsx'),
+  // 통제항목 ↔ 정책 매핑 일괄 다운로드/업로드
+  exportMappings: () => {
+    const lang = getLang()
+    const name = lang === 'ko' ? `ISMS-P-통제항목-매핑-${today()}.xlsx` : `isms-control-mappings-${today()}.xlsx`
+    return downloadBlob('/isms/mappings/export', name)
+  },
+  mappingTemplate: () => {
+    const lang = getLang()
+    const name = lang === 'ko' ? 'ISMS-P-통제항목-매핑-템플릿.xlsx' : 'isms-control-mapping-template.xlsx'
+    return downloadBlob('/isms/mappings/template', name)
+  },
+  importMappings: (file, replace) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/isms/mappings/import', fd, { params: { replace } })
+  },
   bulkImport: (year, file) => {
     const fd = new FormData()
     fd.append('file', file)

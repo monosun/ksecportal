@@ -15,6 +15,14 @@ public interface PolicyArticleRepository extends JpaRepository<PolicyArticle, Lo
 
     List<PolicyArticle> findByPolicyIdOrderBySortOrderAsc(Long policyId);
 
+    /**
+     * ISMS-P 매핑 일괄 업로드·참고 시트용 경량 조회 — 본문(LONGTEXT)은 싣지 않는다.
+     * 반환 배열: [0]=정책 id, [1]=조 id, [2]=조 표기, [3]=조 제목
+     */
+    @Query("SELECT a.policy.id, a.id, a.articleLabel, a.title FROM PolicyArticle a " +
+           "ORDER BY a.policy.id ASC, a.sortOrder ASC")
+    List<Object[]> findMappingRefs();
+
     /** 목록 화면의 "조 N개" 표시용 — 반환 배열: [0]=정책 id, [1]=조 개수 */
     @Query("SELECT a.policy.id, COUNT(a) FROM PolicyArticle a WHERE a.policy.id IN :policyIds GROUP BY a.policy.id")
     List<Object[]> countByPolicyIds(@Param("policyIds") Collection<Long> policyIds);

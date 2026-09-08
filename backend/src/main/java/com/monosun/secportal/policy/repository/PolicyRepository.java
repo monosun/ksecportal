@@ -32,6 +32,16 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
            "p.chapterNo ASC, p.id ASC")
     List<Object[]> findChapterFacets();
 
+    /**
+     * ISMS-P 매핑 일괄 업로드·참고 시트용 경량 조회 — 본문(LONGTEXT)은 싣지 않는다.
+     * 반환 배열: [0]=id, [1]=지침명, [2]=제목
+     */
+    @Query("SELECT p.id, p.guidelineName, p.title FROM Policy p " +
+           "ORDER BY p.guidelineName ASC, " +
+           "CASE WHEN p.chapterNo IS NULL THEN 1 ELSE 0 END ASC, " +
+           "p.chapterNo ASC, p.id ASC")
+    List<Object[]> findMappingRefs();
+
     /** 지침 문서 등록 시 같은 장이 이미 있는지 제목으로 찾는다(있으면 본문만 갱신해 조·매핑을 살린다). */
     Optional<Policy> findFirstByTitle(String title);
 }

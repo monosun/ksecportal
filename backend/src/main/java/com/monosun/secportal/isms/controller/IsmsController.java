@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -245,5 +246,44 @@ public class IsmsController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal User user) throws IOException {
         return ApiResponse.ok(ismsService.bulkImport(year, file, user));
+    }
+
+    // ── 통제항목 ↔ 정책 매핑 일괄 다운로드/업로드 ───────────────────────────────
+
+    /** 현재 등록된 매핑 전체를 엑셀로 내려받는다(그대로 고쳐 다시 올릴 수 있는 형식). */
+    @GetMapping("/mappings/export")
+    public ResponseEntity<byte[]> exportMappings() throws IOException {
+        byte[] xlsx = ismsService.exportMappings();
+        String filename = "ISMS-P_통제항목_매핑_"
+                + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".xlsx";
+        return xlsxResponse(filename, xlsx);
+    }
+
+    /** 매핑 일괄 업로드용 빈 템플릿 */
+    @GetMapping("/mappings/template")
+    public ResponseEntity<byte[]> mappingTemplate() throws IOException {
+        return xlsxResponse("ISMS-P_통제항목_매핑_템플릿.xlsx", ismsService.getMappingTemplate());
+    }
+
+    /**
+     * 매핑 일괄 업로드.
+     *
+     * @param replace true 면 파일에 나온 항목의 기존 매핑을 모두 지운 뒤 파일 내용으로 다시 등록한다
+     */
+    @PostMapping("/mappings/import")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<IsmsDto.MappingImportResult> importMappings(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false, defaultValue = "false") boolean replace) throws IOException {
+        return ApiResponse.ok(ismsService.importMappings(file, replace));
+    }
+
+    private static ResponseEntity<byte[]> xlsxResponse(String filename, byte[] body) {
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(body);
     }
 }

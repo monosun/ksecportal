@@ -282,6 +282,24 @@ public class IsmsDto {
         }
     }
 
+    /** 통제항목 ↔ 정책 매핑 일괄 업로드 결과 */
+    @Getter
+    @Builder
+    public static class MappingImportResult {
+        /** 매핑 대상(정책·조)이 지정된 행 수 — 정책 열이 모두 빈 행은 세지 않는다 */
+        private int total;
+        /** 새로 등록된 매핑 건수 */
+        private int success;
+        /** 이미 등록되어 있어 건너뛴 매핑 건수 */
+        private int skipped;
+        private int failed;
+        /** '기존 매핑 대체' 로 올렸을 때 지워진 기존 매핑 건수 */
+        private int removed;
+        /** '기존 매핑 대체' 로 올렸을 때 매핑이 초기화된 통제항목 수 */
+        private int clearedItems;
+        private List<BulkImportResult.RowError> errors;
+    }
+
     /** 전년도 증적 가져오기 버튼 상태 — 가져올 수 있는 연도와 되돌릴 수 있는 건수 */
     @Getter
     @Builder

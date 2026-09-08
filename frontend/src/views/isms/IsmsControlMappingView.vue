@@ -19,6 +19,23 @@
           <option value="mapped">매핑됨</option>
           <option value="unmapped">미매핑</option>
         </select>
+        <button @click="downloadMappings" :disabled="exportLoading"
+          title="현재 등록된 매핑을 엑셀로 내려받습니다"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          {{ exportLoading ? '내려받는 중...' : '매핑 내보내기' }}
+        </button>
+        <button v-if="canEdit" @click="showImportModal = true"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12"/>
+          </svg>
+          일괄 업로드
+        </button>
       </div>
     </div>
 
@@ -345,6 +362,128 @@
     <!-- 매핑 정책 내용 미리보기 -->
     <PolicyDetailModal :open="showPreview" :item-id="previewPolicyId" :focus-article-id="previewArticleId"
       readonly @close="showPreview = false" />
+
+    <!-- 매핑 일괄 업로드 -->
+    <div v-if="showImportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-xl max-h-[92vh] flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b">
+          <h2 class="text-lg font-semibold text-gray-900">매핑 일괄 업로드</h2>
+          <button @click="closeImportModal" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-5 space-y-5 overflow-y-auto">
+          <p class="text-sm text-gray-500">
+            엑셀(.xlsx)·CSV 파일로 통제항목과 정책(장)·조 매핑을 한 번에 등록합니다.
+            한 행이 매핑 1건이며, '조 표기'가 비어 있으면 장 전체 매핑입니다.
+          </p>
+
+          <!-- 템플릿 / 현재 매핑 내려받기 -->
+          <div class="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-sm text-blue-800 min-w-0">
+                <p class="font-medium">엑셀 템플릿</p>
+                <p class="text-xs text-blue-600 mt-0.5">항목코드 · 지침명 · 정책(장) 제목 · 조 표기 · 정책ID · 조ID</p>
+              </div>
+              <button @click="downloadTemplate" :disabled="templateLoading"
+                class="flex-shrink-0 text-sm text-blue-700 border border-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors">
+                {{ templateLoading ? '내려받는 중...' : '템플릿 다운로드' }}
+              </button>
+            </div>
+            <div class="flex items-center justify-between gap-3 pt-2 border-t border-blue-100">
+              <div class="text-sm text-blue-800 min-w-0">
+                <p class="font-medium">현재 매핑 내려받기</p>
+                <p class="text-xs text-blue-600 mt-0.5">등록된 매핑이 채워진 파일을 고쳐서 그대로 다시 올릴 수 있습니다</p>
+              </div>
+              <button @click="downloadMappings" :disabled="exportLoading"
+                class="flex-shrink-0 text-sm text-blue-700 border border-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-colors">
+                {{ exportLoading ? '내려받는 중...' : '매핑 다운로드' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 파일 선택 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">파일 선택</label>
+            <input type="file" accept=".xlsx,.csv" @change="onFileChange" ref="fileInputRef"
+              class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"/>
+            <p v-if="importFile" class="mt-1 text-xs text-gray-500">{{ importFile.name }}</p>
+          </div>
+
+          <!-- 등록 방식 -->
+          <label class="flex items-start gap-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+            <input type="checkbox" v-model="replaceMode" class="mt-0.5"/>
+            <span class="text-sm text-gray-700">
+              기존 매핑 대체
+              <span class="block text-xs text-gray-500 mt-0.5">
+                파일에 나온 항목의 기존 매핑을 모두 지운 뒤 파일 내용으로 다시 등록합니다.
+                끄면 새 매핑만 추가합니다.
+              </span>
+            </span>
+          </label>
+
+          <!-- 결과 -->
+          <div v-if="importResult" class="rounded-lg border overflow-hidden">
+            <div class="grid grid-cols-4 divide-x bg-gray-50 text-center text-sm font-medium">
+              <div class="p-3">
+                <p class="text-gray-500 text-xs">대상</p>
+                <p class="text-xl font-bold text-gray-800 mt-0.5">{{ importResult.total }}</p>
+              </div>
+              <div class="p-3">
+                <p class="text-green-600 text-xs">등록</p>
+                <p class="text-xl font-bold text-green-700 mt-0.5">{{ importResult.success }}</p>
+              </div>
+              <div class="p-3">
+                <p class="text-gray-500 text-xs">중복</p>
+                <p class="text-xl font-bold text-gray-600 mt-0.5">{{ importResult.skipped }}</p>
+              </div>
+              <div class="p-3">
+                <p class="text-red-500 text-xs">실패</p>
+                <p class="text-xl font-bold text-red-600 mt-0.5">{{ importResult.failed }}</p>
+              </div>
+            </div>
+            <p v-if="importResult.removed" class="px-3 py-2 text-xs text-gray-500 border-t bg-gray-50">
+              기존 매핑 {{ importResult.removed }}건을 지우고 {{ importResult.clearedItems }}개 항목을 다시 등록했습니다.
+            </p>
+            <div v-if="importResult.errors?.length" class="max-h-40 overflow-y-auto border-t">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th class="px-3 py-2 text-left text-gray-500">행</th>
+                    <th class="px-3 py-2 text-left text-gray-500">항목코드</th>
+                    <th class="px-3 py-2 text-left text-gray-500">오류 내용</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-for="(err, i) in importResult.errors" :key="`${err.row}_${i}`" class="text-red-600">
+                    <td class="px-3 py-2">{{ err.row }}</td>
+                    <td class="px-3 py-2 font-mono">{{ err.itemCode }}</td>
+                    <td class="px-3 py-2">{{ err.message }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p v-if="importError" class="text-sm text-red-600">{{ importError }}</p>
+        </div>
+
+        <div class="flex justify-end gap-3 px-5 py-4 border-t bg-gray-50 rounded-b-xl">
+          <button @click="closeImportModal"
+            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100">
+            {{ importResult ? '확인' : '취소' }}
+          </button>
+          <button v-if="!importResult" @click="startImport" :disabled="importLoading || !importFile"
+            class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors">
+            {{ importLoading ? '등록 중...' : '업로드' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -388,6 +527,16 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+/** 일괄 업로드 뒤 바뀐 매핑을 화면에 반영한다. */
+async function loadItems() {
+  try {
+    const res = await ismsApi.listItems({ year })
+    allItems.value = res?.data || []
+  } catch {
+    // silent fail
+  }
+}
 
 // close picker on outside click
 function onDocClick() { activePicker.value = null; openArticleList.value = null; resetArticleHits() }
@@ -748,5 +897,58 @@ function categoryLabel(cat) {
     INCIDENT_RESPONSE: '사고대응', NETWORK: '네트워크', PHYSICAL: '물리보안',
     VENDOR: '공급망', OTHER: '기타'
   }[cat] || cat
+}
+
+// ── 매핑 일괄 다운로드 / 업로드 ────────────────────────────────
+const exportLoading = ref(false)
+const templateLoading = ref(false)
+const showImportModal = ref(false)
+const importFile = ref(null)
+const replaceMode = ref(false)
+const importLoading = ref(false)
+const importResult = ref(null)
+const importError = ref('')
+const fileInputRef = ref(null)
+
+/** 현재 등록된 매핑 전체를 엑셀로 내려받는다. */
+async function downloadMappings() {
+  exportLoading.value = true
+  try { await ismsApi.exportMappings() } finally { exportLoading.value = false }
+}
+
+async function downloadTemplate() {
+  templateLoading.value = true
+  try { await ismsApi.mappingTemplate() } finally { templateLoading.value = false }
+}
+
+function onFileChange(e) {
+  importFile.value = e.target.files[0] || null
+  importResult.value = null
+  importError.value = ''
+}
+
+async function startImport() {
+  if (!importFile.value) return
+  importLoading.value = true
+  importError.value = ''
+  importResult.value = null
+  try {
+    const res = await ismsApi.importMappings(importFile.value, replaceMode.value)
+    importResult.value = res.data
+    // 등록·삭제 어느 쪽이든 매핑이 바뀌었으면 목록을 다시 읽는다
+    if (res.data.success > 0 || res.data.removed > 0) await loadItems()
+  } catch (e) {
+    importError.value = typeof e === 'string' ? e : '업로드 중 오류가 발생했습니다.'
+  } finally {
+    importLoading.value = false
+  }
+}
+
+function closeImportModal() {
+  showImportModal.value = false
+  importFile.value = null
+  importResult.value = null
+  importError.value = ''
+  if (fileInputRef.value) fileInputRef.value.value = ''
 }
 </script>
