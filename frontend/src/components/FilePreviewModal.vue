@@ -7,6 +7,14 @@
           <p v-if="title" class="text-xs text-gray-400 truncate">{{ title }}</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <button v-if="printable && kind === 'pdf' && !loading && !error" @click="printDoc"
+            class="btn-secondary text-sm flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm0-16h6a2 2 0 012 2v3H7V5a2 2 0 012-2z"/>
+            </svg>
+            인쇄
+          </button>
           <button @click="$emit('download')" class="btn-secondary text-sm flex items-center gap-1.5">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -48,7 +56,8 @@
         </div>
 
         <!-- PDF -->
-        <iframe v-else-if="kind === 'pdf'" :src="blobUrl" class="w-full h-full border-0" title="PDF 미리보기"></iframe>
+        <iframe v-else-if="kind === 'pdf'" ref="pdfFrame" :src="blobUrl" class="w-full h-full border-0"
+          title="PDF 미리보기"></iframe>
 
         <!-- 이미지 -->
         <div v-else-if="kind === 'image'" class="min-h-full flex items-center justify-center p-4">
@@ -93,6 +102,8 @@ const props = defineProps({
    * 서버 변환을 지원하는 화면만 넘기면 되고, 없으면 해당 형식은 다운로드 안내를 보여준다.
    */
   pdfLoader: { type: Function, default: null },
+  /** PDF 미리보기에 인쇄 버튼을 함께 노출한다 (보고서처럼 바로 출력하는 화면용) */
+  printable: { type: Boolean, default: false },
 })
 const emit = defineEmits(['close', 'download'])
 
@@ -103,6 +114,7 @@ const loadingText = ref('불러오는 중...')
 const error = ref('')
 const kind = ref('')          // pdf | image | sheet | text
 const blobUrl = ref('')
+const pdfFrame = ref(null)
 const textContent = ref('')
 const workbook = ref(null)
 const sheetNames = ref([])
@@ -219,6 +231,24 @@ watch(() => [props.open, props.fileName], async ([open]) => {
     loading.value = false
   }
 }, { immediate: true })
+
+/**
+ * 미리보기 중인 PDF 를 그대로 인쇄한다.
+ * 브라우저 PDF 뷰어가 iframe 안에서 인쇄를 막는 경우가 있어, 실패하면 새 탭으로 열어 준다.
+ */
+function printDoc() {
+  try {
+    const win = pdfFrame.value?.contentWindow
+    if (win) {
+      win.focus()
+      win.print()
+      return
+    }
+  } catch {
+    // 뷰어 제약 — 아래 새 탭 열기로 대체한다
+  }
+  if (blobUrl.value) window.open(blobUrl.value, '_blank')
+}
 
 function fileExt() {
   return (props.fileName || '').split('.').pop()?.toLowerCase() || '문서'

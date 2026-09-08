@@ -55,6 +55,22 @@ public class ReportController {
         return pdfResponse(reportService.generateSourceScanReport(scanId, lang), filename);
     }
 
+    /**
+     * 보안성 심의 결과 보고서 — 심의 완료된 1건.
+     *
+     * <p>심의 상세는 로그인한 사용자면 화면에서 그대로 볼 수 있으므로, 같은 내용을 담은 이 보고서도
+     * 클래스 기본 규칙(MANAGER 이상)을 풀어 열람 권한과 맞춘다.
+     */
+    @GetMapping("/security-reviews/{reviewId}/pdf")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> securityReviewPdf(@PathVariable Long reviewId,
+                                                    @RequestParam(defaultValue = "ko") String lang) {
+        String filename = "ko".equalsIgnoreCase(lang)
+                ? "보안성심의-결과보고서-" + today() + ".pdf"
+                : "security-review-report-" + today() + ".pdf";
+        return pdfResponse(reportService.generateSecurityReviewReport(reviewId, lang), filename);
+    }
+
     @GetMapping("/policies/pdf")
     public ResponseEntity<byte[]> policyPdf(@RequestParam(defaultValue = "ko") String lang) {
         String filename = "ko".equalsIgnoreCase(lang)

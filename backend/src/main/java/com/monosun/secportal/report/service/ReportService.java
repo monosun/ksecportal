@@ -18,8 +18,12 @@ import com.monosun.secportal.isms.repository.IsmsEvidenceRepository;
 import com.monosun.secportal.isms.repository.IsmsItemRepository;
 import com.monosun.secportal.policy.entity.Policy;
 import com.monosun.secportal.policy.repository.PolicyRepository;
+import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
 import com.monosun.secportal.privacy.dto.PrivacyReportDto;
+import com.monosun.secportal.secreview.entity.SecurityReview;
+import com.monosun.secportal.secreview.entity.SecurityReviewItem;
+import com.monosun.secportal.secreview.repository.SecurityReviewRepository;
 import com.monosun.secportal.sourcescan.entity.SourceScan;
 import com.monosun.secportal.sourcescan.entity.SourceScanFinding;
 import com.monosun.secportal.sourcescan.repository.SourceScanRepository;
@@ -42,6 +46,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -63,6 +68,7 @@ public class ReportService {
     private final com.monosun.secportal.setting.service.AppSettingService appSettingService;
     private final com.monosun.secportal.privacy.service.PrivacyReportService privacyReportService;
     private final SourceScanRepository sourceScanRepository;
+    private final SecurityReviewRepository securityReviewRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -1478,5 +1484,343 @@ public class ReportService {
             stats.addCell(cell);
         }
         doc.add(stats);
+    }
+
+    // ── 보안성 심의 결과 보고서 (심의 1건) ────────────────────────────────────
+
+    /**
+     * 심의가 완료된 보안성 심의 1건을 결과 보고서 PDF 로 만든다.
+     *
+     * <p>심의가 끝나기 전에는 결과·심의자가 확정되지 않아 보고서로서 의미가 없으므로
+     * {@code COMPLETED} 상태에서만 만든다.
+     */
+    @Transactional(readOnly = true)
+    public byte[] generateSecurityReviewReport(Long reviewId, String lang) {
+        SecurityReview r = securityReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("SecurityReview", reviewId));
+        if (r.getStatus() != SecurityReview.Status.COMPLETED) {
+            throw new BusinessException(t(lang,
+                    "심의가 완료된 건만 보고서를 만들 수 있습니다.",
+                    "The report is available only for completed reviews."));
+        }
+        List<SecurityReviewItem> items = r.getItems();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document doc = new Document(PageSize.A4, 36, 36, 34, 32);
+        try {
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+
+            addCenteredTitle(doc, t(lang, "보안성 심의 결과 보고서", "Security Design Review Report"),
+                    kFont(17, Font.BOLD));
+            addCompanyLine(doc);
+            addCenteredSubtitle(doc, r.getSystemName() + "   ·   "
+                    + t(lang, "심의일 ", "Reviewed on ")
+                    + (r.getReviewedAt() != null ? r.getReviewedAt().format(DT_FMT) : "-"));
+            doc.add(new Paragraph(" ", kFont(8, Font.NORMAL)));
+
+            addReviewDecisionBanner(doc, lang, r);
+            doc.add(new Paragraph(" ", kFont(8, Font.NORMAL)));
+
+            // ── 1. 심의 개요 ──────────────────────────────────────────────
+            addSectionHeading(doc, t(lang, "1. 심의 개요", "1. Request"));
+            PdfPTable info = new PdfPTable(new float[]{1.3f, 3f, 1.3f, 3f});
+            info.setWidthPercentage(100);
+            addFieldRow(info, t(lang, "심의 제목", "Title"), nvlDash(r.getTitle()),
+                    t(lang, "대상 시스템", "System"), nvlDash(r.getSystemName()));
+            addFieldRow(info, t(lang, "심의 구분", "Review type"), tReviewType(lang, r.getReviewType()),
+                    t(lang, "요청 부서", "Department"), nvlDash(r.getDepartment()));
+            addFieldRow(info, t(lang, "요청자", "Requester"),
+                    r.getRequester() != null ? nvlDash(r.getRequester().getName()) : "-",
+                    t(lang, "요청일", "Requested on"),
+                    r.getCreatedAt() != null ? r.getCreatedAt().format(DATE_FMT) : "-");
+            addFieldRow(info, t(lang, "오픈 예정일", "Target date"),
+                    r.getTargetDate() != null ? r.getTargetDate().format(DATE_FMT) : "-",
+                    t(lang, "설계서 첨부", "Attachment"), nvlDash(r.getFileName()));
+            addFieldRow(info, t(lang, "개인정보 처리", "Personal data"),
+                    r.isHandlesPersonalData() ? t(lang, "해당", "Yes") : t(lang, "해당없음", "No"),
+                    t(lang, "외부(인터넷) 공개", "Internet facing"),
+                    r.isInternetFacing() ? t(lang, "해당", "Yes") : t(lang, "해당없음", "No"));
+            doc.add(info);
+
+            if (notBlankStr(r.getDescription())) {
+                doc.add(new Paragraph(" ", kFont(5, Font.NORMAL)));
+                doc.add(new Paragraph(t(lang, "구축·변경 개요", "Overview"), kFont(9, Font.BOLD, C_INK2)));
+                doc.add(new Paragraph(" ", kFont(2, Font.NORMAL)));
+                doc.add(boxedText(r.getDescription()));
+            }
+            doc.add(new Paragraph(" ", kFont(9, Font.NORMAL)));
+
+            // ── 2. 검토 결과 요약 ─────────────────────────────────────────
+            addSectionHeading(doc, t(lang, "2. 검토 결과 요약", "2. Review summary"));
+            long pass = countResult(items, SecurityReviewItem.Result.PASS);
+            long fail = countResult(items, SecurityReviewItem.Result.FAIL);
+            long na = countResult(items, SecurityReviewItem.Result.NA);
+            long pending = countResult(items, SecurityReviewItem.Result.PENDING);
+
+            String[][] tiles = {
+                    {t(lang, "검토 항목", "Items"), String.valueOf(items.size()), null},
+                    {t(lang, "적합", "Pass"), String.valueOf(pass), null},
+                    {t(lang, "부적합", "Fail"), String.valueOf(fail), "fail"},
+                    {t(lang, "해당없음", "N/A"), String.valueOf(na), null},
+                    {t(lang, "미검토", "Pending"), String.valueOf(pending), null},
+            };
+            PdfPTable tileTable = new PdfPTable(tiles.length);
+            tileTable.setWidthPercentage(100);
+            for (String[] tile : tiles) {
+                PdfPCell cell = new PdfPCell();
+                Paragraph v = new Paragraph(tile[1],
+                        kFont(16, Font.BOLD, "fail".equals(tile[2]) && fail > 0 ? C_CRITICAL : Color.BLACK));
+                v.setAlignment(Element.ALIGN_CENTER);
+                Paragraph l = new Paragraph(tile[0], kFont(8, Font.NORMAL, C_INK2));
+                l.setAlignment(Element.ALIGN_CENTER);
+                cell.addElement(v);
+                cell.addElement(l);
+                cell.setPadding(7);
+                cell.setBackgroundColor(new Color(0xF9, 0xFA, 0xFB));
+                cell.setBorderColor(C_LINE);
+                tileTable.addCell(cell);
+            }
+            doc.add(tileTable);
+            doc.add(new Paragraph(" ", kFont(6, Font.NORMAL)));
+
+            // 영역별 검토 현황 — 어느 영역에서 보완이 필요한지 한눈에 본다
+            Map<String, List<SecurityReviewItem>> byCategory = items.stream()
+                    .collect(Collectors.groupingBy(
+                            i -> notBlankStr(i.getCategory()) ? i.getCategory() : t(lang, "기타", "Other"),
+                            LinkedHashMap::new, Collectors.toList()));
+            if (!byCategory.isEmpty()) {
+                PdfPTable cat = new PdfPTable(new float[]{3f, 1f, 1f, 1f, 1f});
+                cat.setWidthPercentage(100);
+                cat.setHeaderRows(1);
+                Font chf = kFont(8.5f, Font.BOLD, Color.WHITE);
+                addHeaderCell(cat, t(lang, "검토 영역", "Area"), chf);
+                addHeaderCell(cat, t(lang, "항목", "Items"), chf);
+                addHeaderCell(cat, t(lang, "적합", "Pass"), chf);
+                addHeaderCell(cat, t(lang, "부적합", "Fail"), chf);
+                addHeaderCell(cat, t(lang, "미검토", "Pending"), chf);
+                for (Map.Entry<String, List<SecurityReviewItem>> e : byCategory.entrySet()) {
+                    List<SecurityReviewItem> group = e.getValue();
+                    long gFail = countResult(group, SecurityReviewItem.Result.FAIL);
+                    cat.addCell(padded(new PdfPCell(new Phrase(e.getKey(), kFont(8.5f, Font.NORMAL)))));
+                    cat.addCell(padded(centered(String.valueOf(group.size()), kFont(8.5f, Font.NORMAL, C_INK2))));
+                    cat.addCell(padded(centered(
+                            String.valueOf(countResult(group, SecurityReviewItem.Result.PASS)),
+                            kFont(8.5f, Font.NORMAL, C_INK2))));
+                    cat.addCell(padded(centered(String.valueOf(gFail),
+                            kFont(8.5f, gFail > 0 ? Font.BOLD : Font.NORMAL, gFail > 0 ? C_CRITICAL : C_INK2))));
+                    cat.addCell(padded(centered(
+                            String.valueOf(countResult(group, SecurityReviewItem.Result.PENDING)),
+                            kFont(8.5f, Font.NORMAL, C_INK2))));
+                }
+                doc.add(cat);
+            }
+            doc.add(new Paragraph(" ", kFont(9, Font.NORMAL)));
+
+            // ── 3. 설계 검토 체크리스트 ───────────────────────────────────
+            addSectionHeading(doc, t(lang, "3. 설계 검토 체크리스트", "3. Review checklist"));
+            if (items.isEmpty()) {
+                doc.add(new Paragraph(t(lang, "등록된 검토 항목이 없습니다.", "No review items."),
+                        kFont(9, Font.NORMAL, C_INK2)));
+            } else {
+                PdfPTable table = new PdfPTable(new float[]{1.5f, 3.2f, 3.2f, 0.9f, 3.2f});
+                table.setWidthPercentage(100);
+                table.setHeaderRows(1);
+                Font hf = kFont(8.5f, Font.BOLD, Color.WHITE);
+                addHeaderCell(table, t(lang, "영역", "Area"), hf);
+                addHeaderCell(table, t(lang, "검토 항목", "Item"), hf);
+                addHeaderCell(table, t(lang, "검토 기준", "Criteria"), hf);
+                addHeaderCell(table, t(lang, "결과", "Result"), hf);
+                addHeaderCell(table, t(lang, "검토 의견", "Comment"), hf);
+
+                for (Map.Entry<String, List<SecurityReviewItem>> e : byCategory.entrySet()) {
+                    for (SecurityReviewItem i : e.getValue()) {
+                        table.addCell(padded(new PdfPCell(new Phrase(e.getKey(), kFont(8, Font.NORMAL, C_INK2)))));
+                        table.addCell(padded(new PdfPCell(new Phrase(nvl(i.getItemName()), kFont(8, Font.NORMAL)))));
+                        table.addCell(padded(new PdfPCell(new Phrase(nvl(i.getCriteria()), kFont(8, Font.NORMAL, C_INK2)))));
+                        table.addCell(padded(centered(tItemResult(lang, i.getResult()),
+                                kFont(8, Font.BOLD, itemResultColor(i.getResult())))));
+                        table.addCell(padded(new PdfPCell(new Phrase(nvl(i.getComment()), kFont(8, Font.NORMAL, C_INK2)))));
+                    }
+                }
+                doc.add(table);
+            }
+            doc.add(new Paragraph(" ", kFont(9, Font.NORMAL)));
+
+            // ── 4. 심의 의견 ─────────────────────────────────────────────
+            addSectionHeading(doc, t(lang, "4. 심의 의견", "4. Review opinion"));
+            doc.add(boxedText(notBlankStr(r.getReviewComment())
+                    ? r.getReviewComment()
+                    : t(lang, "별도 의견 없음", "No additional comment")));
+            doc.add(new Paragraph(" ", kFont(14, Font.NORMAL)));
+
+            // ── 심의자 확인란 ────────────────────────────────────────────
+            PdfPTable sign = new PdfPTable(new float[]{1.2f, 2.6f, 1.2f, 2.6f});
+            sign.setWidthPercentage(100);
+            addFieldRow(sign, t(lang, "심의자", "Reviewer"),
+                    r.getReviewer() != null ? nvlDash(r.getReviewer().getName()) : "-",
+                    t(lang, "심의일시", "Reviewed at"),
+                    r.getReviewedAt() != null ? r.getReviewedAt().format(DT_FMT) : "-");
+            doc.add(sign);
+
+            Paragraph issued = new Paragraph(t(lang, "출력일 ", "Issued on ")
+                    + LocalDate.now().format(DATE_FMT), kFont(8, Font.NORMAL, C_INK2));
+            issued.setAlignment(Element.ALIGN_RIGHT);
+            issued.setSpacingBefore(6);
+            doc.add(issued);
+
+            doc.close();
+        } catch (Exception e) {
+            log.error("Failed to generate security review report", e);
+            throw new RuntimeException("Failed to generate security review report", e);
+        }
+        return out.toByteArray();
+    }
+
+    /** 심의 결과(승인·조건부 승인·반려)를 결과 색으로 강조한 머리 배너 */
+    private void addReviewDecisionBanner(Document doc, String lang, SecurityReview r) throws DocumentException {
+        Color color = decisionColor(r.getDecision());
+        PdfPTable banner = new PdfPTable(new float[]{1.4f, 3.6f});
+        banner.setWidthPercentage(100);
+
+        PdfPCell label = new PdfPCell();
+        label.setPadding(9);
+        label.setBackgroundColor(color);
+        label.setBorderColor(color);
+        Paragraph lp = new Paragraph(tDecision(lang, r.getDecision()), kFont(14, Font.BOLD, Color.WHITE));
+        lp.setAlignment(Element.ALIGN_CENTER);
+        label.addElement(lp);
+        Paragraph ls = new Paragraph(t(lang, "심의 결과", "Decision"), kFont(8, Font.NORMAL, Color.WHITE));
+        ls.setAlignment(Element.ALIGN_CENTER);
+        label.addElement(ls);
+        banner.addCell(label);
+
+        PdfPCell body = new PdfPCell();
+        body.setPadding(9);
+        body.setBackgroundColor(new Color(0xF9, 0xFA, 0xFB));
+        body.setBorderColor(C_LINE);
+        body.addElement(new Paragraph(nvlDash(r.getTitle()), kFont(10.5f, Font.BOLD)));
+        body.addElement(new Paragraph(
+                t(lang, "심의자 ", "Reviewer ")
+                        + (r.getReviewer() != null ? nvlDash(r.getReviewer().getName()) : "-")
+                        + "   ·   " + t(lang, "심의일시 ", "Reviewed at ")
+                        + (r.getReviewedAt() != null ? r.getReviewedAt().format(DT_FMT) : "-"),
+                kFont(8.5f, Font.NORMAL, C_INK2)));
+        banner.addCell(body);
+        doc.add(banner);
+    }
+
+    private void addSectionHeading(Document doc, String text) throws DocumentException {
+        Paragraph p = new Paragraph(text, kFont(11, Font.BOLD));
+        p.setSpacingAfter(4);
+        doc.add(p);
+    }
+
+    /** 라벨-값 2쌍을 한 줄로 넣는다(라벨 칸은 회색 배경). */
+    private void addFieldRow(PdfPTable table, String label1, String value1, String label2, String value2) {
+        table.addCell(fieldLabelCell(label1));
+        table.addCell(fieldValueCell(value1));
+        table.addCell(fieldLabelCell(label2));
+        table.addCell(fieldValueCell(value2));
+    }
+
+    private PdfPCell fieldLabelCell(String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, kFont(8.5f, Font.BOLD, C_INK2)));
+        cell.setPadding(5);
+        cell.setBackgroundColor(new Color(0xF3, 0xF4, 0xF6));
+        cell.setBorderColor(C_LINE);
+        return cell;
+    }
+
+    private PdfPCell fieldValueCell(String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, kFont(8.5f, Font.NORMAL)));
+        cell.setPadding(5);
+        cell.setBorderColor(C_LINE);
+        return cell;
+    }
+
+    /** 여러 줄 본문(개요·심의 의견)을 옅은 테두리 상자에 담는다. */
+    private PdfPTable boxedText(String text) {
+        PdfPTable box = new PdfPTable(1);
+        box.setWidthPercentage(100);
+        PdfPCell cell = new PdfPCell(new Phrase(text, kFont(8.5f, Font.NORMAL)));
+        cell.setPadding(7);
+        cell.setBackgroundColor(new Color(0xFB, 0xFC, 0xFD));
+        cell.setBorderColor(C_LINE);
+        box.addCell(cell);
+        return box;
+    }
+
+    private PdfPCell centered(String text, Font font) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        return cell;
+    }
+
+    private static String nvlDash(String s) { return notBlankStr(s) ? s : "-"; }
+
+    private static long countResult(List<SecurityReviewItem> items, SecurityReviewItem.Result result) {
+        return items.stream().filter(i -> i.getResult() == result).count();
+    }
+
+    private Color decisionColor(SecurityReview.Decision d) {
+        if (d == null) return C_NEUTRAL;
+        return switch (d) {
+            case APPROVED -> C_GOOD;
+            case CONDITIONAL -> new Color(0xB4, 0x7C, 0x00);   // 노랑은 흰 배경에서 흐려 어둡게 조정
+            case REJECTED -> C_CRITICAL;
+        };
+    }
+
+    private Color itemResultColor(SecurityReviewItem.Result r) {
+        return switch (r) {
+            case PASS -> C_GOOD;
+            case FAIL -> C_CRITICAL;
+            case NA -> C_INK2;
+            case PENDING -> C_NEUTRAL;
+        };
+    }
+
+    private String tDecision(String lang, SecurityReview.Decision d) {
+        if (d == null) return t(lang, "미확정", "Undecided");
+        if (!"ko".equalsIgnoreCase(lang)) {
+            return switch (d) {
+                case APPROVED -> "Approved";
+                case CONDITIONAL -> "Conditional";
+                case REJECTED -> "Rejected";
+            };
+        }
+        return switch (d) {
+            case APPROVED -> "승인";
+            case CONDITIONAL -> "조건부 승인";
+            case REJECTED -> "반려";
+        };
+    }
+
+    private String tReviewType(String lang, SecurityReview.ReviewType t) {
+        if (!"ko".equalsIgnoreCase(lang)) return t.name();
+        return switch (t) {
+            case NEW -> "신규 구축";
+            case CHANGE -> "변경·고도화";
+            case INTEGRATION -> "외부 연계";
+            case DECOMMISSION -> "폐기·종료";
+        };
+    }
+
+    private String tItemResult(String lang, SecurityReviewItem.Result r) {
+        if (!"ko".equalsIgnoreCase(lang)) {
+            return switch (r) {
+                case PASS -> "Pass";
+                case FAIL -> "Fail";
+                case NA -> "N/A";
+                case PENDING -> "Pending";
+            };
+        }
+        return switch (r) {
+            case PASS -> "적합";
+            case FAIL -> "부적합";
+            case NA -> "해당없음";
+            case PENDING -> "미검토";
+        };
     }
 }

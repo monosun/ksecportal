@@ -92,7 +92,14 @@
               <p v-if="r.itemFailed" class="text-[11px] text-red-500 mt-0.5">부적합 {{ r.itemFailed }}건</p>
             </td>
             <td class="px-5 py-3">
-              <span :class="statusBadge(r)">{{ statusText(r) }}</span>
+              <div class="flex items-center gap-2">
+                <span :class="statusBadge(r)">{{ statusText(r) }}</span>
+                <button v-if="r.status === 'COMPLETED'" @click.stop="openReport(r)"
+                  title="결과 보고서 미리보기"
+                  class="text-xs text-primary-600 hover:text-primary-700 hover:underline whitespace-nowrap">
+                  보고서
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -276,9 +283,21 @@
                 <span class="text-xs text-gray-500">{{ detail.reviewerName }} · {{ fmtDate(detail.reviewedAt) }}</span>
               </div>
               <p v-if="detail.reviewComment" class="mt-2 text-sm text-gray-700 whitespace-pre-line">{{ detail.reviewComment }}</p>
-              <button v-if="isManager" @click="reopen" class="mt-3 text-xs text-gray-500 hover:text-primary-600 underline">
-                재검토로 되돌리기
-              </button>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button @click="openReport(detail)" class="btn-secondary text-sm flex items-center gap-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  결과 보고서
+                </button>
+                <button @click="downloadReport(detail)" class="text-xs text-gray-500 hover:text-primary-600 underline">
+                  PDF 내려받기
+                </button>
+                <button v-if="isManager" @click="reopen" class="text-xs text-gray-500 hover:text-primary-600 underline ml-auto">
+                  재검토로 되돌리기
+                </button>
+              </div>
             </template>
             <template v-else-if="isManager">
               <div class="flex flex-wrap gap-2 mb-3">
@@ -310,6 +329,16 @@
         </div>
       </div>
     </div>
+
+    <!-- 심의 결과 보고서 미리보기 (PDF · 다운로드 · 인쇄) -->
+    <FilePreviewModal
+      :open="!!reportTarget"
+      :file-name="REPORT_FILE_NAME"
+      :title="reportTarget?.title || ''"
+      :loader="loadReport"
+      printable
+      @close="reportTarget = null"
+      @download="downloadReport(reportTarget)" />
   </div>
 </template>
 
@@ -319,6 +348,7 @@ import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import { securityReviewApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import DepartmentInput from '@/components/DepartmentInput.vue'
+import FilePreviewModal from '@/components/FilePreviewModal.vue'
 import { useDebounceFn } from '@vueuse/core'
 
 const auth = useAuthStore()
@@ -538,6 +568,24 @@ async function uploadFile(e) {
 
 async function downloadFile() {
   await securityReviewApi.downloadFile(detail.value.id, detail.value.fileName)
+}
+
+// ── 심의 결과 보고서 ──────────────────────────────────────────
+// 미리보기 파일명은 고정이고, 내려받을 때만 심의 제목을 파일명에 담는다.
+const REPORT_FILE_NAME = '보안성심의-결과보고서.pdf'
+const reportTarget = ref(null)
+
+function openReport(review) {
+  reportTarget.value = review
+}
+
+async function loadReport() {
+  return securityReviewApi.reportBlob(reportTarget.value.id)
+}
+
+async function downloadReport(review) {
+  if (!review) return
+  await securityReviewApi.downloadReport(review.id, review.title)
 }
 
 async function removeReview() {

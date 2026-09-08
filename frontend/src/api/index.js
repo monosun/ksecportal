@@ -310,6 +310,18 @@ export const securityReviewApi = {
     return api.post(`/security-reviews/${id}/file`, fd)
   },
   downloadFile: (id, fileName) => downloadBlob(`/security-reviews/${id}/file`, fileName || 'attachment'),
+  /** 심의 완료 건의 결과 보고서 PDF — 미리보기용 Blob */
+  reportBlob: (id) => api.get(`/reports/security-reviews/${id}/pdf`, {
+    responseType: 'blob', params: { lang: getLang() }
+  }),
+  /** 결과 보고서 PDF 내려받기 — 파일명에 심의 제목을 함께 담는다 */
+  downloadReport: (id, label) => {
+    const lang = getLang()
+    const base = lang === 'ko' ? '보안성심의-결과보고서' : 'security-review-report'
+    const safe = (label || '').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60)
+    return downloadBlob(`/reports/security-reviews/${id}/pdf`,
+      `${base}${safe ? '-' + safe : ''}-${today()}.pdf`, { lang })
+  },
   addItem: (id, data) => api.post(`/security-reviews/${id}/items`, data),
   updateItem: (itemId, data) => api.patch(`/security-reviews/items/${itemId}`, data),
   deleteItem: (itemId) => api.delete(`/security-reviews/items/${itemId}`)
