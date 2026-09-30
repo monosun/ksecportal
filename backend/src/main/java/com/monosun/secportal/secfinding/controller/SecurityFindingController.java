@@ -38,10 +38,11 @@ public class SecurityFindingController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String riskLevel,
             @RequestParam(required = false) String auditType,
+            @RequestParam(required = false) String sourceType,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(service.list(year, status, riskLevel, auditType, keyword, page, size));
+        return ApiResponse.ok(service.list(year, status, riskLevel, auditType, sourceType, keyword, page, size));
     }
 
     @GetMapping("/{id}")

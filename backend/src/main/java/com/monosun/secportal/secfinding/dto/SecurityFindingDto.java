@@ -50,6 +50,14 @@ public class SecurityFindingDto {
         private String createdByName;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        /** MANUAL(직접 등록) / ISMS_DEFECT(ISMS 결함관리에서 가져옴) */
+        private String sourceType;
+        /** 원본 ISMS 결함 id — 화면에서 원본으로 이동하는 데 쓴다 */
+        private Long sourceDefectId;
+        /** 출처 표시용 라벨 — 예: "ISMS-P 갱신심사 · 결함-01" */
+        private String sourceLabel;
+        /** 이 화면에서 수정·삭제할 수 있는지 (가져온 건은 false) */
+        private boolean editable;
 
         public static Response from(SecurityFinding f) {
             return Response.builder()
@@ -72,6 +80,10 @@ public class SecurityFindingDto {
                     .createdByName(f.getCreatedBy() != null ? f.getCreatedBy().getName() : null)
                     .createdAt(f.getCreatedAt())
                     .updatedAt(f.getUpdatedAt())
+                    .sourceType(f.resolvedSourceType().name())
+                    .sourceDefectId(f.getSourceDefectId())
+                    .sourceLabel(f.getSourceLabel())
+                    .editable(!f.isFromIsmsDefect())
                     .build();
         }
     }

@@ -27,6 +27,7 @@
     "securityEvents": "보안이벤트 관리",
     "incidents": "보안 인시던트",
     "isms": "ISMS-P 증적관리",
+    "ismsDefects": "ISMS 결함관리",
     "monthlyChecks": "월간 보안점검",
     "secDocs": "보안문서",
     "glossary": "보안용어집",
@@ -397,6 +398,10 @@
     "addComment": "댓글 추가",
     "commentPlaceholder": "댓글을 입력하세요..."
   },
+  "ismsDefect": {
+    "title": "ISMS 결함관리",
+    "subtitle": "ISMS-P 심사 결함 내용과 연도별 결함 조치 보고서를 관리합니다"
+  },
   "isms": {
     "title": "ISMS-P 증적관리",
     "subtitle": "ISMS-P 인증 항목별 증적을 연도별로 관리합니다",
@@ -624,7 +629,7 @@
   },
   "secFinding": {
     "title": "보안 결함사항",
-    "subtitle": "ISMS-P 인증심사 및 내부감사 결함사항을 등록하고 조치 현황을 관리합니다",
+    "subtitle": "ISMS 결함관리에서 자동으로 가져온 ISMS-P 심사 결함과 그 외 보안결함을 함께 관리합니다",
     "addFinding": "결함 등록",
     "editFinding": "결함 수정",
     "year": "연도",

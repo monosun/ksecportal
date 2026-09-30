@@ -154,6 +154,11 @@ const routes = [
         component: () => import('@/views/isms/IsmsListView.vue')
       },
       {
+        path: 'isms-defects',
+        name: 'IsmsDefects',
+        component: () => import('@/views/isms/IsmsDefectView.vue')
+      },
+      {
         path: 'monthly-checks',
         name: 'MonthlyChecks',
         component: () => import('@/views/monthlycheck/MonthlyCheckView.vue')

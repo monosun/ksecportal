@@ -32,13 +32,18 @@ public class SecurityFindingService {
 
     @Transactional(readOnly = true)
     public Page<SecurityFindingDto.Response> list(Integer year, String status, String riskLevel,
-                                                   String auditType, String keyword, int page, int size) {
+                                                   String auditType, String sourceType,
+                                                   String keyword, int page, int size) {
         PageRequest pr = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        SecurityFinding.SourceType source = parseSourceType(sourceType);
         return repo.findWithFilters(
                 year,
                 parseStatus(status),
                 parseRiskLevel(riskLevel),
                 parseAuditType(auditType),
+                source,
+                // 출처 컬럼이 없던 시절의 행(NULL)은 "직접 등록"으로 본다
+                source == SecurityFinding.SourceType.MANUAL,
                 (keyword == null || keyword.isBlank()) ? null : keyword.trim(),
                 pr
         ).map(SecurityFindingDto.Response::from);
@@ -86,6 +91,7 @@ public class SecurityFindingService {
     public SecurityFindingDto.Response update(Long id, SecurityFindingDto.Request req, MultipartFile file)
             throws IOException {
         SecurityFinding f = find(id);
+        requireEditable(f);
         if (req.getFindingSummary() != null && !req.getFindingSummary().isBlank())
             f.setFindingSummary(req.getFindingSummary().trim());
         if (req.getDomain() != null) f.setDomain(req.getDomain());
@@ -113,8 +119,19 @@ public class SecurityFindingService {
     @Transactional
     public void delete(Long id) throws IOException {
         SecurityFinding f = find(id);
+        requireEditable(f);
         if (f.getFilePath() != null) fileStorageService.delete(f.getFilePath());
         repo.delete(f);
+    }
+
+    /**
+     * ISMS 결함관리에서 가져온 건은 이 화면에서 고칠 수 없다 —
+     * 원본을 고치면 다시 덮어써지므로 수정이 남지 않기 때문이다.
+     */
+    private void requireEditable(SecurityFinding f) {
+        if (f.isFromIsmsDefect())
+            throw new BusinessException(
+                    "ISMS 결함관리에서 가져온 항목입니다. 정보보호 관리체계 > ISMS 결함관리 화면에서 수정하세요.");
     }
 
     public org.springframework.core.io.Resource download(Long id) {
@@ -145,6 +162,11 @@ public class SecurityFindingService {
     private SecurityFinding.RiskLevel parseRiskLevelOrDefault(String s) {
         if (s == null || s.isBlank()) return SecurityFinding.RiskLevel.MEDIUM;
         try { return SecurityFinding.RiskLevel.valueOf(s.toUpperCase()); } catch (IllegalArgumentException e) { return SecurityFinding.RiskLevel.MEDIUM; }
+    }
+
+    private SecurityFinding.SourceType parseSourceType(String s) {
+        if (s == null || s.isBlank()) return null;
+        try { return SecurityFinding.SourceType.valueOf(s.toUpperCase()); } catch (IllegalArgumentException e) { return null; }
     }
 
     private SecurityFinding.AuditType parseAuditType(String s) {

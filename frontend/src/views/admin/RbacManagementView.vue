@@ -298,6 +298,7 @@ const MENUS = [
   { key: 'risk_treatment',    label: '위험처리 계획' },
   { key: 'isms_mapping',      label: 'ISMS-P 통제항목 매핑' },
   { key: 'isms',              label: 'ISMS-P 증적관리' },
+  { key: 'isms_defects',      label: 'ISMS 결함관리' },
   // 보안 운영
   { key: 'security_events',   label: '보안이벤트 관리' },
   { key: 'incidents',         label: '보안 인시던트' },

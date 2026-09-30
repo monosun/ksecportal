@@ -18,28 +18,35 @@
     <div class="card mb-4 flex flex-wrap gap-3 items-end">
       <div class="flex flex-col gap-1">
         <label class="text-xs text-gray-500">{{ $t('secFinding.year') }}</label>
-        <select v-model="filters.year" @change="fetchFindings" class="input w-28 text-sm">
+        <select v-model="filters.year" @change="fetchFindings()" class="input w-28 text-sm">
           <option value="">{{ $t('common.all') }}</option>
           <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}년</option>
         </select>
       </div>
       <div class="flex flex-col gap-1">
         <label class="text-xs text-gray-500">{{ $t('secFinding.auditType') }}</label>
-        <select v-model="filters.auditType" @change="fetchFindings" class="input w-44 text-sm">
+        <select v-model="filters.auditType" @change="fetchFindings()" class="input w-44 text-sm">
           <option value="">{{ $t('common.all') }}</option>
           <option v-for="t in AUDIT_TYPES" :key="t" :value="t">{{ $t(`secFinding.auditType_label.${t}`) }}</option>
         </select>
       </div>
       <div class="flex flex-col gap-1">
+        <label class="text-xs text-gray-500">출처</label>
+        <select v-model="filters.sourceType" @change="fetchFindings()" class="input w-40 text-sm">
+          <option value="">{{ $t('common.all') }}</option>
+          <option v-for="t in SOURCE_TYPES" :key="t" :value="t">{{ SOURCE_LABEL[t] }}</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
         <label class="text-xs text-gray-500">{{ $t('secFinding.riskLevel') }}</label>
-        <select v-model="filters.riskLevel" @change="fetchFindings" class="input w-28 text-sm">
+        <select v-model="filters.riskLevel" @change="fetchFindings()" class="input w-28 text-sm">
           <option value="">{{ $t('common.all') }}</option>
           <option v-for="r in RISK_LEVELS" :key="r" :value="r">{{ $t(`secFinding.riskLevel_label.${r}`) }}</option>
         </select>
       </div>
       <div class="flex flex-col gap-1">
         <label class="text-xs text-gray-500">{{ $t('secFinding.status') }}</label>
-        <select v-model="filters.status" @change="fetchFindings" class="input w-32 text-sm">
+        <select v-model="filters.status" @change="fetchFindings()" class="input w-32 text-sm">
           <option value="">{{ $t('common.all') }}</option>
           <option v-for="s in STATUSES" :key="s" :value="s">{{ $t(`secFinding.status_label.${s}`) }}</option>
         </select>
@@ -72,6 +79,7 @@
           <thead>
             <tr class="border-b">
               <th class="text-left py-3 px-3 font-semibold text-gray-600 w-16">연도</th>
+              <th class="text-left py-3 px-3 font-semibold text-gray-600 w-36">출처</th>
               <th class="text-left py-3 px-3 font-semibold text-gray-600 w-28">{{ $t('secFinding.auditType') }}</th>
               <th class="text-left py-3 px-3 font-semibold text-gray-600 w-24">인증기준</th>
               <th class="text-left py-3 px-3 font-semibold text-gray-600">{{ $t('secFinding.findingSummary') }}</th>
@@ -85,6 +93,12 @@
             <tr v-for="f in findings" :key="f.id" class="border-b hover:bg-gray-50 cursor-pointer"
               @click="openDetail(f)">
               <td class="py-3 px-3 text-gray-500">{{ f.year }}</td>
+              <td class="py-3 px-3">
+                <span :class="sourceBadge(f.sourceType)" class="text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap">
+                  {{ SOURCE_LABEL[f.sourceType] || SOURCE_LABEL.MANUAL }}
+                </span>
+                <div v-if="f.sourceLabel" class="text-[11px] text-gray-400 mt-0.5 truncate max-w-[130px]">{{ f.sourceLabel }}</div>
+              </td>
               <td class="py-3 px-3">
                 <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
                   {{ $t(`secFinding.auditType_label.${f.auditType}`) }}
@@ -110,7 +124,7 @@
                 </span>
               </td>
               <td class="py-3 px-3 text-right" @click.stop>
-                <div v-if="isManager" class="flex gap-1 justify-end">
+                <div v-if="isManager && f.editable !== false" class="flex gap-1 justify-end">
                   <button @click="openEdit(f)" class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
@@ -118,6 +132,10 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
                 </div>
+                <button v-else-if="isManager" @click="goToDefect(f)"
+                  class="text-[11px] text-primary-600 hover:text-primary-700 whitespace-nowrap" title="ISMS 결함관리에서 수정">
+                  원본 &rsaquo;
+                </button>
               </td>
             </tr>
           </tbody>
@@ -138,7 +156,8 @@
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div class="px-6 py-4 border-b flex items-start justify-between">
           <div>
-            <div class="flex gap-2 mb-1">
+            <div class="flex gap-2 mb-1 flex-wrap">
+              <span :class="sourceBadge(detailItem.sourceType)" class="text-xs px-2 py-0.5 rounded font-medium">{{ SOURCE_LABEL[detailItem.sourceType] || SOURCE_LABEL.MANUAL }}</span>
               <span :class="riskBadge(detailItem.riskLevel)" class="text-xs px-2 py-0.5 rounded font-medium">{{ $t(`secFinding.riskLevel_label.${detailItem.riskLevel}`) }}</span>
               <span :class="statusBadge(detailItem.status)" class="text-xs px-2 py-0.5 rounded font-medium">{{ $t(`secFinding.status_label.${detailItem.status}`) }}</span>
             </div>
@@ -149,6 +168,17 @@
           </button>
         </div>
         <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4 text-sm">
+          <div v-if="detailItem.editable === false"
+            class="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="flex-1">
+              <strong>{{ detailItem.sourceLabel || 'ISMS 결함관리' }}</strong> 에서 자동으로 가져온 항목입니다.
+              내용을 고치려면 정보보호 관리체계 &gt; ISMS 결함관리에서 원본을 수정하세요.
+            </span>
+            <button @click="goToDefect(detailItem)" class="font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap">원본 열기 &rsaquo;</button>
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div><span class="text-gray-500">연도</span><p class="font-medium mt-0.5">{{ detailItem.year }}</p></div>
             <div><span class="text-gray-500">심사 유형</span><p class="font-medium mt-0.5">{{ $t(`secFinding.auditType_label.${detailItem.auditType}`) }}</p></div>
@@ -280,9 +310,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { secFindingApi } from '@/api'
 
+const router = useRouter()
 const auth = useAuthStore()
 const isManager = computed(() => auth.isAdmin || auth.user?.role === 'MANAGER')
 
@@ -305,8 +337,11 @@ const confirmModal = ref({ show: false, message: '', onConfirm: () => {} })
 const AUDIT_TYPES = ['ISMS_P', 'INTERNAL', 'OTHER']
 const RISK_LEVELS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 const STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED']
+// 출처 — ISMS 결함관리에서 자동으로 가져온 건과 이 화면에서 직접 등록한 건
+const SOURCE_TYPES = ['ISMS_DEFECT', 'MANUAL']
+const SOURCE_LABEL = { ISMS_DEFECT: 'ISMS-P 결함', MANUAL: '직접 등록' }
 
-const filters = ref({ year: '', auditType: '', riskLevel: '', status: '', keyword: '' })
+const filters = ref({ year: '', auditType: '', sourceType: '', riskLevel: '', status: '', keyword: '' })
 
 const statusCounts = computed(() => {
   const counts = {}
@@ -342,6 +377,7 @@ async function fetchFindings(page = 0) {
     const params = { page, size: pageSize }
     if (filters.value.year) params.year = filters.value.year
     if (filters.value.auditType) params.auditType = filters.value.auditType
+    if (filters.value.sourceType) params.sourceType = filters.value.sourceType
     if (filters.value.riskLevel) params.riskLevel = filters.value.riskLevel
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.keyword) params.keyword = filters.value.keyword
@@ -357,7 +393,7 @@ async function fetchFindings(page = 0) {
 function goPage(p) { fetchFindings(p) }
 
 function resetFilters() {
-  filters.value = { year: yearOptions.value[0] || '', auditType: '', riskLevel: '', status: '', keyword: '' }
+  filters.value = { year: yearOptions.value[0] || '', auditType: '', sourceType: '', riskLevel: '', status: '', keyword: '' }
   fetchFindings()
 }
 
@@ -414,6 +450,15 @@ function confirmDelete(f) {
 }
 
 function download(f) { secFindingApi.download(f.id, f.fileName) }
+
+function sourceBadge(t) {
+  return t === 'ISMS_DEFECT' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+}
+
+/** ISMS 결함관리 화면의 해당 연도로 이동 — 원본은 그쪽에서 수정한다 */
+function goToDefect(f) {
+  router.push({ path: '/isms-defects', query: { year: f.year, defectId: f.sourceDefectId } })
+}
 
 function riskBadge(r) {
   return { CRITICAL: 'bg-red-100 text-red-700', HIGH: 'bg-orange-100 text-orange-700',

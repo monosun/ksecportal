@@ -269,10 +269,16 @@ CREATE TABLE IF NOT EXISTS security_findings (
     file_path        VARCHAR(1000),
     file_size        BIGINT,
     created_by       BIGINT,
+    -- 출처: MANUAL=화면에서 직접 등록, ISMS_DEFECT=ISMS 결함관리(isms_defects)에서 자동 반영
+    source_type      VARCHAR(20) DEFAULT 'MANUAL',
+    source_defect_id BIGINT,
+    source_label     VARCHAR(100),
     created_at       DATETIME(6),
     updated_at       DATETIME(6),
     KEY idx_sec_findings_year (year),
     KEY idx_sec_findings_status (status),
+    KEY idx_sec_findings_source_type (source_type),
+    UNIQUE KEY uk_sec_findings_source_defect (source_defect_id),
     FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

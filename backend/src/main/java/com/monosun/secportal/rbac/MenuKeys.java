@@ -18,7 +18,7 @@ public final class MenuKeys {
             "dash_risks", "dash_vulns", "dash_incidents", "dash_isms", "dash_evidence",
             // 정보보호 관리체계
             "policies", "assets", "sbom", "threats", "vulnerabilities",
-            "risk_assessment", "risk_treatment", "isms_mapping", "isms",
+            "risk_assessment", "risk_treatment", "isms_mapping", "isms", "isms_defects",
             // 보안 운영
             "security_events", "incidents", "sec_findings", "monthly_checks",
             "source_scan", "security_reviews", "operation_status", "emergency_contacts",

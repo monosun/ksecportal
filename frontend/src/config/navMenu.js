@@ -31,6 +31,7 @@ export const navGroups = [
       { to: '/risk-treatment',    label: 'nav.riskTreatment',   icon: DocumentTextIcon,      menuKey: 'risk_treatment' },
       { to: '/isms-mapping',      label: 'nav.ismsMapping',     icon: ClipboardCheckIcon,    menuKey: 'isms_mapping' },
       { to: '/isms',              label: 'nav.isms',            icon: ClipboardCheckIcon,    menuKey: 'isms' },
+      { to: '/isms-defects',      label: 'nav.ismsDefects',     icon: ShieldExclamationIcon, menuKey: 'isms_defects' },
     ]
   },
   {

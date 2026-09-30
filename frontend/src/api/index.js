@@ -500,6 +500,43 @@ export const ismsApi = {
   }
 }
 
+// ISMS 결함관리 — 연도별 결함 내역 + 연도별 결함 조치 보고서
+export const ismsDefectApi = {
+  list: (params) => api.get('/isms-defects', { params }),
+  years: () => api.get('/isms-defects/years'),
+  summary: (year) => api.get('/isms-defects/summary', { params: { year } }),
+  get: (id) => api.get(`/isms-defects/${id}`),
+  create: (data, file) => {
+    const fd = new FormData()
+    fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+    if (file) fd.append('file', file)
+    return api.post('/isms-defects', fd)
+  },
+  update: (id, data, file) => {
+    const fd = new FormData()
+    fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+    if (file) fd.append('file', file)
+    return api.patch(`/isms-defects/${id}`, fd)
+  },
+  delete: (id) => api.delete(`/isms-defects/${id}`),
+  downloadFile: (id, fileName) => downloadBlob(`/isms-defects/${id}/file`, fileName),
+  getReport: (year) => api.get('/isms-defects/report', { params: { year } }),
+  saveReport: (year, data, file) => {
+    const fd = new FormData()
+    fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+    if (file) fd.append('file', file)
+    return api.put('/isms-defects/report', fd, { params: { year } })
+  },
+  deleteReport: (year) => api.delete('/isms-defects/report', { params: { year } }),
+  downloadReportFile: (year, fileName) =>
+    downloadBlob(`/isms-defects/report/file?year=${year}`, fileName),
+  exportCsv: (year) => {
+    const lang = getLang()
+    const name = lang === 'ko' ? `ISMS-결함관리-${year}.csv` : `isms-defects-${year}.csv`
+    return downloadBlob(`/isms-defects/export/csv?year=${year}`, name)
+  }
+}
+
 export const monthlyCheckApi = {
   list: (yearMonth) => api.get('/monthly-checks', { params: { yearMonth } }),
   summary: (yearMonth) => api.get('/monthly-checks/summary', { params: { yearMonth } }),

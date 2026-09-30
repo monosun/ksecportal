@@ -660,6 +660,125 @@ ISMS-P 인증 항목 목록 조회.
 
 ---
 
+## ISMS 결함관리 (ISMS Defect)
+
+ISMS-P 심사에서 지적된 **결함(부적합)** 을 연도별로 관리한다. 증적관리(`/isms`)와 같은 "연도 단위" 모델이며,
+한 연도는 **결함 N건 + 결함 조치 보고서 1건**으로 구성된다.
+
+> **보안 결함사항(`/security-findings`) 자동 연동**
+> 결함을 등록·수정·삭제하면 같은 내용이 보안 결함사항에 `sourceType=ISMS_DEFECT` 행으로 즉시 반영된다
+> (`security_findings.source_defect_id` 로 1:1 연결, 유니크). 단방향이므로 보안 결함사항 쪽에서
+> 그 행을 `PATCH`·`DELETE` 하면 400 으로 거부된다 — 원본을 고쳐야 한다.
+> 첨부파일은 실물을 복제하지 않고 **경로만 공유**하며, 원본 결함을 지우면 연동 행도 함께 사라진다.
+> 기동 시 `IsmsDefectFindingBackfill` 이 아직 반영되지 않은 결함을 보충하므로, 과거 데이터나 어긋난 동기화도 스스로 복구된다.
+>
+> 필드 대응: `title`→`findingSummary`, `content`+`cause`→`findingDetail`,
+> `actionPlan`+`actionResult`+`preventionPlan`→`correctiveAction`, `severity`→`riskLevel`(동일 4단계),
+> `status` `COMPLETED`→`RESOLVED` · `HOLD`→`ACCEPTED`, `auditType` 최초/사후/갱신→`ISMS_P`.
+
+열거형 값
+
+| 필드 | 값 |
+|------|-----|
+| `auditType` | `INITIAL`(최초심사) · `FOLLOWUP`(사후심사) · `RENEWAL`(갱신심사) · `INTERNAL`(내부심사) · `OTHER`(기타) |
+| `defectType` | `DEFECT`(결함) · `RECOMMENDATION`(권고) · `IMPROVEMENT`(개선사항) |
+| `severity` | `CRITICAL` · `HIGH` · `MEDIUM` · `LOW` |
+| `status` | `OPEN`(미조치) · `IN_PROGRESS`(조치중) · `COMPLETED`(조치완료) · `HOLD`(보류) |
+
+### GET /isms-defects
+
+연도별 결함 목록. `year` 를 생략하면 올해로 조회한다.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 조회 연도 (기본값: 올해) |
+| `auditType` · `defectType` · `severity` · `status` | string | 열거형 필터 (생략 시 전체) |
+| `keyword` | string | 결함번호 · 제목 · 내용 · 인증기준 코드 부분일치 |
+
+정렬은 `sortOrder` → `defectNo` → `id` 순이다.
+
+### GET /isms-defects/years
+
+결함이나 보고서가 등록된 연도 목록(내림차순).
+
+### GET /isms-defects/summary
+
+```json
+{
+  "year": 2026, "total": 12, "open": 3, "inProgress": 4, "completed": 5, "hold": 0,
+  "defect": 8, "recommendation": 3, "improvement": 1,
+  "overdue": 2, "completionRate": 42, "reportWritten": true, "years": [2026, 2025]
+}
+```
+
+`overdue` 는 **조치완료가 아닌데 조치기한이 지난** 건수, `completionRate` 는 `조치완료 ÷ 전체` 백분율이다.
+
+### POST /isms-defects *(MANAGER+)*
+
+`multipart/form-data` — `data`(JSON) + `file`(선택, 첨부 1건).
+
+```json
+{
+  "year": 2026, "auditType": "RENEWAL", "defectNo": "결함-01", "defectType": "DEFECT",
+  "severity": "HIGH", "domainName": "2.10 시스템 및 서비스 보안관리",
+  "itemCode": "2.10.1", "itemName": "보안시스템 운영",
+  "title": "방화벽 정책 주기적 검토 미흡",
+  "content": "…", "cause": "…", "actionPlan": "…", "actionResult": "…", "preventionPlan": "…",
+  "dueDate": "2026-12-31", "completedDate": null,
+  "department": "인프라팀", "assignee": "홍길동", "status": "OPEN", "sortOrder": 1
+}
+```
+
+`itemCode`·`itemName`·`domainName` 은 `GET /isms/items` 의 101개 인증기준에서 고른 값을 그대로 넣는 것을 권장하지만,
+직접 입력해도 된다(문자열 필드이며 참조 무결성은 없다).
+
+### PATCH /isms-defects/:id *(MANAGER+)*
+
+POST 와 같은 형식. **null 인 필드는 변경하지 않는다.** 다만 `dueDate`·`completedDate` 는
+"비우기"도 의미가 있으므로 요청 값을 그대로 반영한다 — 수정 시에는 폼 전체 값을 보낼 것.
+`removeFile: true` 면 기존 첨부를 삭제한다(새 파일을 함께 올리면 교체).
+
+### DELETE /isms-defects/:id *(MANAGER+)*
+
+### GET /isms-defects/:id/file
+
+결함 첨부파일 다운로드.
+
+### GET /isms-defects/report
+
+연도별 결함 조치 보고서 1건. 아직 없으면 `exists: false` 와 기본값만 반환한다(404 아님).
+
+```json
+{
+  "year": 2026, "exists": true, "title": "2026년 ISMS-P 결함 조치 보고서",
+  "auditType": "RENEWAL", "auditOrg": "한국인터넷진흥원(KISA)", "auditors": "…",
+  "auditScope": "…", "auditStartDate": "2026-05-11", "auditEndDate": "2026-05-15",
+  "summary": "…", "content": "…", "conclusion": "…",
+  "reportedAt": "2026-06-30", "reporter": "정보보호팀", "fileName": "보고서.pdf"
+}
+```
+
+### PUT /isms-defects/report *(MANAGER+)*
+
+연도당 1건 **upsert** — `year` 쿼리 파라미터 + `multipart/form-data`(`data` JSON + 선택 `file`).
+`title` 을 비우면 `{연도}년 ISMS-P 결함 조치 보고서` 로 자동 채운다.
+날짜 3종(`auditStartDate`·`auditEndDate`·`reportedAt`)은 요청 값을 그대로 반영하므로 전체 값을 보낼 것.
+`removeFile: true` 로 첨부만 삭제할 수 있다.
+
+### DELETE /isms-defects/report *(MANAGER+)*
+
+해당 연도 보고서를 첨부와 함께 삭제한다.
+
+### GET /isms-defects/report/file
+
+보고서 첨부파일 다운로드.
+
+### GET /isms-defects/export/csv
+
+연도별 결함 전체를 CSV(UTF-8 BOM)로 내려받는다 — `ISMS_결함관리_{연도}.csv`.
+
+---
+
 ## 보안 인시던트 (Incident)
 
 ### GET /incidents

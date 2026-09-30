@@ -27,6 +27,7 @@
     "securityEvents": "Security Events",
     "incidents": "Security Incidents",
     "isms": "ISMS-P Evidence",
+    "ismsDefects": "ISMS Defects",
     "monthlyChecks": "Monthly Security Check",
     "secDocs": "Security Documents",
     "glossary": "Security Glossary",
@@ -370,6 +371,10 @@
     "addComment": "Add Comment",
     "commentPlaceholder": "Write a comment..."
   },
+  "ismsDefect": {
+    "title": "ISMS Defects",
+    "subtitle": "Manage ISMS-P audit defects and the yearly corrective-action report"
+  },
   "isms": {
     "title": "ISMS-P Evidence",
     "subtitle": "Manage ISMS-P certification evidence records by year",
@@ -597,7 +602,7 @@
   },
   "secFinding": {
     "title": "Security Findings",
-    "subtitle": "Track ISMS-P certification and internal audit findings and corrective actions",
+    "subtitle": "ISMS-P audit defects synced from ISMS Defects, plus other security findings",
     "addFinding": "Add Finding",
     "editFinding": "Edit Finding",
     "year": "Year",
