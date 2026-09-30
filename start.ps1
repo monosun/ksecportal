@@ -83,7 +83,7 @@ docker compose ps
 Write-Host ""
 Write-Host "=== Access Info ===" -ForegroundColor Cyan
 Write-Host "  Frontend     : http://localhost" -ForegroundColor Green
-Write-Host "  Backend API  : http://localhost:8080/api" -ForegroundColor Green
+Write-Host "  Backend API  : http://localhost/api" -ForegroundColor Green
 Write-Host "  Default Admin: secportal@monosun.com / Ksecurity!!!" -ForegroundColor Green
 Write-Host ""
 

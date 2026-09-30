@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # SecPortal — EC2 서버 최초 초기화 스크립트
 # Ubuntu 22.04 / 24.04 LTS 기준
-# 사용법: bash <(curl -fsSL https://raw.githubusercontent.com/monosun/secportal/main/scripts/server-setup.sh)
+# 사용법: bash <(curl -fsSL https://raw.githubusercontent.com/monosun/ksecportal/main/scripts/server-setup.sh)
 # 또는:   bash scripts/server-setup.sh
 
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/monosun/secportal.git}"
+REPO_URL="${REPO_URL:-https://github.com/monosun/ksecportal.git}"
 DEPLOY_DIR="${DEPLOY_DIR:-/home/ubuntu/secportal}"
 SWAP_SIZE="${SWAP_SIZE:-2G}"
 

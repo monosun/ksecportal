@@ -261,7 +261,7 @@ assets
 | `06_isms.sql` | ISMS-P 인증항목·증적 테이블 |
 | `07_extended_schema.sql` | 확장 스키마 (RBAC·위원회·내부감사 등) |
 | `08_extended_seed.sql` | 확장 기능 기본 데이터 |
-| `09_threat_seed.sql` | 위협 카탈로그 기본 560개 |
+| `09_threat_seed.sql` | 위협 카탈로그 기본 140개 |
 | `10_sbom.sql` | `sbom_software`·`sbom_components` 테이블 + `assets.sbom_software_id` 컬럼 |
 
 ---

@@ -158,7 +158,7 @@ ssh -i secportal-key.pem ubuntu@13.124.xxx.xxx
 
 ```bash
 # EC2 서버에서 실행
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/monosun/secportal/main/scripts/server-setup.sh)
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/monosun/ksecportal/main/scripts/server-setup.sh)
 ```
 
 스크립트가 자동으로 수행하는 작업:
@@ -205,7 +205,7 @@ sudo usermod -aG docker ubuntu
 newgrp docker  # 재로그인 대신 즉시 적용
 
 # 5. 소스코드 클론
-git clone https://github.com/monosun/secportal.git /home/ubuntu/secportal
+git clone https://github.com/monosun/ksecportal.git /home/ubuntu/secportal
 cd /home/ubuntu/secportal
 ```
 

@@ -89,7 +89,7 @@ docker compose ps
 echo ""
 echo "=== Access Info ==="
 echo "  Frontend     : http://localhost"
-echo "  Backend API  : http://localhost:8080/api"
+echo "  Backend API  : http://localhost/api"
 echo "  Default Admin: secportal@monosun.com / Ksecurity!!!"
 echo ""
 
