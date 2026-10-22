@@ -3,7 +3,7 @@
 Git에서 소스를 받아 처음 설치하고, 이후 버전을 올리는 방법까지 단계별로 안내합니다.
 모든 구성 요소는 **Docker Compose** 로 실행되므로 호스트에 Java·Gradle·Node.js 를 설치할 필요가 없습니다.
 
-> 기준 버전: **v1.42.0** · 빠른 요약은 [README — 빠른 시작](README.md#빠른-시작)을 참고하세요.
+> 기준 버전: **v1.42.1** · 빠른 요약은 [README — 빠른 시작](README.md#빠른-시작)을 참고하세요.
 
 ---
 
@@ -34,7 +34,7 @@ git clone https://github.com/monosun/ksecportal.git
 cd ksecportal
 ```
 
-특정 버전으로 설치하려면 태그를 체크아웃합니다: `git checkout v1.42.0`
+특정 버전으로 설치하려면 태그를 체크아웃합니다: `git checkout v1.42.1`
 
 ---
 
@@ -336,6 +336,6 @@ docker compose exec -T db mysql --default-character-set=utf8mb4 -usecportal -p<�
 
 ## 버전 확인
 
-최신 버전: **v1.42.0** — 릴리즈 노트: [release/v1.42.0/RELEASE_NOTES.md](release/v1.42.0/RELEASE_NOTES.md)
+최신 버전: **v1.42.1** — 릴리즈 노트: [release/v1.42.1/RELEASE_NOTES.md](release/v1.42.1/RELEASE_NOTES.md)
 
 전체 이력: [README.md — 릴리즈 히스토리](README.md#릴리즈-히스토리)
