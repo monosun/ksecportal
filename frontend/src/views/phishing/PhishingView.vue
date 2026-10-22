@@ -337,7 +337,7 @@
               <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 border-b flex gap-4">
                 <span>보내는 사람: {{ previewModal.template?.senderName }} &lt;{{ previewModal.template?.senderEmail }}&gt;</span>
               </div>
-              <div class="p-4 max-h-96 overflow-y-auto" v-html="previewModal.template?.bodyHtml"></div>
+              <div class="p-4 max-h-96 overflow-y-auto" v-html="previewBodyHtml"></div>
             </div>
           </div>
         </div>
@@ -533,6 +533,7 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from 'vue'
+import DOMPurify from 'dompurify'
 import { phishingApi } from '@/api'
 import PiMaskToggle from '@/components/privacy/PiMaskToggle.vue'
 import DepartmentInput from '@/components/DepartmentInput.vue'
@@ -630,6 +631,7 @@ async function confirmDeleteTemplate(t) {
 // ── Preview modal ──────────────────────────────────────────────────────────
 const previewModal = reactive({ open: false, template: null })
 function previewTemplate(t) { previewModal.template = t; previewModal.open = true }
+const previewBodyHtml = computed(() => DOMPurify.sanitize(previewModal.template?.bodyHtml || ''))
 
 // ── Target modal ───────────────────────────────────────────────────────────
 const targetModal = reactive({
