@@ -140,7 +140,7 @@ public class OktaAuthService {
             throw new BusinessException("Okta 토큰 교환에 실패했습니다.");
         }
 
-        Jwt jwt = validateIdToken(idToken, resolveIssuer());
+        Jwt jwt = validateIdToken(idToken, resolveIssuer(), resolveClientId());
         String sub = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
         String name = jwt.getClaimAsString("name");
@@ -184,7 +184,8 @@ public class OktaAuthService {
         }
     }
 
-    private Jwt validateIdToken(String idToken, String effectiveIssuer) {
+    private Jwt validateIdToken(String idToken, String effectiveIssuer, String clientId) {
+        Jwt jwt;
         try {
             if (jwtDecoder == null || !effectiveIssuer.equals(cachedDecoderIssuer)) {
                 synchronized (this) {
@@ -194,10 +195,15 @@ public class OktaAuthService {
                     }
                 }
             }
-            return jwtDecoder.decode(idToken);
+            jwt = jwtDecoder.decode(idToken);
         } catch (Exception e) {
             throw new BusinessException("Okta 토큰 검증에 실패했습니다.");
         }
+        // 서명·issuer·만료만으로는 같은 Okta 테넌트의 다른 앱용 토큰도 통과하므로 수신자(aud)가 이 앱인지 확인한다(OIDC Core 3.1.3.7)
+        if (jwt.getAudience() == null || !jwt.getAudience().contains(clientId)) {
+            throw new BusinessException("Okta 토큰 검증에 실패했습니다.");
+        }
+        return jwt;
     }
 
     private User findOrCreateUser(String sub, String email, String name) {

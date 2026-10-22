@@ -2,6 +2,7 @@ package com.monosun.secportal.auth.entity;
 
 import com.monosun.secportal.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -51,7 +52,9 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private boolean mfaEnabled = false;
 
-    @Column(length = 64)
+    /** TOTP 비밀키 — 유출되면 MFA 가 무력화되므로 저장 시 암호화(AES-256-GCM) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(length = 255)
     private String mfaSecret;
 
     @Column(nullable = false)

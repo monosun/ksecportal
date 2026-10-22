@@ -4,7 +4,7 @@ SET CHARACTER SET utf8mb4;
 -- GitHub 연동 설정 (단일 행 — 토큰은 ADMIN 전용 API로만 접근, 공개 app_settings에 저장 금지)
 CREATE TABLE IF NOT EXISTS github_config (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
-    token        VARCHAR(500),
+    token        VARCHAR(1024),
     api_base_url VARCHAR(300),
     owner        VARCHAR(200),
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

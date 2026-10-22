@@ -1,6 +1,7 @@
 package com.monosun.secportal.notification.entity;
 
 import jakarta.persistence.*;
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -34,8 +35,9 @@ public class MailConfig {
     @Column(length = 200)
     private String username;
 
-    /** SMTP 인증 비밀번호 (마스킹 응답, 평문 저장) */
-    @Column(length = 500)
+    /** SMTP 인증 비밀번호 (마스킹 응답, 저장 시 암호화) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(length = 1024)
     private String password;
 
     /** 발신자 주소 (From) */

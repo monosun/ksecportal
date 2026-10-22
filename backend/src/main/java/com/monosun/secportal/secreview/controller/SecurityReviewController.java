@@ -90,8 +90,9 @@ public class SecurityReviewController {
     @PostMapping(value = "/{id}/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<SecurityReviewDto.Response> uploadFile(
             @PathVariable Long id,
-            @RequestParam("file") MultipartFile file) throws IOException {
-        return ApiResponse.ok(service.uploadFile(id, file));
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal User user) throws IOException {
+        return ApiResponse.ok(service.uploadFile(id, file, user));
     }
 
     @GetMapping("/{id}/file")

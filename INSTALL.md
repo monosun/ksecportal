@@ -3,7 +3,7 @@
 Git에서 소스를 받아 처음 설치하고, 이후 버전을 올리는 방법까지 단계별로 안내합니다.
 모든 구성 요소는 **Docker Compose** 로 실행되므로 호스트에 Java·Gradle·Node.js 를 설치할 필요가 없습니다.
 
-> 기준 버전: **v1.42.1** · 빠른 요약은 [README — 빠른 시작](README.md#빠른-시작)을 참고하세요.
+> 기준 버전: **v1.42.2** · 빠른 요약은 [README — 빠른 시작](README.md#빠른-시작)을 참고하세요.
 
 ---
 
@@ -34,7 +34,7 @@ git clone https://github.com/monosun/ksecportal.git
 cd ksecportal
 ```
 
-특정 버전으로 설치하려면 태그를 체크아웃합니다: `git checkout v1.42.1`
+특정 버전으로 설치하려면 태그를 체크아웃합니다: `git checkout v1.42.2`
 
 ---
 
@@ -66,7 +66,7 @@ cp .env.example .env        # Windows PowerShell: copy .env.example .env
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `DB_PASSWORD_ENC` · `JWT_SECRET_ENC` · `MAIL_PASSWORD_ENC` | (비어 있음) | 평문 대신 쓸 `ENC(...)` 암호문. 값이 있으면 평문 변수보다 우선합니다 (아래 "비밀 값 암호화") |
-| `SECURITY_FAIL_ON_INSECURE_SECRETS` | `false` | `true` 면 기본값·평문 비밀이 남아 있을 때 백엔드 기동을 중단합니다 (**운영 권장**) |
+| `SECURITY_FAIL_ON_INSECURE_SECRETS` | `.env.example`: `true` (v1.42.2~) · 미지정: `false` | `true` 면 공개된 기본 키·샘플 비밀번호·짧은 키가 남아 있을 때 백엔드 기동을 중단합니다. 개인정보 암호화·백필보다 먼저 점검합니다. `start.sh`·`start.ps1` 이 자동으로 만든 체험용 `.env` 는 `false` |
 | `PI_COLUMN_ENCRYPTION_ENABLED` | `true` | `false` 면 개인정보를 평문 저장 (권장하지 않음) |
 | `MAIL_HOST` · `MAIL_PORT` · `MAIL_USERNAME` · `MAIL_PASSWORD` | `smtp.gmail.com` · `587` | 알림 메일. **587(STARTTLS)만 지원**하며 465(SSL)는 지원하지 않습니다. 비밀번호가 비면 발송을 건너뜁니다. 설치 후 **관리 > 설정관리 > 시스템 설정**의 발송 메일서버(SMTP)에서도 설정할 수 있으며, 그쪽이 켜져 있으면 우선합니다 |
 | `DOC_CONVERT_URL` · `DOC_CONVERT_TIMEOUT` · `DOC_CONVERT_MAX_MB` | `http://gotenberg:3000` · `120` · `80` | 보안문서 PPT·워드 미리보기용 변환 서버. URL 을 비우면 변환 미리보기가 꺼집니다 |
@@ -243,6 +243,7 @@ docker compose up -d
 | v1.39.0 | `v1.39.0_error_logs.sql` | 에러 로그 관리 |
 | v1.42.0 | `v1.42.0_isms_defect.sql` | ISMS 결함관리 테이블 |
 | v1.42.0 | `v1.42.0_security_finding_source.sql` | 보안 결함사항 출처 구분·기존 행 보정·유니크 제약 |
+| v1.42.2 | `v1.42.2_secret_column_encryption.sql` | MFA 비밀키·SMTP 비밀번호·보안 솔루션 API 키·GitHub 토큰 암호화 대비 컬럼 길이 확대 (재기동 시 기존 평문 자동 암호화) |
 
 > `db/migration/` 에 있는 나머지 파일(`v1.26.0_*`, `v1.29.0_*`, `v1.44.0_*` ~ `v1.54.0_*` 등)은 **v1.0.0 공개 이전** 내부 버전용입니다.
 > v1.0.0 이후 설치본은 이미 `db/init` 에 반영되어 있으므로 적용할 필요가 없습니다.
@@ -336,6 +337,6 @@ docker compose exec -T db mysql --default-character-set=utf8mb4 -usecportal -p<�
 
 ## 버전 확인
 
-최신 버전: **v1.42.1** — 릴리즈 노트: [release/v1.42.1/RELEASE_NOTES.md](release/v1.42.1/RELEASE_NOTES.md)
+최신 버전: **v1.42.2** — 릴리즈 노트: [release/v1.42.2/RELEASE_NOTES.md](release/v1.42.2/RELEASE_NOTES.md)
 
 전체 이력: [README.md — 릴리즈 히스토리](README.md#릴리즈-히스토리)

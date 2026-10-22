@@ -4,10 +4,11 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-**최신 버전: v1.42.1**
+**최신 버전: v1.42.2**
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.42.2](release/v1.42.2/RELEASE_NOTES.md) | **[보안 수정]** OWASP 자체 점검 조치 — ISMS-P 증적·월간 보안점검 쓰기/삭제 API 와 보안성 심의 첨부 교체의 **권한 누락 수정**(메뉴별 권한을 서버에서도 검사), **MFA 비밀키·SMTP 비밀번호·보안 솔루션 API 키·GitHub 토큰 암호화 저장**, 공개된 기본 키로 기동·암호화되지 않도록 **기동 점검을 백필보다 먼저 실행**(`.env.example` 기본 차단), Okta 토큰 `aud` 검증, `/app-settings` 비밀값 가림 — **마이그레이션 필수** `v1.42.2_secret_column_encryption.sql` |
 | [v1.42.1](release/v1.42.1/RELEASE_NOTES.md) | **[보안 수정]** 모의훈련 악성메일 템플릿 미리보기 XSS(저장형 XSS) 취약점 패치 |
 | [v1.42.0](release/v1.42.0/RELEASE_NOTES.md) | **ISMS 결함관리 신설**(정보보호 관리체계 메뉴 — ISMS-P 심사 결함을 연도별로 등록·조치 추적, 인증기준 101항목 선택·기한초과 자동 표시·조치율 요약·CSV, 연도당 **결함 조치 보고서** 1건), **보안 결함사항에 ISMS-P 결함 자동 연동**(등록·수정·삭제 즉시 반영, 출처 배지·필터, 연동 건은 읽기 전용·`원본 ›` 이동), 보안 결함사항 **필터 변경 시 목록이 갱신되지 않던 문제 수정** — **마이그레이션 필수** `v1.42.0_*.sql` |
 | [v1.41.0](release/v1.41.0/RELEASE_NOTES.md) | **보안성 심의 결과 보고서(PDF)**(심의가 완료된 건을 보안 운영 > 보안성 심의 화면에서 바로 **미리보기·인쇄·다운로드** — 목록의 `보고서` 링크나 상세의 `결과 보고서` 버튼, 심의 결과 배너(승인·조건부 승인·반려)와 심의 개요·검토 결과 요약(영역별 현황표)·설계 검토 체크리스트 전 항목·심의 의견·심의자 확인란으로 구성, 심의 완료 건만 생성되며 심의 상세를 볼 수 있는 사용자면 누구나 받을 수 있음, 파일 미리보기 창에 **인쇄** 버튼 추가(뷰어가 막으면 새 탭으로 대체)) |
@@ -202,7 +203,7 @@ docker compose up -d --build
 | `CORS_ALLOWED_ORIGINS` | `http://localhost,http://localhost:80` | CORS 허용 출처 |
 | `JASYPT_ENCRYPTOR_PASSWORD` | `dev-local-key` | 설정값 암호화 마스터 키 (모든 `ENC(...)` 복호화, 16자 이상 권장) |
 | `JASYPT_ENCRYPTOR_PASSWORD_FILE` | — | 마스터 키를 담은 파일 경로 (docker secret 등, 지정 시 파일 값 사용 — 권장) |
-| `SECURITY_FAIL_ON_INSECURE_SECRETS` | `false` | `true` 면 기본값·평문 비밀이 남아 있을 때 백엔드 기동 중단 |
+| `SECURITY_FAIL_ON_INSECURE_SECRETS` | `.env.example`: `true` · 미지정: `false` | `true` 면 공개된 기본 키·샘플 비밀번호·짧은 키가 남아 있을 때 백엔드 기동 중단(개인정보 암호화·백필보다 먼저 점검) |
 | `OKTA_ENABLED` | `false` | Okta SSO 활성화 여부 (DB 설정 없을 때 폴백) |
 | `OKTA_CLIENT_ID` | — | Okta 애플리케이션 Client ID |
 | `OKTA_ISSUER` | — | Okta 도메인 (예: `https://dev-xxx.okta.com/oauth2/default`) |
@@ -955,6 +956,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.42.2](release/v1.42.2/RELEASE_NOTES.md) | **[보안 수정]** OWASP Top 10 자체 점검 결과 조치. **A01 권한 누락** — ISMS-P 증적 등록·수정·삭제·일괄 가져오기, 월간 보안점검 쓰기·삭제(월 전체 삭제 포함)에 서버 권한 검사가 없어 일반 USER 도 API 로 변조·삭제할 수 있었다. 화면과 같은 메뉴별 권한(`@menuAuth.canWrite/canDelete`)으로 검사해 커스텀 Role 부여 권한은 유지. 보안성 심의 첨부 교체는 요청자 본인·ADMIN·MANAGER 만, 요청자는 완료 후 불가. `/app-settings` 는 ADMIN 외에 `lawApiKey`·`backup.default.password` 를 가림. **A02 암호화** — `users.mfa_secret`·`mail_config.password`·`security_integrations.api_key`·`github_config.token` AES-256-GCM 암호화(재기동 시 기존 평문 자동 암호화). 기동 비밀 점검을 모든 시더·백필보다 먼저 실행하고 차단/권고로 분리, `.env.example` 의 `SECURITY_FAIL_ON_INSECURE_SECRETS=true`(자동 생성 체험용 `.env` 는 false). **A07** Okta ID 토큰 `aud` 검증 — **마이그레이션 필수** `v1.42.2_secret_column_encryption.sql` |
 | [v1.42.1](release/v1.42.1/RELEASE_NOTES.md) | **[보안 수정]** 모의훈련 악성메일 템플릿 미리보기 XSS(저장형 XSS) 취약점 패치 — 템플릿 미리보기가 본문 HTML을 검증 없이 `v-html`로 렌더링해, 조작된 템플릿을 열람하면 삽입된 스크립트가 실행되고 `localStorage`의 JWT가 노출될 수 있었다. `DOMPurify.sanitize()`로 정제 후 렌더링하도록 수정. 프론트엔드 전용, DB 변경 없음 |
 | [v1.42.0](release/v1.42.0/RELEASE_NOTES.md) | **ISMS 결함관리 신설 + 보안 결함사항 연동** — 정보보호 관리체계 > ISMS 결함관리에서 ISMS-P 심사 결함을 **연도별**로 관리한다(심사구분·결함구분·중요도·인증기준 101항목 선택·결함 내용/원인/조치 계획/조치 내용/재발방지 대책·조치기한·담당자·첨부, 상태 4단계와 기한초과 표시, 조치율 요약 카드, CSV). 연도당 **결함 조치 보고서** 1건(심사 개요·총평·본문·종합의견·원본 첨부). 등록한 결함은 **보안 결함사항에 `sourceType=ISMS_DEFECT` 로 자동 반영**(1:1, 수정·삭제 동기화, 기동 시 누락분 보충)되며 그 화면에서는 읽기 전용이다. 보안 결함사항에 출처 열·필터 추가, 드롭다운 필터가 `page=[object Event]` 로 400 을 내던 문제 수정. RBAC 메뉴 키 `isms_defects`. DB: `isms_defects`·`isms_defect_reports` 신규, `security_findings.source_type/source_defect_id/source_label` — **마이그레이션 필수** `v1.42.0_isms_defect.sql`·`v1.42.0_security_finding_source.sql` |
 | [v1.41.0](release/v1.41.0/RELEASE_NOTES.md) | **보안성 심의 결과 보고서(PDF)** — 심의가 **완료된 건**을 보안 운영 > 보안성 심의 화면에서 바로 **미리보기·인쇄·다운로드**한다. 목록에서는 완료 행의 상태 옆 `보고서` 링크, 상세에서는 심의 결과의 `결과 보고서` 버튼(미리보기)·`PDF 내려받기`(바로 저장, 파일명에 심의 제목 포함)로 연다. 구성은 표지(제목·회사명·대상 시스템·심의일) → **심의 결과 배너**(승인 초록·조건부 승인 노랑·반려 빨강, 심의자·심의일시) → `1. 심의 개요`(심의 구분·요청 부서·요청자·요청일·오픈 예정일·설계서 첨부·개인정보 처리·외부 공개와 구축·변경 개요) → `2. 검토 결과 요약`(항목·적합·부적합·해당없음·미검토 타일과 검토 영역별 현황표, 부적합은 붉게 강조) → `3. 설계 검토 체크리스트`(영역·항목·기준·결과·의견 전 항목) → `4. 심의 의견` → 심의자·심의일시·출력일. 세로 A4·나눔고딕 임베딩이라 인쇄물에서도 한글이 깨지지 않는다. 완료 전 상태에서는 결과·심의자가 확정되지 않아 `심의가 완료된 건만 보고서를 만들 수 있습니다.` 로 막는다. 다른 보고서와 달리 **로그인한 사용자면 받을 수 있다**(심의 상세 열람 권한과 동일). 공용 파일 미리보기 창에는 **인쇄** 버튼을 옵션(`printable`)으로 추가해 보고서 화면에서만 켜고, 브라우저 PDF 뷰어가 창 안 인쇄를 막으면 새 탭으로 대체한다. `GET /api/reports/security-reviews/:id/pdf`. DB 변경 없음 |

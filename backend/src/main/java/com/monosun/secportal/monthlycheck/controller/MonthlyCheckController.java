@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +47,7 @@ public class MonthlyCheckController {
     }
 
     @PostMapping
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MonthlyCheckDto.CheckItemResponse> create(
             @Valid @RequestBody MonthlyCheckDto.CreateRequest request,
@@ -54,6 +56,7 @@ public class MonthlyCheckController {
     }
 
     @DeleteMapping
+    @PreAuthorize("@menuAuth.canDelete('monthly_checks')")
     public ApiResponse<Void> clearAll(@RequestParam String yearMonth) {
         service.clearByYearMonth(yearMonth);
         return ApiResponse.noContent();
@@ -65,6 +68,7 @@ public class MonthlyCheckController {
     }
 
     @PostMapping("/defaults")
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     public ApiResponse<List<MonthlyCheckDto.CheckItemResponse>> loadDefaults(
             @RequestParam String yearMonth,
             @AuthenticationPrincipal User user) {
@@ -79,6 +83,7 @@ public class MonthlyCheckController {
 
     /** 이전 점검 월의 항목 구성을 대상 월로 복사 */
     @PostMapping("/copy-previous")
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     public ApiResponse<List<MonthlyCheckDto.CheckItemResponse>> copyPrevious(
             @RequestParam String yearMonth,
             @AuthenticationPrincipal User user) {
@@ -86,6 +91,7 @@ public class MonthlyCheckController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     public ApiResponse<MonthlyCheckDto.CheckItemResponse> update(
             @PathVariable Long id,
             @RequestBody MonthlyCheckDto.UpdateRequest request) {
@@ -93,6 +99,7 @@ public class MonthlyCheckController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@menuAuth.canDelete('monthly_checks')")
     public ApiResponse<Void> delete(@PathVariable Long id) throws IOException {
         service.delete(id);
         return ApiResponse.noContent();
@@ -106,6 +113,7 @@ public class MonthlyCheckController {
     }
 
     @PostMapping(value = "/{itemId}/evidences", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MonthlyCheckDto.EvidenceResponse> createEvidence(
             @PathVariable Long itemId,
@@ -116,6 +124,7 @@ public class MonthlyCheckController {
     }
 
     @PatchMapping(value = "/evidences/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@menuAuth.canWrite('monthly_checks')")
     public ApiResponse<MonthlyCheckDto.EvidenceResponse> updateEvidence(
             @PathVariable Long id,
             @ModelAttribute MonthlyCheckDto.EvidenceUpdateRequest request,
@@ -124,6 +133,7 @@ public class MonthlyCheckController {
     }
 
     @DeleteMapping("/evidences/{id}")
+    @PreAuthorize("@menuAuth.canDelete('monthly_checks')")
     public ApiResponse<Void> deleteEvidence(@PathVariable Long id) throws IOException {
         service.deleteEvidence(id);
         return ApiResponse.noContent();

@@ -1,10 +1,12 @@
 package com.monosun.secportal.setting.controller;
 
+import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.response.ApiResponse;
 import com.monosun.secportal.setting.service.AppSettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -18,6 +20,10 @@ public class AppSettingController {
     // 로그인 화면(인증 전)에서 필요한 항목만 — lawApiKey 등 민감값은 절대 포함하지 않는다
     private static final Set<String> PUBLIC_KEYS = Set.of(
             "login_logo", "login_logo_text", "session_timeout_minutes", "menu_order");
+
+    // 비밀 값 — ADMIN 이 아니면 값 대신 마스크만 준다(등록 여부 표시는 그대로 동작)
+    private static final Set<String> SENSITIVE_KEYS = Set.of("lawApiKey", "backup.default.password");
+    private static final String MASK = "********";
 
     private final AppSettingService service;
 
@@ -33,10 +39,17 @@ public class AppSettingController {
         return ResponseEntity.ok(ApiResponse.ok(filtered));
     }
 
-    // 로그인 후 화면(설정관리·대시보드 등)에서 사용 — 인증만 요구, 전체 설정값 반환
+    // 로그인 후 화면(설정관리·대시보드 등)에서 사용 — 인증만 요구. 비밀 값은 ADMIN 에게만 원문을 준다
     @GetMapping("/app-settings")
-    public ResponseEntity<ApiResponse<Map<String, String>>> getAllAuthenticated() {
-        return ResponseEntity.ok(ApiResponse.ok(service.getAllAsMap()));
+    public ResponseEntity<ApiResponse<Map<String, String>>> getAllAuthenticated(@AuthenticationPrincipal User user) {
+        Map<String, String> all = new LinkedHashMap<>(service.getAllAsMap());
+        if (user == null || user.getRole() != User.Role.ADMIN) {
+            for (String key : SENSITIVE_KEYS) {
+                String value = all.get(key);
+                if (value != null && !value.isBlank()) all.put(key, MASK);
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok(all));
     }
 
     @PutMapping("/admin/app-settings/{key}")

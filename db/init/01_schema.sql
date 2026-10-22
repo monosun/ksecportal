@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until DATETIME(6),
     mfa_enabled BIT(1) NOT NULL DEFAULT 0,
-    mfa_secret VARCHAR(64),
+    mfa_secret VARCHAR(255),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

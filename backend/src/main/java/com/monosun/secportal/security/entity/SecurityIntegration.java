@@ -2,6 +2,7 @@ package com.monosun.secportal.security.entity;
 
 import com.monosun.secportal.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -29,7 +30,9 @@ public class SecurityIntegration extends BaseEntity {
 
     private String host;
 
-    @Column(name = "api_key")
+    /** 연동 API 키 — 저장 시 암호화(AES-256-GCM) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "api_key", length = 1024)
     private String apiKey;
 
     @Column(columnDefinition = "TEXT")

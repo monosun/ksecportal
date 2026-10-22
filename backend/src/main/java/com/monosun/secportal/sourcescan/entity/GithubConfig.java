@@ -1,6 +1,7 @@
 package com.monosun.secportal.sourcescan.entity;
 
 import jakarta.persistence.*;
+import com.monosun.secportal.common.crypto.EncryptedStringConverter;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,9 @@ public class GithubConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 500)
+    /** GitHub 토큰 — 저장 시 암호화(AES-256-GCM) */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(length = 1024)
     private String token;
 
     // GitHub Enterprise 지원용 — 기본 https://api.github.com

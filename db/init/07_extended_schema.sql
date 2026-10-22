@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS security_integrations (
     solution_type  VARCHAR(255) NOT NULL,
     vendor         VARCHAR(255),
     host           VARCHAR(255),
-    api_key        VARCHAR(255),
+    api_key        VARCHAR(1024),
     status         ENUM('CONNECTED', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'DISCONNECTED',
     description    TEXT,
     last_sync_at   DATETIME(6),

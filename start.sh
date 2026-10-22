@@ -38,9 +38,11 @@ fi
 # Check / create .env file
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
-        cp .env.example .env
-        echo "[WARN] .env not found. Copied from .env.example."
-        echo "       In production, make sure to change JWT_SECRET and other secrets."
+        # Auto-created .env is for local trial only: disable the insecure-secret startup block.
+        sed "s/^SECURITY_FAIL_ON_INSECURE_SECRETS=.*/SECURITY_FAIL_ON_INSECURE_SECRETS=false/" .env.example > .env
+        echo "[WARN] .env not found. Created a LOCAL TRIAL .env from .env.example (insecure default secrets)."
+        echo "       Before production: change JASYPT_ENCRYPTOR_PASSWORD, JWT_SECRET, DB passwords, PI_ENCRYPTION_KEY"
+        echo "       and set SECURITY_FAIL_ON_INSECURE_SECRETS=true."
     else
         echo "[ERROR] Neither .env nor .env.example was found."
         exit 1

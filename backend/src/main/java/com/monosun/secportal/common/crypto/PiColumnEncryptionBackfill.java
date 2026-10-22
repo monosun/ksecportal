@@ -33,7 +33,12 @@ public class PiColumnEncryptionBackfill implements ApplicationRunner {
 
     private static final List<Target> TARGETS = List.of(
             new Target("privacy_rights_requests", List.of("subject_name", "contact")),
-            new Target("privacy_contractors", List.of("business_number", "contact_person", "contact_email", "contact_phone"))
+            new Target("privacy_contractors", List.of("business_number", "contact_person", "contact_email", "contact_phone")),
+            // v1.42.2 — 인증·연동 비밀값(MFA 비밀키, SMTP 비밀번호, 보안 솔루션 API 키, GitHub 토큰)
+            new Target("users", List.of("mfa_secret")),
+            new Target("mail_config", List.of("password")),
+            new Target("security_integrations", List.of("api_key")),
+            new Target("github_config", List.of("token"))
     );
 
     private final JdbcTemplate jdbc;
@@ -97,7 +102,7 @@ public class PiColumnEncryptionBackfill implements ApplicationRunner {
         if (length < MIN_COLUMN_LENGTH) {
             // 이 상태에서는 신규 저장도 실패하므로(암호문이 컬럼 길이를 넘김) 눈에 띄게 남긴다
             log.error("[개인정보 암호화] {}.{} 길이가 {}자로 부족합니다. 백필을 건너뛰며 이 컬럼의 저장도 실패할 수 있습니다. "
-                            + "db/migration/v1.28.0_pi_column_encryption.sql 을 실행한 뒤 재기동하세요.",
+                            + "db/migration 의 컬럼 암호화 스크립트(v1.28.0_pi_column_encryption.sql·v1.42.2_secret_column_encryption.sql)를 실행한 뒤 재기동하세요.",
                     table, column, length);
             return false;
         }

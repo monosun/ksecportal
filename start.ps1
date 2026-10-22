@@ -25,9 +25,12 @@ $EnvExample = Join-Path $ProjectRoot ".env.example"
 
 if (-not (Test-Path $EnvFile)) {
     if (Test-Path $EnvExample) {
-        Copy-Item $EnvExample $EnvFile
-        Write-Host "[WARN] .env not found. Copied from .env.example." -ForegroundColor Yellow
-        Write-Host "       In production, make sure to change JWT_SECRET and other secrets." -ForegroundColor Yellow
+        # Auto-created .env is for local trial only: disable the insecure-secret startup block. Write UTF-8 without BOM so compose reads the first line.
+        $lines = (Get-Content $EnvExample -Encoding UTF8) -replace '^SECURITY_FAIL_ON_INSECURE_SECRETS=.*', 'SECURITY_FAIL_ON_INSECURE_SECRETS=false'
+        [System.IO.File]::WriteAllLines($EnvFile, $lines, (New-Object System.Text.UTF8Encoding $false))
+        Write-Host "[WARN] .env not found. Created a LOCAL TRIAL .env from .env.example (insecure default secrets)." -ForegroundColor Yellow
+        Write-Host "       Before production: change JASYPT_ENCRYPTOR_PASSWORD, JWT_SECRET, DB passwords, PI_ENCRYPTION_KEY" -ForegroundColor Yellow
+        Write-Host "       and set SECURITY_FAIL_ON_INSECURE_SECRETS=true." -ForegroundColor Yellow
     } else {
         Write-Host "[ERROR] Neither .env nor .env.example was found." -ForegroundColor Red
         exit 1

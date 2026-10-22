@@ -121,6 +121,7 @@ public class IsmsController {
     }
 
     @PostMapping(value = "/items/{id}/evidences", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@menuAuth.canWrite('isms')")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<IsmsDto.EvidenceResponse> createEvidence(
             @PathVariable Long id,
@@ -131,6 +132,7 @@ public class IsmsController {
     }
 
     @PatchMapping(value = "/evidences/{evidenceId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@menuAuth.canWrite('isms')")
     public ResponseEntity<ApiResponse<IsmsDto.EvidenceResponse>> updateEvidence(
             @PathVariable Long evidenceId,
             @ModelAttribute IsmsDto.EvidenceUpdateRequest request,
@@ -143,6 +145,7 @@ public class IsmsController {
     }
 
     @DeleteMapping("/evidences/{evidenceId}")
+    @PreAuthorize("@menuAuth.canDelete('isms')")
     public ApiResponse<Void> deleteEvidence(@PathVariable Long evidenceId) throws IOException {
         ismsService.deleteEvidence(evidenceId);
         return ApiResponse.noContent();
@@ -157,6 +160,7 @@ public class IsmsController {
     }
 
     @PostMapping("/items/{id}/evidence-refs")
+    @PreAuthorize("@menuAuth.canWrite('isms')")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<IsmsDto.EvidenceResponse> createEvidenceRef(
             @PathVariable Long id,
@@ -180,6 +184,7 @@ public class IsmsController {
     }
 
     @DeleteMapping("/evidences/{evidenceId}/file")
+    @PreAuthorize("@menuAuth.canDelete('isms')")
     public ApiResponse<IsmsDto.EvidenceResponse> removeFile(@PathVariable Long evidenceId) throws IOException {
         return ApiResponse.ok(ismsService.removeEvidenceFile(evidenceId));
     }
@@ -241,6 +246,7 @@ public class IsmsController {
     }
 
     @PostMapping("/import")
+    @PreAuthorize("@menuAuth.canWrite('isms')")
     public ApiResponse<IsmsDto.BulkImportResult> bulkImport(
             @RequestParam int year,
             @RequestParam("file") MultipartFile file,

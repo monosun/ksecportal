@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -187,8 +188,14 @@ public class SecurityReviewService {
     // ── 첨부 ────────────────────────────────────────────────────────────────
 
     @Transactional
-    public SecurityReviewDto.Response uploadFile(Long id, MultipartFile file) throws IOException {
+    public SecurityReviewDto.Response uploadFile(Long id, MultipartFile file, User user) throws IOException {
         SecurityReview r = find(id);
+        // 첨부(설계서)는 승인·반려의 근거이므로 요청자 본인 또는 심의 담당(ADMIN·MANAGER)만 교체할 수 있다.
+        boolean reviewer = user.getRole() == User.Role.ADMIN || user.getRole() == User.Role.MANAGER;
+        boolean owner = r.getRequester() != null && r.getRequester().getId().equals(user.getId());
+        if (!reviewer && !owner) throw new AccessDeniedException("심의 요청자 본인 또는 심의 담당자만 첨부를 변경할 수 있습니다.");
+        if (!reviewer && r.getStatus() == SecurityReview.Status.COMPLETED)
+            throw new BusinessException("심의가 완료된 건은 첨부를 변경할 수 없습니다.");
         if (file == null || file.isEmpty()) throw new BusinessException("파일을 선택해 주세요.");
         if (r.getFilePath() != null) fileStorageService.delete(r.getFilePath());
         r.setFilePath(fileStorageService.store(file, "secreview/" + r.getId()));
