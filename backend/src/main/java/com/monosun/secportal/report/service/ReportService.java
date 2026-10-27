@@ -1,6 +1,7 @@
 package com.monosun.secportal.report.service;
 
 import com.lowagie.text.*;
+import com.monosun.secportal.common.excel.SpreadsheetSafe;
 import com.lowagie.text.Font;
 import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfPCell;
@@ -675,7 +676,7 @@ public class ReportService {
         }
         for (Vulnerability v : vulns) {
             sb.append(row(
-                    v.getId(), csv(v.getTitle()), v.getSeverity(), v.getStatus(),
+                    v.getId(), v.getTitle(), v.getSeverity(), v.getStatus(),
                     nvl(v.getCveId()), nvl(v.getCvssScore()), nvl(v.getAssetName()),
                     v.getAssignee() != null ? v.getAssignee().getName() : "",
                     v.getReporter().getName(),
@@ -697,10 +698,10 @@ public class ReportService {
         }
         for (Asset a : assets) {
             sb.append(row(
-                    a.getId(), csv(a.getName()), a.getType(),
+                    a.getId(), a.getName(), a.getType(),
                     nvl(a.getEnvironment()), nvl(a.getCloudProvider()),
                     nvl(a.getCloudResourceId()), nvl(a.getRegion()),
-                    nvl(a.getIpAddress()), nvl(a.getOsType()), csv(nvl(a.getSpec())),
+                    nvl(a.getIpAddress()), nvl(a.getOsType()), nvl(a.getSpec()),
                     nvl(a.getOwner()), nvl(a.getDepartment()), a.getCriticality(),
                     a.getMonthlyCost() != null ? a.getMonthlyCost().toPlainString() : "",
                     a.getContractExpiry() != null ? a.getContractExpiry().format(DATE_FMT) : "",
@@ -724,7 +725,7 @@ public class ReportService {
         }
         for (Policy p : policies) {
             sb.append(row(
-                    p.getId(), csv(p.getTitle()), p.getCategory(), p.getStatus(), p.getVersion(),
+                    p.getId(), p.getTitle(), p.getCategory(), p.getStatus(), p.getVersion(),
                     p.getAuthor().getName(),
                     p.getEffectiveDate() != null ? p.getEffectiveDate().format(DATE_FMT) : "",
                     p.getCreatedAt() != null ? p.getCreatedAt().format(DT_FMT) : ""
@@ -744,7 +745,7 @@ public class ReportService {
         }
         for (Incident i : incidents) {
             sb.append(row(
-                    i.getId(), csv(i.getTitle()), i.getSeverity(), i.getStatus(), i.getType(),
+                    i.getId(), i.getTitle(), i.getSeverity(), i.getStatus(), i.getType(),
                     i.getReporter().getName(),
                     i.getAssignee() != null ? i.getAssignee().getName() : "",
                     i.getDetectedAt() != null ? i.getDetectedAt().format(DT_FMT) : "",
@@ -766,7 +767,7 @@ public class ReportService {
         }
         for (User u : users) {
             sb.append(row(
-                    u.getId(), csv(u.getName()), u.getEmail(),
+                    u.getId(), u.getName(), u.getEmail(),
                     u.getRole().name(), nvl(u.getDepartment()),
                     u.isActive() ? "Y" : "N",
                     u.getCreatedAt() != null ? u.getCreatedAt().format(DT_FMT) : ""
@@ -777,18 +778,20 @@ public class ReportService {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    /** CSV 한 행 — 모든 필드에 수식 삽입 방어와 따옴표 이스케이프를 적용한다. */
     private String row(Object... fields) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < fields.length; i++) {
             if (i > 0) sb.append(',');
-            sb.append(fields[i] != null ? fields[i].toString() : "");
+            sb.append(csv(fields[i] != null ? fields[i].toString() : ""));
         }
         return sb.append('\n').toString();
     }
 
     private String csv(String s) {
         if (s == null) return "";
-        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+        s = SpreadsheetSafe.csv(s);
+        if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
             return "\"" + s.replace("\"", "\"\"") + "\"";
         }
         return s;

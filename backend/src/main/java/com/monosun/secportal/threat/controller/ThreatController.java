@@ -20,22 +20,26 @@ public class ThreatController {
     private final ThreatService threatService;
 
     @GetMapping
+    @PreAuthorize("@menuAuth.canRead('threats', 'risk_assessment')")
     public ApiResponse<List<ThreatDto.ThreatResponse>> list() {
         return ApiResponse.ok(threatService.list());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@menuAuth.canRead('threats', 'risk_assessment')")
     public ApiResponse<ThreatDto.ThreatResponse> get(@PathVariable Long id) {
         return ApiResponse.ok(threatService.get(id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@menuAuth.canWrite('threats')")
     public ApiResponse<ThreatDto.ThreatResponse> create(@Valid @RequestBody ThreatDto.ThreatRequest request) {
         return ApiResponse.created(threatService.create(request));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@menuAuth.canWrite('threats')")
     public ApiResponse<ThreatDto.ThreatResponse> update(
             @PathVariable Long id,
             @RequestBody ThreatDto.ThreatRequest request) {
@@ -43,23 +47,27 @@ public class ThreatController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@menuAuth.canDelete('threats')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         threatService.delete(id);
         return ApiResponse.noContent();
     }
 
     @GetMapping("/defaults/check")
+    @PreAuthorize("@menuAuth.canRead('threats')")
     public ApiResponse<ThreatDto.DefaultCheckResponse> checkDefaults() {
         return ApiResponse.ok(threatService.checkDefaults());
     }
 
     @PostMapping("/defaults")
+    @PreAuthorize("@menuAuth.canWrite('threats')")
     public ApiResponse<Map<String, Integer>> loadDefaults() {
         int loaded = threatService.loadDefaults();
         return ApiResponse.ok(Map.of("loaded", loaded));
     }
 
     @GetMapping("/defaults")
+    @PreAuthorize("@menuAuth.canRead('threats')")
     public ApiResponse<ThreatDto.DefaultListResponse> listDefaults(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {

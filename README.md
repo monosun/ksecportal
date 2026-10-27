@@ -4,10 +4,11 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-**최신 버전: v1.42.2**
+**최신 버전: v1.42.3**
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.42.3](release/v1.42.3/RELEASE_NOTES.md) | **[보안 수정]** 위협관리 추가·수정·삭제, 취약점 등록·댓글, 보안성 심의 요청, 인시던트 등록의 **권한 누락 수정**(메뉴별 권한 서버 검사, 4개 메뉴는 조회도 검사), 메뉴 화면 **직접 접근 차단**, 엑셀·CSV 내려받기 **수식 삽입(Formula Injection) 방어** — 기본 USER 의 보안성 심의 요청은 권한관리에서 쓰기 권한을 줘야 가능 |
 | [v1.42.2](release/v1.42.2/RELEASE_NOTES.md) | **[보안 수정]** OWASP 자체 점검 조치 — ISMS-P 증적·월간 보안점검 쓰기/삭제 API 와 보안성 심의 첨부 교체의 **권한 누락 수정**(메뉴별 권한을 서버에서도 검사), **MFA 비밀키·SMTP 비밀번호·보안 솔루션 API 키·GitHub 토큰 암호화 저장**, 공개된 기본 키로 기동·암호화되지 않도록 **기동 점검을 백필보다 먼저 실행**(`.env.example` 기본 차단), Okta 토큰 `aud` 검증, `/app-settings` 비밀값 가림 — **마이그레이션 필수** `v1.42.2_secret_column_encryption.sql` |
 | [v1.42.1](release/v1.42.1/RELEASE_NOTES.md) | **[보안 수정]** 모의훈련 악성메일 템플릿 미리보기 XSS(저장형 XSS) 취약점 패치 |
 | [v1.42.0](release/v1.42.0/RELEASE_NOTES.md) | **ISMS 결함관리 신설**(정보보호 관리체계 메뉴 — ISMS-P 심사 결함을 연도별로 등록·조치 추적, 인증기준 101항목 선택·기한초과 자동 표시·조치율 요약·CSV, 연도당 **결함 조치 보고서** 1건), **보안 결함사항에 ISMS-P 결함 자동 연동**(등록·수정·삭제 즉시 반영, 출처 배지·필터, 연동 건은 읽기 전용·`원본 ›` 이동), 보안 결함사항 **필터 변경 시 목록이 갱신되지 않던 문제 수정** — **마이그레이션 필수** `v1.42.0_*.sql` |
@@ -956,6 +957,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.42.3](release/v1.42.3/RELEASE_NOTES.md) | **[보안 수정]** 외부 제보(유\*우님) 조치. **A01 권한 누락** — 위협관리 추가·수정·삭제·기본값 불러오기, 취약점 등록·댓글 작성/수정/삭제, 보안성 심의 요청·첨부 교체, 인시던트 등록에 서버 권한 검사가 없어 메뉴 권한이 없는 USER 도 API 로 등록·변경할 수 있었다. `@menuAuth.canWrite/canDelete` 검사 추가, `@menuAuth.canRead(...)` 신설해 위협·취약점·보안성 심의·인시던트 조회도 메뉴 권한 검사(위험평가·대시보드 메뉴로도 허용). 라우터가 메뉴 권한 없이 화면 진입을 허용하던 문제 수정. **Formula Injection** — `= + - @`·탭·CR 로 시작하는 값을 xlsx 는 quotePrefix 서식(`SpreadsheetSafe.protect`), CSV·브라우저 생성 xlsx 는 `'` 접두로 텍스트 고정, 퀴즈 일괄등록은 `'` 자동 제거. DB 변경 없음 |
 | [v1.42.2](release/v1.42.2/RELEASE_NOTES.md) | **[보안 수정]** OWASP Top 10 자체 점검 결과 조치. **A01 권한 누락** — ISMS-P 증적 등록·수정·삭제·일괄 가져오기, 월간 보안점검 쓰기·삭제(월 전체 삭제 포함)에 서버 권한 검사가 없어 일반 USER 도 API 로 변조·삭제할 수 있었다. 화면과 같은 메뉴별 권한(`@menuAuth.canWrite/canDelete`)으로 검사해 커스텀 Role 부여 권한은 유지. 보안성 심의 첨부 교체는 요청자 본인·ADMIN·MANAGER 만, 요청자는 완료 후 불가. `/app-settings` 는 ADMIN 외에 `lawApiKey`·`backup.default.password` 를 가림. **A02 암호화** — `users.mfa_secret`·`mail_config.password`·`security_integrations.api_key`·`github_config.token` AES-256-GCM 암호화(재기동 시 기존 평문 자동 암호화). 기동 비밀 점검을 모든 시더·백필보다 먼저 실행하고 차단/권고로 분리, `.env.example` 의 `SECURITY_FAIL_ON_INSECURE_SECRETS=true`(자동 생성 체험용 `.env` 는 false). **A07** Okta ID 토큰 `aud` 검증 — **마이그레이션 필수** `v1.42.2_secret_column_encryption.sql` |
 | [v1.42.1](release/v1.42.1/RELEASE_NOTES.md) | **[보안 수정]** 모의훈련 악성메일 템플릿 미리보기 XSS(저장형 XSS) 취약점 패치 — 템플릿 미리보기가 본문 HTML을 검증 없이 `v-html`로 렌더링해, 조작된 템플릿을 열람하면 삽입된 스크립트가 실행되고 `localStorage`의 JWT가 노출될 수 있었다. `DOMPurify.sanitize()`로 정제 후 렌더링하도록 수정. 프론트엔드 전용, DB 변경 없음 |
 | [v1.42.0](release/v1.42.0/RELEASE_NOTES.md) | **ISMS 결함관리 신설 + 보안 결함사항 연동** — 정보보호 관리체계 > ISMS 결함관리에서 ISMS-P 심사 결함을 **연도별**로 관리한다(심사구분·결함구분·중요도·인증기준 101항목 선택·결함 내용/원인/조치 계획/조치 내용/재발방지 대책·조치기한·담당자·첨부, 상태 4단계와 기한초과 표시, 조치율 요약 카드, CSV). 연도당 **결함 조치 보고서** 1건(심사 개요·총평·본문·종합의견·원본 첨부). 등록한 결함은 **보안 결함사항에 `sourceType=ISMS_DEFECT` 로 자동 반영**(1:1, 수정·삭제 동기화, 기동 시 누락분 보충)되며 그 화면에서는 읽기 전용이다. 보안 결함사항에 출처 열·필터 추가, 드롭다운 필터가 `page=[object Event]` 로 400 을 내던 문제 수정. RBAC 메뉴 키 `isms_defects`. DB: `isms_defects`·`isms_defect_reports` 신규, `security_findings.source_type/source_defect_id/source_label` — **마이그레이션 필수** `v1.42.0_isms_defect.sql`·`v1.42.0_security_finding_source.sql` |

@@ -346,6 +346,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import * as XLSX from 'xlsx-js-style'
+import { safeRows } from '@/utils/spreadsheet'
 import { threatApi, codeApi } from '@/api'
 
 const threatTypes = ref([])
@@ -459,7 +460,7 @@ function downloadThreats() {
     formatDate(t.createdAt),
     formatDate(t.updatedAt),
   ])
-  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
+  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...safeRows(rows)])
   for (let c = 0; c < HEADERS.length; c++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c })
     ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E5E7EB' } } }

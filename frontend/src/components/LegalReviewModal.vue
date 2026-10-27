@@ -348,6 +348,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import * as XLSX from 'xlsx-js-style'
+import { safeRows } from '@/utils/spreadsheet'
 import { fetchLawFull } from '@/services/legalApiService.js'
 import { LAW_ARTICLES } from '@/data/legalArticles.js'
 import { appSettingApi } from '@/api/index.js'
@@ -951,7 +952,7 @@ function buildLawInfoSheet(savedLaws, tabMetaVal) {
     const m = tabMetaVal[law.name]
     return [i + 1, law.name, m?.lawType||law.type||'-', m?.department||law.ministry||'-', m?.promulgationDate||'-', m?.enforcementDate||'-', m?.amendType||'-', m?.link||law.url||'-']
   })
-  const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows])
+  const ws = XLSX.utils.aoa_to_sheet([hdr, ...safeRows(rows)])
   const range = XLSX.utils.decode_range(ws['!ref'])
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= range.e.c; C++) {

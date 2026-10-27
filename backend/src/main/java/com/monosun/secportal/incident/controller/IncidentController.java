@@ -32,6 +32,7 @@ public class IncidentController {
     private final IncidentBulkService incidentBulkService;
 
     @GetMapping
+    @PreAuthorize("@menuAuth.canRead('incidents', 'dash_incidents')")
     public ApiResponse<Page<IncidentDto.Response>> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Incident.Severity severity,
@@ -42,12 +43,14 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@menuAuth.canRead('incidents', 'dash_incidents')")
     public ApiResponse<IncidentDto.Response> get(@PathVariable Long id) {
         return ApiResponse.ok(incidentService.get(id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@menuAuth.canWrite('incidents')")
     public ApiResponse<IncidentDto.Response> create(
             @Valid @RequestBody IncidentDto.CreateRequest request,
             @AuthenticationPrincipal User user) {

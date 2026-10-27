@@ -1,5 +1,6 @@
 package com.monosun.secportal.risk.service;
 
+import com.monosun.secportal.common.excel.SpreadsheetSafe;
 import com.monosun.secportal.asset.entity.Asset;
 import com.monosun.secportal.asset.repository.AssetRepository;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
@@ -499,6 +500,7 @@ public class RiskAssessmentService {
                 }
             }
 
+            SpreadsheetSafe.protect(wb);
             wb.write(out);
             return out.toByteArray();
         } catch (IOException e) {

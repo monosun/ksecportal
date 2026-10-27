@@ -1,5 +1,6 @@
 package com.monosun.secportal.ismsdefect.service;
 
+import com.monosun.secportal.common.excel.SpreadsheetSafe;
 import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.common.exception.BusinessException;
@@ -363,7 +364,7 @@ public class IsmsDefectService {
 
     private static String csv(String v) {
         if (v == null) return "\"\"";
-        String cleaned = v.replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
+        String cleaned = SpreadsheetSafe.csv(v).replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
         return "\"" + cleaned.replace("\"", "\"\"") + "\"";
     }
 

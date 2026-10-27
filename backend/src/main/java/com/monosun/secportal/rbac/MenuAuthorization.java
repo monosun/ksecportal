@@ -25,6 +25,17 @@ public class MenuAuthorization {
 
     private final RbacService rbacService;
 
+    /**
+     * 조회 권한 — 여러 메뉴가 같은 API 를 쓰는 경우(예: 위험평가 화면이 위협 목록을 조회) 하나라도 허용되면 통과.
+     * 쓰기·삭제 권한이 있으면 조회도 허용한다.
+     */
+    public boolean canRead(String... menuKeys) {
+        for (String key : menuKeys) {
+            if (check(key, e -> e.isCanRead() || e.isCanWrite() || e.isCanDelete())) return true;
+        }
+        return false;
+    }
+
     public boolean canWrite(String menuKey) {
         return check(menuKey, RbacDto.PermissionEntry::isCanWrite);
     }

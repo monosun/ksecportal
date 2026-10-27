@@ -32,6 +32,7 @@ public class SecurityReviewController {
     private final SecurityReviewService service;
 
     @GetMapping
+    @PreAuthorize("@menuAuth.canRead('security_reviews')")
     public ApiResponse<Page<SecurityReviewDto.Response>> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String reviewType,
@@ -41,18 +42,21 @@ public class SecurityReviewController {
     }
 
     @GetMapping("/summary")
+    @PreAuthorize("@menuAuth.canRead('security_reviews')")
     public ApiResponse<SecurityReviewDto.Summary> summary() {
         return ApiResponse.ok(service.summary());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@menuAuth.canRead('security_reviews')")
     public ApiResponse<SecurityReviewDto.Response> get(@PathVariable Long id) {
         return ApiResponse.ok(service.get(id));
     }
 
-    /** 심의 요청 등록 — 설계서 첨부 가능 (요청은 일반 사용자도 가능) */
+    /** 심의 요청 등록 — 설계서 첨부 가능 (일반 사용자는 권한관리에서 security_reviews 쓰기 권한을 받은 경우만) */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@menuAuth.canWrite('security_reviews')")
     public ApiResponse<SecurityReviewDto.Response> create(
             @Valid @ModelAttribute SecurityReviewDto.CreateRequest request,
             @RequestParam(value = "file", required = false) MultipartFile file,
@@ -88,6 +92,7 @@ public class SecurityReviewController {
     // ── 첨부 ────────────────────────────────────────────────────────────────
 
     @PostMapping(value = "/{id}/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@menuAuth.canWrite('security_reviews')")
     public ApiResponse<SecurityReviewDto.Response> uploadFile(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
@@ -96,6 +101,7 @@ public class SecurityReviewController {
     }
 
     @GetMapping("/{id}/file")
+    @PreAuthorize("@menuAuth.canRead('security_reviews')")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         Resource resource = service.downloadFile(id);
         String encoded = URLEncoder.encode(service.fileName(id), StandardCharsets.UTF_8).replace("+", "%20");

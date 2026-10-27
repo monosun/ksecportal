@@ -161,6 +161,7 @@ public class ExcelWriter implements AutoCloseable {
 
     public byte[] toBytes() {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            SpreadsheetSafe.protect(wb);
             wb.write(out);
             return out.toByteArray();
         } catch (IOException e) {

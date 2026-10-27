@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { navGroups } from '@/config/navMenu'
 
 const routes = [
   {
@@ -475,6 +476,15 @@ const routes = [
   }
 ]
 
+// 메뉴 경로 → RBAC menuKey. 하위 경로(/vulnerabilities/new 등)도 같은 메뉴로 본다.
+// 화면 진입만 막는 UX 방어이며, 실제 데이터 접근 통제는 서버(@menuAuth)가 한다.
+const MENU_ROUTES = navGroups.flatMap(g => g.items).filter(i => i.menuKey)
+  .sort((a, b) => b.to.length - a.to.length)
+
+function menuKeyOf(path) {
+  return MENU_ROUTES.find(i => path === i.to || path.startsWith(i.to + '/'))?.menuKey
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes
@@ -495,6 +505,10 @@ router.beforeEach(async (to) => {
     return { name: 'ForceChangePassword' }
   }
   if (to.meta.adminOnly && !auth.isAdmin) {
+    return { name: 'Dashboard' }
+  }
+  const menuKey = auth.isAuthenticated && menuKeyOf(to.path)
+  if (menuKey && !auth.canRead(menuKey)) {
     return { name: 'Dashboard' }
   }
 })

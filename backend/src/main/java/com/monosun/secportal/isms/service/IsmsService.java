@@ -1,5 +1,6 @@
 package com.monosun.secportal.isms.service;
 
+import com.monosun.secportal.common.excel.SpreadsheetSafe;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.auth.repository.UserRepository;
 import com.monosun.secportal.common.exception.BusinessException;
@@ -663,6 +664,7 @@ public class IsmsService {
             ref.setColumnWidth(3, 16000);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            SpreadsheetSafe.protect(wb);
             wb.write(baos);
             return baos.toByteArray();
         }
@@ -845,6 +847,7 @@ public class IsmsService {
             writeMappingReferenceSheet(wb, headerStyle);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            SpreadsheetSafe.protect(wb);
             wb.write(baos);
             return baos.toByteArray();
         }
@@ -1187,6 +1190,7 @@ public class IsmsService {
 
     private static String csvField(String s) {
         if (s == null || s.isEmpty()) return "";
+        s = SpreadsheetSafe.csv(s);
         if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
             return "\"" + s.replace("\"", "\"\"") + "\"";
         }

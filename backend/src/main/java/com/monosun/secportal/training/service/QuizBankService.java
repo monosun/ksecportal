@@ -1,5 +1,6 @@
 package com.monosun.secportal.training.service;
 
+import com.monosun.secportal.common.excel.SpreadsheetSafe;
 import com.monosun.secportal.audit.service.AuditLogService;
 import com.monosun.secportal.common.exception.BusinessException;
 import com.monosun.secportal.common.exception.ResourceNotFoundException;
@@ -297,7 +298,7 @@ public class QuizBankService {
         Cell cell = row.getCell(col);
         if (cell == null) return "";
         return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
+            case STRING -> SpreadsheetSafe.unescape(cell.getStringCellValue().trim());
             case NUMERIC -> {
                 double d = cell.getNumericCellValue();
                 yield d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);

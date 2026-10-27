@@ -271,6 +271,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useFitPageSize, keepFirstRow } from '@/composables/useFitPageSize'
 import * as XLSX from 'xlsx-js-style'
+import { safeRows } from '@/utils/spreadsheet'
 import { quizBankApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
 import { useDebounceFn } from '@vueuse/core'
@@ -363,7 +364,7 @@ function exportQuestions(items, scopeLabel) {
     q.optionC ?? '', q.optionD ?? '', q.optionE ?? '',
     toAnswerString(parseAnswer(q.correctAnswer)), q.explanation ?? '',
   ])
-  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows])
+  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...safeRows(rows)])
   // 헤더 스타일 (일괄등록 템플릿과 동일한 느낌)
   for (let c = 0; c < HEADERS.length; c++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c })
