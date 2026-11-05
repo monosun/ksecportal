@@ -26,7 +26,7 @@ public class PolicyDoc extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 문서번호 (예: ISP-REG-001) — 선택 */
+    /** 문서번호 (예: REG-001) — 비워 두면 분류 키워드로 자동 부여 */
     @Column(name = "doc_no", length = 50)
     private String docNo;
 
@@ -58,9 +58,19 @@ public class PolicyDoc extends BaseEntity {
     @JoinColumn(name = "registrant_id")
     private User registrant;
 
-    /** 규정 / 지침 / 가이드 / 절차서 / 매뉴얼 */
+    /**
+     * 규정 / 지침 / 가이드 / 절차서 / 매뉴얼 / 기타.
+     * prefix 는 문서번호를 비워 두었을 때 자동 부여하는 구분 키워드 — {@code REG-001}.
+     * MySQL ENUM 컬럼이므로 값을 추가하면 마이그레이션(ALTER ... MODIFY)이 필요하다.
+     */
     public enum Category {
-        REGULATION, GUIDELINE, GUIDE, PROCEDURE, MANUAL
+        REGULATION("REG"), GUIDELINE("GDL"), GUIDE("GDE"), PROCEDURE("PRC"), MANUAL("MNL"), OTHER("ETC");
+
+        private final String prefix;
+
+        Category(String prefix) { this.prefix = prefix; }
+
+        public String getPrefix() { return prefix; }
     }
 
     /** 시행 / 폐지 */

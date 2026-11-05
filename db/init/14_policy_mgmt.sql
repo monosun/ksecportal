@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS policy_mgmt_docs (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     doc_no         VARCHAR(50),
     title          VARCHAR(300) NOT NULL,
-    category       ENUM('REGULATION','GUIDELINE','GUIDE','PROCEDURE','MANUAL') NOT NULL,
+    category       ENUM('REGULATION','GUIDELINE','GUIDE','PROCEDURE','MANUAL','OTHER') NOT NULL,
     department     VARCHAR(100),
     owner          VARCHAR(100),
     description    TEXT,

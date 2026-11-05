@@ -48,6 +48,14 @@ public class PolicyDocController {
         return ApiResponse.ok(service.summary(status));
     }
 
+    /** 문서번호를 비웠을 때 부여될 번호 미리보기 (등록 화면 안내용) */
+    @GetMapping("/next-doc-no")
+    @PreAuthorize("@menuAuth.canWrite('policy_management')")
+    public ApiResponse<Map<String, String>> nextDocNo(@RequestParam String category) {
+        // 문자열 하나를 ok(...) 로 넘기면 ok(String message) 오버로드로 해석되므로 객체로 감싼다
+        return ApiResponse.ok(Map.of("docNo", service.nextDocNo(category)));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@menuAuth.canRead('policy_management')")
     public ApiResponse<PolicyDocDto.Response> get(@PathVariable Long id) {

@@ -125,8 +125,9 @@
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| GET | /policy-docs | 목록 — `category`(REGULATION·GUIDELINE·GUIDE·PROCEDURE·MANUAL), `status`(ACTIVE·ABOLISHED), `keyword`, `page`, `size`. 각 항목에 현행본(`current`)·`revisionCount` 포함 |
+| GET | /policy-docs | 목록 — `category`(REGULATION·GUIDELINE·GUIDE·PROCEDURE·MANUAL·OTHER), `status`(ACTIVE·ABOLISHED), `keyword`, `page`, `size`. 각 항목에 현행본(`current`)·`revisionCount` 포함 |
 | GET | /policy-docs/summary | 분류별 문서 수 (`status` 선택) |
+| GET | /policy-docs/next-doc-no?category= | 문서번호를 비웠을 때 부여될 번호 `{ docNo }` (쓰기 권한). 키워드: REG·GDL·GDE·PRC·MNL·ETC, 형식 `키워드-001` |
 | GET | /policy-docs/:id | 상세 + 버전 이력 `revisions`(최신순, 첫 항목이 현행본) |
 | POST | /policy-docs | multipart — `data`: `{ doc: {category, title, docNo, department, owner, description}, revision: {version, revisionType, revisionDate, effectiveDate, approver, changeReason, changeDetails} }`, `file`(선택) |
 | PUT | /policy-docs/:id | 문서 기본정보 수정 (JSON, `doc` 필드와 동일) |
@@ -138,6 +139,7 @@
 | GET | /policy-docs/revisions/:revisionId/download | 파일 다운로드 |
 | GET | /policy-docs/revisions/:revisionId/preview | 오피스 문서를 PDF 로 변환해 inline 응답 (뷰어용) |
 
+`docNo` 를 비우면 분류 키워드로 자동 부여(같은 키워드 최대 번호 + 1), 중복 문서번호는 400.
 `revisionType`: ENACTMENT(제정)·AMENDMENT(개정)·ABOLITION(폐지). 현행본이 ABOLITION 이면 문서 `status` 는 ABOLISHED.
 첨부 형식: pdf, doc, docx, odt, rtf, ppt, pptx, xls, xlsx, txt, hwp, hwpx.
 

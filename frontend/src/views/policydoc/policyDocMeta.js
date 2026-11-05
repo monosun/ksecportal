@@ -8,6 +8,7 @@ export const CATEGORIES = [
   { value: 'GUIDE',      label: '가이드', badge: 'bg-teal-100 text-teal-700' },
   { value: 'PROCEDURE',  label: '절차서', badge: 'bg-amber-100 text-amber-700' },
   { value: 'MANUAL',     label: '매뉴얼', badge: 'bg-indigo-100 text-indigo-700' },
+  { value: 'OTHER',      label: '기타',   badge: 'bg-gray-100 text-gray-600' },
 ]
 
 export const REVISION_TYPES = [

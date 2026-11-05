@@ -31,7 +31,10 @@
               </div>
               <div>
                 <label class="text-xs text-gray-500">문서번호</label>
-                <input v-model="doc.docNo" class="input w-full mt-1" placeholder="예: ISP-REG-001" />
+                <input v-model="doc.docNo" class="input w-full mt-1" :placeholder="docNoPlaceholder" />
+                <p v-if="!doc.docNo?.trim() && nextDocNo" class="text-xs text-primary-600 mt-1">
+                  비워 두면 <span class="font-mono font-semibold">{{ nextDocNo }}</span> 로 자동 부여
+                </p>
               </div>
               <div>
                 <label class="text-xs text-gray-500">주관부서</label>
@@ -108,6 +111,16 @@ const emptyRevision = () => ({
 })
 const doc = ref(emptyDoc())
 const revision = ref(emptyRevision())
+
+// 문서번호 자동 부여 안내 — 분류별 키워드(REG·GDL·GDE·PRC·MNL·ETC)로 다음 번호를 미리 보여 준다
+const nextDocNo = ref('')
+const docNoPlaceholder = computed(() =>
+  doc.value.category ? '비우면 자동 부여' : '분류를 고르면 자동 부여 번호 표시')
+watch(() => [props.open, doc.value.category], async ([open, category]) => {
+  nextDocNo.value = ''
+  if (!open || !category) return
+  try { nextDocNo.value = (await policyDocApi.nextDocNo(category)).data?.docNo || '' } catch { nextDocNo.value = '' }
+})
 
 watch(() => props.open, async (open) => {
   if (!open) return

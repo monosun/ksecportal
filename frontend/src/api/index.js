@@ -664,6 +664,7 @@ const multipart = (data, file) => {
 export const policyDocApi = {
   list: (params) => api.get('/policy-docs', { params }),
   summary: (params) => api.get('/policy-docs/summary', { params }),
+  nextDocNo: (category) => api.get('/policy-docs/next-doc-no', { params: { category } }),
   get: (id) => api.get(`/policy-docs/${id}`),
   create: (data, file) => api.post('/policy-docs', multipart(data, file)),
   update: (id, data) => api.put(`/policy-docs/${id}`, data),

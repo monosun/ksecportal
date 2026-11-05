@@ -221,10 +221,57 @@ public class PolicyDocService {
         if (category == null) throw new BusinessException("분류를 선택해주세요.");
         doc.setTitle(req.getTitle().trim());
         doc.setCategory(category);
-        doc.setDocNo(trimToNull(req.getDocNo()));
+        doc.setDocNo(resolveDocNo(doc, trimToNull(req.getDocNo())));
         doc.setDepartment(trimToNull(req.getDepartment()));
         doc.setOwner(trimToNull(req.getOwner()));
         doc.setDescription(trimToNull(req.getDescription()));
+    }
+
+    /**
+     * 입력한 문서번호는 중복만 확인해 그대로 쓰고, 비워 두면 분류 키워드로 다음 번호를 부여한다.
+     * 수정 시 분류를 바꿔도 이미 있는 번호는 유지한다(문서번호는 외부 문서·결재에 인용되므로 바뀌면 안 된다).
+     */
+    private String resolveDocNo(PolicyDoc doc, String requested) {
+        if (requested == null) return nextDocNo(doc.getCategory());
+        boolean duplicate = doc.getId() == null
+                ? docRepository.existsByDocNo(requested)
+                : docRepository.existsByDocNoAndIdNot(requested, doc.getId());
+        if (duplicate) throw new BusinessException("이미 사용 중인 문서번호입니다: " + requested);
+        return requested;
+    }
+
+    /** 분류 키워드별 다음 문서번호 — 키워드-001 형식, 직접 입력한 같은 형식의 번호도 이어서 센다 */
+    @Transactional(readOnly = true)
+    public String nextDocNo(PolicyDoc.Category category) {
+        String prefix = category.getPrefix();
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("^" + prefix + "-(\\d+)$");
+        int max = 0;
+        for (String no : docRepository.findDocNosByPrefix(prefix)) {
+            java.util.regex.Matcher m = p.matcher(no);
+            if (m.matches()) {
+                try { max = Math.max(max, Integer.parseInt(m.group(1))); } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("%s-%03d", prefix, max + 1);
+    }
+
+    /** 화면 안내용 — 문서번호를 비웠을 때 부여될 번호 */
+    @Transactional(readOnly = true)
+    public String nextDocNo(String category) {
+        PolicyDoc.Category c = parseCategory(category);
+        if (c == null) throw new BusinessException("분류를 선택해주세요.");
+        return nextDocNo(c);
+    }
+
+    /** 문서번호 없이 등록된 기존 문서에 번호를 채운다 (기동 시 1회, 등록 순서대로) */
+    @Transactional
+    public int backfillDocNos() {
+        List<PolicyDoc> targets = docRepository.findByDocNoIsNullOrderByIdAsc();
+        for (PolicyDoc d : targets) {
+            d.setDocNo(nextDocNo(d.getCategory()));
+            docRepository.saveAndFlush(d);
+        }
+        return targets.size();
     }
 
     private void applyRevision(PolicyDocRevision rev, PolicyDocDto.RevisionRequest req) {
