@@ -19,6 +19,7 @@
   "nav": {
     "dashboard": "대시보드",
     "policies": "보안 정책",
+    "policyManagement": "보안정책관리",
     "vulnerabilities": "취약점 관리",
     "training": "IT 및 정보보호 교육",
     "admin": "관리",

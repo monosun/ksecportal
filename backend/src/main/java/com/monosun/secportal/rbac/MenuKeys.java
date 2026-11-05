@@ -17,7 +17,7 @@ public final class MenuKeys {
             // 대시보드
             "dash_risks", "dash_vulns", "dash_incidents", "dash_isms", "dash_evidence",
             // 정보보호 관리체계
-            "policies", "assets", "sbom", "threats", "vulnerabilities",
+            "policies", "policy_management", "assets", "sbom", "threats", "vulnerabilities",
             "risk_assessment", "risk_treatment", "isms_mapping", "isms", "isms_defects",
             // 보안 운영
             "security_events", "incidents", "sec_findings", "monthly_checks",
@@ -37,9 +37,10 @@ public final class MenuKeys {
     );
 
     /**
-     * USER 역할의 초기 권한 — 기존 하드코딩 기본값(보안교육·보안 가이드 읽기)에 사례집을 더한 것.
+     * USER 역할의 초기 권한 — 기존 하드코딩 기본값(보안교육·보안 가이드 읽기)에 사례집,
+     * 임직원 공표 대상인 보안정책관리(정책 문서 열람)를 더한 것.
      * 이 값은 <b>USER 역할을 처음 만들 때만</b> 쓰인다(시더는 비어 있을 때만 동작).
      * 이미 운영 중인 인스턴스에서 임직원에게 새 메뉴를 열어 주려면 관리 &gt; 권한관리에서 직접 켜야 한다.
      */
-    public static final List<String> DEFAULT_USER_READ = List.of("training", "sec_docs", "security_cases");
+    public static final List<String> DEFAULT_USER_READ = List.of("training", "sec_docs", "security_cases", "policy_management");
 }

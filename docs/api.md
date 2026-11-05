@@ -119,6 +119,30 @@
 
 ---
 
+## 보안정책관리 (Policy Document)
+
+정책 문서(규정·지침·가이드·절차서·매뉴얼)별 버전(개정본)·개정사항·파일 관리. 권한은 RBAC 메뉴 `policy_management` 기준 — 조회 `canRead`, 등록·수정 `canWrite`, 삭제 `canDelete`.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | /policy-docs | 목록 — `category`(REGULATION·GUIDELINE·GUIDE·PROCEDURE·MANUAL), `status`(ACTIVE·ABOLISHED), `keyword`, `page`, `size`. 각 항목에 현행본(`current`)·`revisionCount` 포함 |
+| GET | /policy-docs/summary | 분류별 문서 수 (`status` 선택) |
+| GET | /policy-docs/:id | 상세 + 버전 이력 `revisions`(최신순, 첫 항목이 현행본) |
+| POST | /policy-docs | multipart — `data`: `{ doc: {category, title, docNo, department, owner, description}, revision: {version, revisionType, revisionDate, effectiveDate, approver, changeReason, changeDetails} }`, `file`(선택) |
+| PUT | /policy-docs/:id | 문서 기본정보 수정 (JSON, `doc` 필드와 동일) |
+| DELETE | /policy-docs/:id | 문서와 전체 버전·파일 삭제 |
+| POST | /policy-docs/:id/revisions | 새 버전 — multipart `data`(revision 필드), `file`(선택). `version` 생략 시 자동 증가, 중복 버전은 400 |
+| PUT | /policy-docs/revisions/:revisionId | 버전 정보 수정 (JSON) |
+| POST | /policy-docs/revisions/:revisionId/file | 버전 파일 교체 (multipart `file`) |
+| DELETE | /policy-docs/revisions/:revisionId | 버전 삭제 (마지막 1개는 400) |
+| GET | /policy-docs/revisions/:revisionId/download | 파일 다운로드 |
+| GET | /policy-docs/revisions/:revisionId/preview | 오피스 문서를 PDF 로 변환해 inline 응답 (뷰어용) |
+
+`revisionType`: ENACTMENT(제정)·AMENDMENT(개정)·ABOLITION(폐지). 현행본이 ABOLITION 이면 문서 `status` 는 ABOLISHED.
+첨부 형식: pdf, doc, docx, odt, rtf, ppt, pptx, xls, xlsx, txt, hwp, hwpx.
+
+---
+
 ## 보안 정책 조문 (Policy Article)
 
 정책은 **지침 &gt; 장(章) &gt; 조(條)** 계층으로 다룹니다. 정책 1건이 장 하나이고,

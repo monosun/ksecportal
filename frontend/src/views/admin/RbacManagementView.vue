@@ -290,6 +290,7 @@ const MENUS = [
   { key: 'dash_evidence',     label: '[대시보드] 증적 제출 현황' },
   // 정보보호 관리체계
   { key: 'policies',          label: '보안 정책' },
+  { key: 'policy_management', label: '보안정책관리' },
   { key: 'assets',            label: '자산 관리' },
   { key: 'sbom',              label: 'SBOM 관리' },
   { key: 'threats',           label: '위협 관리' },

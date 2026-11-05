@@ -654,6 +654,34 @@ export const secDocApi = {
   fetchPreviewPdf: (id) => api.get(`/sec-docs/${id}/preview`, { responseType: 'blob', timeout: 180000 })
 }
 
+// 정보보호관리체계 > 보안정책관리 — 정책 문서별 버전(개정본)·개정사항을 파일 단위로 관리
+const multipart = (data, file) => {
+  const fd = new FormData()
+  fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  if (file) fd.append('file', file)
+  return fd
+}
+export const policyDocApi = {
+  list: (params) => api.get('/policy-docs', { params }),
+  summary: (params) => api.get('/policy-docs/summary', { params }),
+  get: (id) => api.get(`/policy-docs/${id}`),
+  create: (data, file) => api.post('/policy-docs', multipart(data, file)),
+  update: (id, data) => api.put(`/policy-docs/${id}`, data),
+  delete: (id) => api.delete(`/policy-docs/${id}`),
+  addRevision: (id, data, file) => api.post(`/policy-docs/${id}/revisions`, multipart(data, file)),
+  updateRevision: (revisionId, data) => api.put(`/policy-docs/revisions/${revisionId}`, data),
+  replaceFile: (revisionId, file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post(`/policy-docs/revisions/${revisionId}/file`, fd)
+  },
+  deleteRevision: (revisionId) => api.delete(`/policy-docs/revisions/${revisionId}`),
+  download: (revisionId, fileName) => downloadBlob(`/policy-docs/revisions/${revisionId}/download`, fileName),
+  fetchBlob: (revisionId) => api.get(`/policy-docs/revisions/${revisionId}/download`, { responseType: 'blob' }),
+  // DOC·PPT 등은 서버에서 PDF 로 변환 — 첫 변환은 오래 걸릴 수 있어 timeout 을 늘린다
+  fetchPreviewPdf: (revisionId) => api.get(`/policy-docs/revisions/${revisionId}/preview`, { responseType: 'blob', timeout: 180000 })
+}
+
 export const committeeApi = {
   years: () => api.get('/committee/years'),
   list: (year) => api.get('/committee', { params: { year } }),

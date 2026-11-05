@@ -55,6 +55,11 @@ const routes = [
         component: () => import('@/views/policy/PolicyDetailView.vue')
       },
       {
+        path: 'policy-management',
+        name: 'PolicyManagement',
+        component: () => import('@/views/policydoc/PolicyDocListView.vue')
+      },
+      {
         path: 'policies/:id/edit',
         name: 'PolicyEdit',
         component: () => import('@/views/policy/PolicyFormView.vue')

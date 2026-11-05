@@ -23,6 +23,7 @@ export const navGroups = [
     icon: ShieldExclamationIcon,
     items: [
       { to: '/policies',          label: 'nav.policies',       icon: DocumentTextIcon,      menuKey: 'policies' },
+      { to: '/policy-management', label: 'nav.policyManagement', icon: DocumentTextIcon,    menuKey: 'policy_management' },
       { to: '/assets',            label: 'nav.assets',          icon: DocumentTextIcon,      menuKey: 'assets' },
       { to: '/sbom',              label: 'nav.sbom',            icon: DocumentTextIcon,      menuKey: 'sbom' },
       { to: '/threat-management', label: 'nav.threats',         icon: ShieldExclamationIcon, menuKey: 'threats' },
@@ -196,6 +197,15 @@ export function resolveMenu(groups, cfg) {
       : (base ? base.items.map(it => it.to) : [])
     const orderRank = {}
     orderList.forEach((to, i) => { orderRank[to] = i })
+    // 저장된 순서에 없는 신규 메뉴는 맨 뒤가 아니라 원본 정의에서 바로 앞에 있던 메뉴 뒤에 끼워 넣는다
+    // (예: '보안 정책' 다음에 추가된 '보안정책관리'는 사용자가 순서를 바꿔 두었어도 '보안 정책' 바로 아래에 온다)
+    if (base) {
+      let prevRank = -1
+      base.items.forEach((it, i) => {
+        if (it.to in orderRank) prevRank = orderRank[it.to]
+        else orderRank[it.to] = prevRank + (i + 1) / 1000
+      })
+    }
     const items = Object.keys(itemGroup)
       .filter(to => itemGroup[to] === key)
       .map(to => pool[to])
