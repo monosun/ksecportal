@@ -59,6 +59,8 @@ services:
       DOC_CONVERT_URL: ${DOC_CONVERT_URL:-http://gotenberg:3000}
       DOC_CONVERT_TIMEOUT: ${DOC_CONVERT_TIMEOUT:-120}
       DOC_CONVERT_MAX_MB: ${DOC_CONVERT_MAX_MB:-80}
+      # 관련 사이트 수집 시 사설망(10/8·172.16/12·192.168/16) 주소 허용 — 폐쇄망 사내 사이트용, 기본 차단(SSRF 방어)
+      RELATED_SITE_ALLOW_PRIVATE_NETWORK: ${RELATED_SITE_ALLOW_PRIVATE_NETWORK:-false}
       JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
       # JMX 모니터링이 필요한 경우: docker exec -it secportal-backend sh 후 로컬에서 접속
     volumes:

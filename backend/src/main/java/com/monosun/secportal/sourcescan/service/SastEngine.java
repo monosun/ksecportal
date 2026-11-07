@@ -37,7 +37,9 @@ public class SastEngine {
     private static final long MAX_FILE_BYTES = 500_000;
     private static final int MAX_FILES = 2000;
     private static final int MAX_FINDINGS = 1000;
-    private static final int MAX_LINE_LEN = 2000;   // 초장문(압축·번들) 라인 스킵
+    // 초장문(압축·번들) 라인 스킵. 규칙 정규식은 스캔 대상 저장소(외부 입력)에 적용되므로
+    // 반복 수량자를 {m,n} 으로 묶어 백트래킹을 선형에 가깝게 유지한다(ReDoS 방어, CWE-1333).
+    private static final int MAX_LINE_LEN = 2000;
 
     /** 검토 후 예외로 인정한 줄에 남기는 억제 주석 (`// sast:ignore 사유`, `# sast:ignore …`) */
     private static final Pattern SUPPRESS_MARKER = Pattern.compile("sast\\s*:\\s*ignore", Pattern.CASE_INSENSITIVE);
@@ -127,7 +129,7 @@ public class SastEngine {
                 "MessageDigest\\.getInstance\\(\\s*[\"'](MD5|SHA-?1)[\"']|hashlib\\.(md5|sha1)\\(|createHash\\(\\s*[\"'](md5|sha1)[\"']", F)));
         r.add(new Rule("SAST-CRYPTO-WEAKCIPHER", "A02:2021-Cryptographic Failures", "CWE-327", Severity.HIGH,
                 "취약한 암호 알고리즘/모드(DES·RC4·ECB) 사용", Pattern.compile(
-                "Cipher\\.getInstance\\(\\s*[\"'](DES|DESede|RC4|RC2|[^\"']*ECB[^\"']*)[\"']", F)));
+                "Cipher\\.getInstance\\(\\s*[\"'](DES|DESede|RC4|RC2|[^\"']{0,40}ECB[^\"']{0,40})[\"']", F)));
         r.add(new Rule("SAST-TLS-DISABLED", "A02:2021-Cryptographic Failures", "CWE-295", Severity.HIGH,
                 "TLS 인증서 검증 비활성화", Pattern.compile(
                 "rejectUnauthorized\\s*:\\s*false|verify\\s*=\\s*False|CURLOPT_SSL_VERIFY(PEER|HOST)\\s*,\\s*(0|false)|TrustAllCerts|NoopHostnameVerifier|ALLOW_ALL_HOSTNAME", F)));   // sast:ignore 탐지 규칙 정의일 뿐, 이 코드에는 TLS 설정이 없다
@@ -147,7 +149,7 @@ public class SastEngine {
         // A05 보안 설정 오류
         r.add(new Rule("SAST-CORS-WILDCARD", "A05:2021-Security Misconfiguration", "CWE-942", Severity.MEDIUM,
                 "CORS 와일드카드(*) 허용", Pattern.compile(
-                "Access-Control-Allow-Origin[\"'\\s:=]+\\*|allowedOrigins?\\(\\s*[\"']\\*[\"']|origin\\s*:\\s*[\"']\\*[\"']", F)));
+                "Access-Control-Allow-Origin[\"'\\s:=]{1,10}\\*|allowedOrigins?\\(\\s*[\"']\\*[\"']|origin\\s*:\\s*[\"']\\*[\"']", F)));
         r.add(new Rule("SAST-CSRF-DISABLED", "A05:2021-Security Misconfiguration", "CWE-352", Severity.MEDIUM,
                 "CSRF 보호 비활성화", Pattern.compile("csrf\\(\\)\\s*\\.\\s*disable\\(\\)|csrf\\s*:\\s*false", F)));
         r.add(new Rule("SAST-XXE", "A05:2021-Security Misconfiguration", "CWE-611", Severity.MEDIUM,
@@ -162,7 +164,7 @@ public class SastEngine {
         // A08 무결성 실패 — 안전하지 않은 역직렬화
         r.add(new Rule("SAST-DESERIALIZE", "A08:2021-Software and Data Integrity Failures", "CWE-502", Severity.HIGH,
                 "안전하지 않은 역직렬화", Pattern.compile(
-                "new\\s+ObjectInputStream|\\.readObject\\s*\\(|new\\s+XMLDecoder\\(|yaml\\.load\\s*\\((?![^)]*Loader)|pickle\\.loads?\\(", F)));
+                "new\\s+ObjectInputStream|\\.readObject\\s*\\(|new\\s+XMLDecoder\\(|yaml\\.load\\s*\\((?![^)]{0,200}Loader)|pickle\\.loads?\\(", F)));
         return r;
     }
 

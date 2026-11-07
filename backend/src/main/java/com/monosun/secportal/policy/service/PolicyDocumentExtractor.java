@@ -33,32 +33,39 @@ import java.util.regex.Pattern;
 @Component
 public class PolicyDocumentExtractor {
 
+    /*
+     * ReDoS 방어(CWE-1333) — 아래 패턴은 업로드된 문서의 모든 줄에 적용되므로 백트래킹이 없도록 짠다.
+     *  · 공백을 맞출 수 없는 토큰 사이의 공백은 소유 수량자(\s*+)로 — "\s*[기호]?\s*" 같은 이중 공백 모호성 제거
+     *  · 끝부분은 ".*?\s*$" 대신 탐욕 ".*" — 그룹 값은 호출부에서 strip() 하므로 결과가 같다
+     *  · 괄호 안 제목은 "[^)]*+" (닫는 괄호까지 한 번에)
+     */
+
     /** 쪽번호로 보이는 줄 — "12", "- 12 -", "12 / 40", "Page 12", "- 12 -쪽" */
     private static final Pattern PAGE_NUMBER = Pattern.compile(
-            "^\\s*(?:page\\s*)?[-–—\\[(]?\\s*\\d{1,4}\\s*(?:/\\s*\\d{1,4})?\\s*[-–—\\])]?\\s*(?:쪽|페이지)?\\s*$",
+            "^\\s*+(?:page\\s*+)?[-–—\\[(]?\\s*+\\d{1,4}\\s*+(?:/\\s*+\\d{1,4})?\\s*+[-–—\\])]?\\s*+(?:쪽|페이지)?\\s*+$",
             Pattern.CASE_INSENSITIVE);
 
-    /** 조 머리글 — "제1조(목적)", "제3조의2 (특례)", 앞뒤 장식 기호 허용 */
+    /** 조 머리글 — "제1조(목적)", "제3조의2 (특례)", 앞뒤 장식 기호 허용 (title·rest 는 호출부에서 strip) */
     private static final Pattern ARTICLE_LINE = Pattern.compile(
-            "^\\s*[◇◆○●■□▪•\\-]?\\s*제\\s*(?<no>\\d{1,3})\\s*조(?:\\s*의\\s*(?<sub>\\d{1,2}))?\\s*"
-            + "(?:[(（]\\s*(?<title>[^)）]{0,80}?)\\s*[)）])?\\s*(?<rest>.*?)\\s*$");
+            "^\\s*+[◇◆○●■□▪•\\-]?\\s*+제\\s*+(?<no>\\d{1,3})\\s*+조(?:\\s*+의\\s*+(?<sub>\\d{1,2}))?\\s*+"
+            + "(?:[(（](?<title>[^)）]{0,80}+)[)）])?\\s*+(?<rest>.*)$");
 
     /** 장 머리글 — "제1장 총칙", "부칙" */
     public static final Pattern CHAPTER_LINE = Pattern.compile(
-            "^\\s*[◇◆○●■□]?\\s*(?:제\\s*(?<no>\\d{1,3})\\s*장|(?<supplement>부\\s*칙))\\s*(?<title>[^\\n]{0,80}?)\\s*$");
+            "^\\s*+[◇◆○●■□]?\\s*+(?:제\\s*+(?<no>\\d{1,3})\\s*+장|(?<supplement>부\\s*+칙))\\s*+(?<title>[^\\n]{0,80}?)\\s*+$");
 
     /** 목차 머리글 — "목차", "목 차", "차례", "CONTENTS" 만 있는 줄 */
     private static final Pattern TOC_HEADING = Pattern.compile(
-            "^\\s*[<\\[(]?\\s*(?:목\\s*차|차\\s*례|table\\s+of\\s+contents|contents)\\s*[>\\])]?\\s*$",
+            "^\\s*+[<\\[(]?\\s*+(?:목\\s*+차|차\\s*+례|table\\s++of\\s++contents|contents)\\s*+[>\\])]?\\s*+$",
             Pattern.CASE_INSENSITIVE);
 
-    /** 점선 안내가 붙은 목차 항목 — "제1조(목적) ………… 3" */
+    /** 점선 안내가 붙은 목차 항목 — "제1조(목적) ………… 3" (탐욕 .* 가 마지막 점선 3개를 찾는다) */
     private static final Pattern TOC_DOT_LEADER = Pattern.compile(
-            "^\\s*\\S.*?[.·‥…]{3,}\\s*\\d{1,4}\\s*$");
+            "^\\s*+\\S.*[.·‥…]{3}\\s*+\\d{1,4}\\s*+$");
 
-    /** 끝에 쪽번호가 붙은 줄 — "제1장 총칙   3" (머리글일 때만 목차로 본다) */
+    /** 끝에 쪽번호가 붙은 줄 — "제1장 총칙   3" (머리글일 때만 목차로 본다. head 는 호출부에서 strip) */
     private static final Pattern TRAILING_PAGE = Pattern.compile(
-            "^\\s*(?<head>\\S.*?)\\s+(?<page>\\d{1,4})\\s*$");
+            "^\\s*+(?<head>\\S.*)\\s(?<page>\\d{1,4})\\s*+$");
 
     /** 목차 블록을 훑을 때 한 번에 지울 수 있는 최대 줄 수 — 폭주 방지 */
     private static final int TOC_SCAN_LIMIT = 300;
@@ -246,9 +253,49 @@ public class PolicyDocumentExtractor {
 
     /** 점선 안내와 끝의 쪽번호를 떼어낸다. */
     private String stripLeaders(String line) {
-        return line.replaceAll("[.·‥…\\u00B7]{2,}\\s*\\d{0,4}\\s*$", "")
-                   .replaceAll("\\s+\\d{1,4}\\s*$", "")
-                   .strip();
+        // 정규식 replaceAll 대신 뒤에서부터 훑는다 — 시작 위치마다 점선을 다시 훑던 백트래킹(ReDoS) 제거.
+        // 1) "점선{2,} 공백* 숫자{0,4} 공백*" 꼬리 제거  2) "공백+ 숫자{1,4} 공백*" 꼬리 제거 (기존 두 정규식과 같은 규칙)
+        String s = removeDotLeaderTail(line);
+        s = removeTrailingPageNumber(s);
+        return s.strip();
+    }
+
+    private static boolean isLeaderChar(char c) {
+        return c == '.' || c == '·' || c == '‥' || c == '…';
+    }
+
+    /** 끝 공백을 건너뛰고 1~maxDigits 자리(0 허용 여부는 minDigits) 숫자 시작 위치, 조건에 안 맞으면 -1 */
+    private static int digitsStart(String s, int end, int minDigits, int maxDigits) {
+        int i = end, d = 0;
+        while (i > 0 && Character.isDigit(s.charAt(i - 1)) && d < maxDigits) { i--; d++; }
+        if (d < minDigits) return -1;
+        // 자릿수 한도를 넘는 숫자열(예: 12345)은 쪽번호가 아니다
+        if (i > 0 && Character.isDigit(s.charAt(i - 1))) return -1;
+        return i;
+    }
+
+    private static int skipSpacesBackward(String s, int end) {
+        int i = end;
+        while (i > 0 && Character.isWhitespace(s.charAt(i - 1))) i--;
+        return i;
+    }
+
+    private static String removeDotLeaderTail(String s) {
+        int end = skipSpacesBackward(s, s.length());
+        int digits = digitsStart(s, end, 0, 4);
+        if (digits < 0) return s;
+        int beforeDigits = skipSpacesBackward(s, digits);
+        int k = beforeDigits;
+        while (k > 0 && isLeaderChar(s.charAt(k - 1))) k--;
+        return beforeDigits - k >= 2 ? s.substring(0, k) : s;
+    }
+
+    private static String removeTrailingPageNumber(String s) {
+        int end = skipSpacesBackward(s, s.length());
+        int digits = digitsStart(s, end, 1, 4);
+        if (digits < 0) return s;
+        int beforeDigits = skipSpacesBackward(s, digits);
+        return beforeDigits < digits ? s.substring(0, beforeDigits) : s;
     }
 
     /**

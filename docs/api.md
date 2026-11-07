@@ -2047,6 +2047,12 @@ GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenSt
 
 전체 수집은 `relatedsite.refresh-cron`(기본 `0 10 7 * * *`, 환경변수 `RELATED_SITE_CRON`) 스케줄로도 하루 한 번 실행된다.
 
+*(v1.44.1, SSRF 방어)* 수집 시 등록 주소·자동 탐색한 피드·`meta refresh`·리다이렉트 대상 모두 접속 전에 검사한다 —
+http/https 만, 계정정보 포함 URL 거부, 호스트가 풀리는 **모든** IP 가 루프백·링크로컬(169.254.x)·any-local·멀티캐스트·사설망
+(10/8·172.16/12·192.168/16·100.64/10·fc00::/7)이 아니어야 한다. 자동 리다이렉트는 끄고 최대 3회까지 홉마다 다시 검사한다.
+사설망은 `relatedsite.allow-private-network`(환경변수 `RELATED_SITE_ALLOW_PRIVATE_NETWORK`, 기본 `false`)로만 허용되며
+루프백·링크로컬은 이 값과 무관하게 항상 차단된다. 차단 시 사이트 상태는 `ERROR`, 사유는 `내부망 주소로의 접속은 허용되지 않습니다 (…)`.
+
 ---
 
 ## 위협 카탈로그 기본 항목 (Threat Defaults)

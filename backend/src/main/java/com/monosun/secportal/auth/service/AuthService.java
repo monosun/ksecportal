@@ -150,16 +150,29 @@ public class AuthService {
         if (password == null || password.length() < 8) {
             throw new BusinessException("비밀번호는 8자 이상이어야 합니다.");
         }
-        if (!password.matches(".*[A-Z].*")) {
+        // BCrypt 는 앞 72바이트만 쓰므로 그보다 긴 입력은 의미가 없다 — 과도한 입력 차단
+        if (password.length() > 128) {
+            throw new BusinessException("비밀번호는 128자 이하여야 합니다.");
+        }
+        // 문자 종류 검사는 한 번 훑어서 판단한다 (".*[A-Z].*" 같은 정규식은 긴 입력에서 백트래킹 — ReDoS)
+        boolean upper = false, lower = false, digit = false, special = false;
+        for (int i = 0; i < password.length(); i++) {
+            char c = password.charAt(i);
+            if (c >= 'A' && c <= 'Z') upper = true;
+            else if (c >= 'a' && c <= 'z') lower = true;
+            else if (c >= '0' && c <= '9') digit = true;
+            else special = true;
+        }
+        if (!upper) {
             throw new BusinessException("비밀번호에 대문자(A-Z)를 포함해야 합니다.");
         }
-        if (!password.matches(".*[a-z].*")) {
+        if (!lower) {
             throw new BusinessException("비밀번호에 소문자(a-z)를 포함해야 합니다.");
         }
-        if (!password.matches(".*[0-9].*")) {
+        if (!digit) {
             throw new BusinessException("비밀번호에 숫자(0-9)를 포함해야 합니다.");
         }
-        if (!password.matches(".*[^A-Za-z0-9].*")) {
+        if (!special) {
             throw new BusinessException("비밀번호에 특수문자(!@#$ 등)를 포함해야 합니다.");
         }
     }

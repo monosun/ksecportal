@@ -4,6 +4,8 @@
 # 셸 스크립트는 항상 LF (Windows에서 체크아웃해도 CRLF 변환 안 함)
 *.sh text eol=lf
 *.bash text eol=lf
+# Gradle wrapper 실행 스크립트(확장자 없음) — CRLF 면 Linux 러너에서 실행 실패
+gradlew text eol=lf
 
 # Windows 전용 파일은 CRLF 허용
 *.bat text eol=crlf

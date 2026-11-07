@@ -10,6 +10,8 @@ claude-auto-resume.ps1
 # Java
 *.class
 *.jar
+# Gradle Wrapper 실행에 필요한 jar 는 커밋한다 (CodeQL 등 CI 가 고정 버전 Gradle 을 쓰도록)
+!backend/gradle/wrapper/gradle-wrapper.jar
 !frontend/node_modules/.cache
 backend/build/
 backend/.gradle/

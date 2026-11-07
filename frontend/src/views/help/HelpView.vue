@@ -95,8 +95,14 @@ const filteredToc = computed(() => {
 
 // GitHub 스타일 슬러그 (한글 유지, 구두점 제거)
 function slugify(text, seen) {
-  let slug = text.toLowerCase().trim()
-    .replace(/<[^>]+>/g, '')
+  // 태그 제거는 바뀌지 않을 때까지 반복한다 — "<scr<x>ipt>" 처럼 한 번 지우면 새 태그가 생기는 입력 대비
+  let stripped = text.toLowerCase().trim()
+  let prev
+  do {
+    prev = stripped
+    stripped = stripped.replace(/<[^<>]*>/g, '')
+  } while (stripped !== prev)
+  let slug = stripped
     .replace(/[^\p{L}\p{N}\s-]/gu, '')
     .replace(/\s+/g, '-')
   if (seen[slug] !== undefined) {
@@ -112,6 +118,11 @@ function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+/** 속성값용 — 따옴표까지 이스케이프해 alt="…" / src="…" 밖으로 빠져나가지 못하게 한다 */
+function escapeAttr(s) {
+  return escapeHtml(String(s)).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 function buildMarked() {
   const seen = {}
   const marked = new Marked({ gfm: true })
@@ -125,7 +136,7 @@ function buildMarked() {
       },
       image({ href, text }) {
         const src = /^(https?:)?\/\//.test(href) ? href : `/help/${href}`
-        return `<img src="${src}" alt="${escapeHtml(text || '')}" loading="lazy" class="md-img">`
+        return `<img src="${escapeAttr(src)}" alt="${escapeAttr(text || '')}" loading="lazy" class="md-img">`
       },
       code({ text, lang }) {
         if (lang === 'mermaid') {

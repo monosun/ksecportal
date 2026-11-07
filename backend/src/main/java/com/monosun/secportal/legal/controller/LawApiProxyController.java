@@ -32,6 +32,15 @@ public class LawApiProxyController {
     // 연결 테스트용 — law.go.kr에 항상 존재하는 법령으로 검색해 OC 코드 유효성만 확인
     private static final String TEST_QUERY = "대한민국헌법";
 
+    /*
+     * 요청 파라미터 검증 (SSRF·파라미터 주입 방어, CWE-918).
+     * 호스트는 LAW_BASE 상수로 고정이지만, UriComponentsBuilder.encode() 는 쿼리값의 '&'·'=' 를
+     * 인코딩하지 않아 target=law&OC=... 처럼 상류 요청에 임의 파라미터를 끼워 넣을 수 있었다.
+     */
+    private static final java.util.Set<String> ALLOWED_TARGETS = java.util.Set.of("law", "admrul");
+    private static final java.util.regex.Pattern MST_PATTERN = java.util.regex.Pattern.compile("\\d{1,20}");
+    private static final int MAX_QUERY_LENGTH = 100;
+
     private final AppSettingService appSettingService;
     private final ObjectMapper objectMapper;
     /**
@@ -56,6 +65,10 @@ public class LawApiProxyController {
     public ResponseEntity<String> search(
             @RequestParam String query,
             @RequestParam(defaultValue = "law") String target) {
+        target = checkTarget(target);
+        if (query == null || query.isBlank() || query.length() > MAX_QUERY_LENGTH) {
+            return badRequest("검색어는 1~" + MAX_QUERY_LENGTH + "자로 입력하세요.");
+        }
         String apiKey = resolveApiKey();
         if (apiKey == null) return keyMissing();
 
@@ -77,6 +90,10 @@ public class LawApiProxyController {
     public ResponseEntity<String> content(
             @RequestParam String mst,
             @RequestParam(defaultValue = "law") String target) {
+        target = checkTarget(target);
+        if (mst == null || !MST_PATTERN.matcher(mst).matches()) {
+            return badRequest("법령 일련번호(MST/ID)는 숫자만 사용할 수 있습니다.");
+        }
         String apiKey = resolveApiKey();
         if (apiKey == null) return keyMissing();
 
@@ -195,6 +212,17 @@ public class LawApiProxyController {
     private String resolveApiKey() {
         String key = appSettingService.getValue(API_KEY_SETTING);
         return (key != null && !key.isBlank()) ? key.trim() : null;
+    }
+
+    /** 허용된 target(law | admrul)만 통과 — 그 외 값은 기본값 law 로 바꾼다 */
+    private static String checkTarget(String target) {
+        return target != null && ALLOWED_TARGETS.contains(target) ? target : "law";
+    }
+
+    private ResponseEntity<String> badRequest(String message) {
+        return ResponseEntity.badRequest()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"error\":" + jsonString(message) + ",\"message\":" + jsonString(message) + "}");
     }
 
     private ResponseEntity<String> keyMissing() {

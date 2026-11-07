@@ -37,7 +37,7 @@ KSecPortal의 알림을 Slack 채널로 전송하는 방법을 단계별로 설�
 
 발급된 Webhook URL 형식:
 ```
-https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>
 ```
 
 이 URL을 안전하게 복사해 둡니다. 나중에 환경변수로 등록합니다.
@@ -413,9 +413,9 @@ slack:
 SLACK_ENABLED=true
 
 # Slack Webhook URL (Slack 앱 대시보드에서 발급)
-SLACK_WEBHOOK_ALERTS=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX
-SLACK_WEBHOOK_INCIDENTS=https://hooks.slack.com/services/T00000000/B11111111/YYYYYYYYYYYYYYYY
-SLACK_WEBHOOK_INFO=https://hooks.slack.com/services/T00000000/B22222222/ZZZZZZZZZZZZZZZZ
+SLACK_WEBHOOK_ALERTS=https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>
+SLACK_WEBHOOK_INCIDENTS=https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>
+SLACK_WEBHOOK_INFO=https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>
 ```
 
 > 채널을 구분하지 않을 경우 동일한 URL을 모두 입력하거나,  
@@ -440,7 +440,7 @@ SLACK_WEBHOOK_INFO=
 Webhook URL이 정상인지 먼저 확인합니다:
 
 ```bash
-curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXXXX \
+curl -X POST https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN> \
   -H 'Content-Type: application/json' \
   -d '{"text":"KSecPortal Slack 연동 테스트 메시지입니다."}'
 

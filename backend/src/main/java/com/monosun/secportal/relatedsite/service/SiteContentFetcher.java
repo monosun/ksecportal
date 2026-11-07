@@ -1,16 +1,19 @@
 package com.monosun.secportal.relatedsite.service;
 
+import com.monosun.secportal.common.net.OutboundUrlGuard;
 import com.monosun.secportal.relatedsite.entity.RelatedSite;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.Element;
@@ -20,7 +23,10 @@ import org.xml.sax.InputSource;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.IOException;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -55,9 +61,10 @@ public class SiteContentFetcher {
             "Mozilla/5.0 (compatible; KSecPortal/1.0; +https://localhost) RelatedSiteBot";
 
     private static final Pattern XML_ENCODING =
-            Pattern.compile("<\\?xml[^>]*encoding=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+            // 외부 사이트 응답에 적용되므로 수량자를 묶어 백트래킹을 제한한다(ReDoS 방어)
+            Pattern.compile("<\\?xml[^>]{0,200}?encoding=[\"']([^\"'>]{1,40})[\"']", Pattern.CASE_INSENSITIVE);
     private static final Pattern HTML_CHARSET =
-            Pattern.compile("charset=[\"']?([a-zA-Z0-9_\\-]+)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("charset=[\"']?([a-zA-Z0-9_\\-]{1,40})", Pattern.CASE_INSENSITIVE);
 
     private static final List<DateTimeFormatter> DATE_FMTS = List.of(
             DateTimeFormatter.RFC_1123_DATE_TIME,
@@ -69,13 +76,27 @@ public class SiteContentFetcher {
             DateTimeFormatter.ISO_ZONED_DATE_TIME
     );
 
-    private final RestTemplate restTemplate;
+    /** 리다이렉트는 자동으로 따라가지 않고 홉마다 SSRF 검사를 거쳐 최대 이만큼 따라간다 */
+    private static final int MAX_REDIRECTS = 3;
 
-    public SiteContentFetcher(RestTemplateBuilder builder) {
-        this.restTemplate = builder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(10))
-                .build();
+    private final RestTemplate restTemplate;
+    /** 사설망(10/8·172.16/12·192.168/16 등) 사이트 수집 허용 — 폐쇄망 설치용, 기본 차단 */
+    private final boolean allowPrivateNetwork;
+
+    public SiteContentFetcher(RestTemplateBuilder builder,
+                              @Value("${relatedsite.allow-private-network:false}") boolean allowPrivateNetwork) {
+        this.allowPrivateNetwork = allowPrivateNetwork;
+        // 자동 리다이렉트를 끈다 — 외부 사이트가 내부 주소로 302 를 보내 검사를 우회하지 못하도록.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                super.prepareConnection(connection, httpMethod);
+                connection.setInstanceFollowRedirects(false);
+            }
+        };
+        factory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
+        factory.setReadTimeout((int) Duration.ofSeconds(10).toMillis());
+        this.restTemplate = builder.requestFactory(() -> factory).build();
     }
 
     // ── 결과 모델 ──────────────────────────────────────────────────────────
@@ -216,15 +237,26 @@ public class SiteContentFetcher {
 
     // ── HTTP ──────────────────────────────────────────────────────────────
 
-    /** 응답을 바이트로 받아 문서에 선언된 인코딩(EUC-KR 등)까지 감안해 문자열로 만든다 */
+    /**
+     * 응답을 바이트로 받아 문서에 선언된 인코딩(EUC-KR 등)까지 감안해 문자열로 만든다.
+     * 등록 주소·자동 탐색한 피드·meta refresh·리다이렉트 대상 모두 접속 전에 SSRF 검사를 거친다.
+     */
     private String get(String url) {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.USER_AGENT, USER_AGENT);
         headers.set(HttpHeaders.ACCEPT,
                 "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/html;q=0.8, */*;q=0.5");
 
-        ResponseEntity<byte[]> res =
-                restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), byte[].class);
+        URI target = OutboundUrlGuard.validate(url, allowPrivateNetwork);
+        ResponseEntity<byte[]> res = null;
+        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            res = restTemplate.exchange(target, HttpMethod.GET, new HttpEntity<>(headers), byte[].class);
+            if (!res.getStatusCode().is3xxRedirection()) break;
+            URI location = res.getHeaders().getLocation();
+            if (location == null) throw new IllegalStateException("이동 주소 없는 리다이렉트");
+            if (hop == MAX_REDIRECTS) throw new IllegalStateException("리다이렉트가 너무 많습니다");
+            target = OutboundUrlGuard.validate(target.resolve(location).toString(), allowPrivateNetwork);
+        }
         byte[] body = res.getBody();
         if (body == null || body.length == 0) throw new IllegalStateException("빈 응답");
 

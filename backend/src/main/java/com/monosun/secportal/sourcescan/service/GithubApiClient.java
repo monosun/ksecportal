@@ -10,9 +10,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * GitHub REST API 클라이언트 (https://docs.github.com/rest).
@@ -82,26 +85,64 @@ public class GithubApiClient {
         }
     }
 
+    /**
+     * 응답의 {@code Link: <...>; rel="next"} 헤더를 따라가며 페이지를 모은다.
+     *
+     * <p>{@code page=N} 을 직접 붙이지 않는다 — Dependabot alerts 등 일부 API 는 커서 방식
+     * ({@code after=}/{@code before=})만 지원해 {@code page} 파라미터를 보내면 400
+     * ("Pagination using the `page` parameter is not supported.") 을 돌려준다.
+     * Link 헤더는 두 방식 모두에서 다음 페이지 URL 을 주므로 공통으로 쓸 수 있다.
+     */
     private List<JsonNode> fetchPaged(String baseUrl, String token, String pathWithQuery) {
+        String base = normalizeBase(baseUrl);
         List<JsonNode> result = new ArrayList<>();
-        for (int page = 1; page <= MAX_PAGES; page++) {
-            JsonNode body = exchange(baseUrl, token, pathWithQuery + "&page=" + page).getBody();
+        URI next = URI.create(base + pathWithQuery);
+        for (int page = 1; page <= MAX_PAGES && next != null; page++) {
+            ResponseEntity<JsonNode> resp = exchange(token, next);
+            JsonNode body = resp.getBody();
             if (body == null || !body.isArray() || body.isEmpty()) break;
             body.forEach(result::add);
-            if (body.size() < PER_PAGE) break;
+            next = nextLink(resp.getHeaders(), base);
         }
         return result;
     }
 
-    private ResponseEntity<JsonNode> exchange(String baseUrl, String token, String path) {
-        String base = (baseUrl == null || baseUrl.isBlank()) ? DEFAULT_API_BASE
+    private static final Pattern NEXT_LINK = Pattern.compile("<([^>]+)>\\s*;\\s*rel=\"next\"");
+
+    /**
+     * Link 헤더의 rel="next" URL. 토큰이 다른 호스트로 새지 않도록 설정된 API 주소로 시작하는 URL 만 따른다.
+     * URL 은 이미 인코딩된 상태라 다시 인코딩되지 않게 URI 로 그대로 넘긴다(커서의 %3D 등 보존).
+     */
+    private static URI nextLink(HttpHeaders headers, String base) {
+        String link = headers.getFirst(HttpHeaders.LINK);
+        if (link == null) return null;
+        Matcher m = NEXT_LINK.matcher(link);
+        if (!m.find()) return null;
+        String url = m.group(1);
+        if (!url.startsWith(base + "/")) return null;
+        try {
+            return URI.create(url);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static String normalizeBase(String baseUrl) {
+        return (baseUrl == null || baseUrl.isBlank()) ? DEFAULT_API_BASE
                 : baseUrl.trim().replaceAll("/+$", "");
+    }
+
+    private ResponseEntity<JsonNode> exchange(String baseUrl, String token, String path) {
+        return exchange(token, URI.create(normalizeBase(baseUrl) + path));
+    }
+
+    private ResponseEntity<JsonNode> exchange(String token, URI uri) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.set(HttpHeaders.ACCEPT, "application/vnd.github+json");
         headers.set("X-GitHub-Api-Version", "2022-11-28");
         try {
-            return restTemplate.exchange(base + path, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
+            return restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), JsonNode.class);
         } catch (HttpStatusCodeException e) {
             throw new GithubApiException(e.getStatusCode().value(), extractMessage(e));
         } catch (Exception e) {

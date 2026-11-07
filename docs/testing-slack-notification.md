@@ -29,7 +29,7 @@ KSecPortal v1.14.0 이상에서 제공하는 **승인 알림 Slack 연동**의 �
 
 발급된 URL 형식:
 ```
-https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>
 ```
 
 > **보안 주의**: 이 URL은 비밀번호와 동일하게 취급합니다. Git에 커밋하지 마세요.
@@ -73,7 +73,7 @@ https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 ### Windows (PowerShell)
 
 ```powershell
-$webhookUrl = "https://hooks.slack.com/services/T00000000/B00000000/XXXX"
+$webhookUrl = "https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN>"
 $body = '{"text":"KSecPortal Slack 연동 직접 테스트 메시지입니다."}'
 Invoke-RestMethod -Uri $webhookUrl -Method POST -ContentType "application/json" -Body $body
 ```
@@ -81,7 +81,7 @@ Invoke-RestMethod -Uri $webhookUrl -Method POST -ContentType "application/json" 
 ### macOS / Linux (curl)
 
 ```bash
-curl -X POST https://hooks.slack.com/services/T00000000/B00000000/XXXX \
+curl -X POST https://hooks.slack.com/services/<WORKSPACE_ID>/<CHANNEL_ID>/<TOKEN> \
   -H 'Content-Type: application/json' \
   -d '{"text":"KSecPortal Slack 연동 직접 테스트 메시지입니다."}'
 ```

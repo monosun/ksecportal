@@ -23,29 +23,39 @@ import java.util.regex.Pattern;
 @Component
 public class PolicyStructureParser {
 
+    /*
+     * ReDoS 방어(CWE-1333) — 공백을 맞출 수 없는 토큰 사이 공백은 소유 수량자(\s*+),
+     * 꼬리는 탐욕 ".*"(그룹 값은 호출부에서 trim), 괄호 안 제목은 "[^)]*+" 로 백트래킹을 없앤다.
+     * 지침명(guideline)은 "ISMS-P 지침" 처럼 하이픈을 품을 수 있어 게으른 매칭이 필요하므로
+     * 제목 길이를 MAX_TITLE_LENGTH 로 제한해 최악의 경우를 묶는다.
+     */
+    private static final int MAX_TITLE_LENGTH = 500;
+    /** 조 머리글 후보로 볼 줄의 최대 길이 — 이보다 긴 줄은 본문으로 본다 */
+    private static final int MAX_HEADING_LINE_LENGTH = 1000;
+
     /** "지침명 - 제N장 장제목" / "지침명 - 부칙" */
     private static final Pattern TITLE_PATTERN = Pattern.compile(
-            "^\\s*(?<guideline>.+?)\\s*[-–—]\\s*(?:제\\s*(?<no>\\d+)\\s*장|(?<supplement>부\\s*칙))\\s*(?<ctitle>.*)$");
+            "^\\s*+(?<guideline>.+?)\\s*+[-–—]\\s*+(?:제\\s*+(?<no>\\d++)\\s*+장|(?<supplement>부\\s*+칙))\\s*+(?<ctitle>.*)$");
 
     /** 제목 자체가 "제N장 …" 으로 시작하는 경우(지침명 없음) */
     private static final Pattern CHAPTER_ONLY_PATTERN = Pattern.compile(
-            "^\\s*(?:제\\s*(?<no>\\d+)\\s*장|(?<supplement>부\\s*칙))\\s*(?<ctitle>.*)$");
+            "^\\s*+(?:제\\s*+(?<no>\\d++)\\s*+장|(?<supplement>부\\s*+칙))\\s*+(?<ctitle>.*)$");
 
     /**
      * 마크다운 머리글 형태의 조 — "### 제1조(목적)", "## 제3조의2 (특례)".
      * 제목 뒤의 "&lt;개정 2024.5.28&gt;" 같은 꼬리말은 note 로 따로 보존한다.
      */
     private static final Pattern ARTICLE_HEADING = Pattern.compile(
-            "^\\s{0,3}#{1,6}\\s*제\\s*(?<no>\\d+)\\s*조(?:\\s*의\\s*(?<sub>\\d+))?\\s*"
-            + "(?:[(（]\\s*(?<title>[^)）]*?)\\s*[)）])?\\s*(?<note>.*?)\\s*$");
+            "^\\s{0,3}+#{1,6}+\\s*+제\\s*+(?<no>\\d++)\\s*+조(?:\\s*+의\\s*+(?<sub>\\d++))?\\s*+"
+            + "(?:[(（](?<title>[^)）]*+)[)）])?\\s*+(?<note>.*)$");
 
     /**
      * 머리글 표시가 없는 문서용 대체 규칙 — 줄 전체가 "제1조(목적)" 인 경우만.
      * 본문 문장("제3조의 규정에 따라 …")을 조로 오인하지 않도록 꼬리말은 &lt;…&gt; 형태만 허용한다.
      */
     private static final Pattern ARTICLE_PLAIN = Pattern.compile(
-            "^\\s*제\\s*(?<no>\\d+)\\s*조(?:\\s*의\\s*(?<sub>\\d+))?\\s*"
-            + "(?:[(（]\\s*(?<title>[^)）]*?)\\s*[)）])?\\s*(?<note><[^>\\n]*>)?\\s*$");
+            "^\\s*+제\\s*+(?<no>\\d++)\\s*+조(?:\\s*+의\\s*+(?<sub>\\d++))?\\s*+"
+            + "(?:[(（](?<title>[^)）]*+)[)）])?\\s*+(?<note><[^>\\n]*+>)?\\s*+$");
 
     /** 제목에서 파생한 지침/장 정보를 정책 엔티티에 반영한다. */
     public void applyTitleStructure(Policy policy) {
@@ -60,6 +70,8 @@ public class PolicyStructureParser {
     public Chapter parseTitle(String rawTitle) {
         String title = rawTitle == null ? "" : rawTitle.trim();
         if (title.isEmpty()) return new Chapter("", null, null, null);
+        // 비정상적으로 긴 제목은 장 구분을 시도하지 않는다 (정규식 최악 시간 제한)
+        if (title.length() > MAX_TITLE_LENGTH) return new Chapter(title, null, null, null);
 
         Matcher m = TITLE_PATTERN.matcher(title);
         if (m.matches()) {
@@ -129,6 +141,7 @@ public class PolicyStructureParser {
 
     private void collect(String[] lines, Pattern pattern, List<Integer> heads, List<Matcher> matchers) {
         for (int i = 0; i < lines.length; i++) {
+            if (lines[i].length() > MAX_HEADING_LINE_LENGTH) continue;   // 조 머리글일 수 없는 긴 본문 줄
             Matcher m = pattern.matcher(lines[i]);
             if (m.matches()) {
                 heads.add(i);

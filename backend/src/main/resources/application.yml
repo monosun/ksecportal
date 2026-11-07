@@ -57,6 +57,9 @@ notification:
 # 관련 사이트(보안 가이드 및 자료) 내용 자동 수집 주기
 relatedsite:
   refresh-cron: ${RELATED_SITE_CRON:0 10 7 * * *}
+  # 사설망(10/8·172.16/12·192.168/16 등) 사이트 수집 허용 — 폐쇄망에서 사내 사이트를 등록할 때만 true.
+  # 루프백·링크로컬(클라우드 메타데이터 169.254.169.254)은 이 값과 무관하게 항상 차단(SSRF 방어).
+  allow-private-network: ${RELATED_SITE_ALLOW_PRIVATE_NETWORK:false}
 
 # 에러 로그 보관 정책 (관리 > 에러 로그 관리)
 errorlog:

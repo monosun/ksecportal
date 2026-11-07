@@ -49,6 +49,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            // CSRF 토큰 미사용 사유(CWE-352 검토 완료): 인증은 Authorization: Bearer 헤더(JWT)로만 하고
+            // 세션·인증 쿠키를 쓰지 않는다(STATELESS). 브라우저는 교차 사이트 요청에 이 헤더를 자동으로
+            // 붙이지 않으므로 CSRF 가 성립하지 않는다. 쿠키 기반 인증을 도입하면 반드시 CSRF 보호를 켤 것.
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
