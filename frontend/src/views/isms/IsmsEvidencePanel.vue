@@ -9,6 +9,11 @@
               {{ item.itemCode }}
             </span>
             <span class="text-sm text-gray-500">{{ item.sectionName }} › {{ item.domainName }}</span>
+            <span :class="['inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border',
+                item.evidenceValidityMonths ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-gray-50 text-gray-400 border-gray-200']"
+              title="증적 유효기간 — 코드관리 > ISMS-P 101항목에서 설정">
+              ⏱ 증적 유효기간 {{ validityLabel(item.evidenceValidityMonths) }}
+            </span>
           </div>
           <h2 class="text-lg font-bold text-gray-900 mb-2">{{ item.itemName }}</h2>
           <p class="text-sm text-gray-600 leading-relaxed">{{ item.description }}</p>
@@ -161,13 +166,24 @@
           {{ selectedYear }}{{ $t('isms.year') }} {{ $t('isms.evidences') }}
           <span class="ml-2 text-sm font-normal text-gray-500">({{ evidences.length }}건)</span>
         </h3>
-        <button v-if="!showForm" @click="openForm('direct')"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          {{ $t('isms.addEvidence') }}
-        </button>
+        <div v-if="!showForm" class="flex items-center gap-2">
+          <button @click="openForm('copy')"
+            title="이 항목의 이전 연도 증적을 골라 현재 연도로 복사합니다"
+            class="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            전년도 가져오기
+          </button>
+          <button @click="openForm('direct')"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            {{ $t('isms.addEvidence') }}
+          </button>
+        </div>
       </div>
 
       <!-- 증적 등록 폼 -->
@@ -180,9 +196,75 @@
           </button>
           <button @click="switchFormMode('ref')"
             :class="formMode === 'ref' ? 'border-b-2 border-primary-600 text-primary-600 font-medium' : 'text-gray-500 hover:text-gray-700'"
-            class="px-4 py-2 text-sm transition-colors">
+            class="px-4 py-2 text-sm mr-2 transition-colors">
             다른 항목 참조
           </button>
+          <button @click="switchFormMode('copy')"
+            :class="formMode === 'copy' ? 'border-b-2 border-primary-600 text-primary-600 font-medium' : 'text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2 text-sm transition-colors">
+            전년도 증적 가져오기
+          </button>
+        </div>
+
+        <!-- 전년도 증적 가져오기 (이 항목만) -->
+        <div v-if="formMode === 'copy'" class="p-5">
+          <p class="text-xs text-gray-500 mb-3">
+            이 항목의 이전 연도 증적 중 가져올 증적을 선택하세요. 증적제목 · 내용 · 준수상태 · 첨부파일이
+            <span class="font-medium text-gray-700">{{ selectedYear }}년</span>으로 복사됩니다.
+            유효기간은 원본 증적의 기준일을 그대로 이어받으며, 상단 '가져오기 초기화'로 되돌릴 수 있습니다.
+          </p>
+          <div v-if="prevLoading" class="py-6 text-center text-sm text-gray-400">{{ $t('common.loading') }}</div>
+          <div v-else-if="prevEvidences.length === 0"
+            class="py-6 text-center text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg bg-white">
+            {{ selectedYear }}년 이전에 이 항목에 등록된 증적이 없습니다.
+          </div>
+          <div v-else class="border border-gray-200 rounded-lg bg-white max-h-72 overflow-y-auto">
+            <div v-for="grp in prevGroups" :key="grp.year">
+              <label class="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 sticky top-0 cursor-pointer">
+                <input type="checkbox" :checked="isGroupChecked(grp)" @change="toggleGroup(grp, $event.target.checked)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"/>
+                {{ grp.year }}년 <span class="font-normal text-gray-400">({{ grp.items.length }}건)</span>
+              </label>
+              <label v-for="pe in grp.items" :key="pe.id"
+                class="flex items-start gap-3 px-3 py-2.5 border-b border-gray-50 last:border-b-0 hover:bg-primary-50/40 cursor-pointer">
+                <input type="checkbox" :value="pe.id" v-model="prevSelected"
+                  class="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"/>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <StatusBadge :status="pe.status" />
+                    <span class="text-sm font-medium text-gray-900">{{ pe.title }}</span>
+                    <span v-if="pe.sourceEvidenceId" class="text-xs text-blue-600">🔗 참조</span>
+                  </div>
+                  <div class="mt-0.5 flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                    <span v-if="pe.fileName">📎 {{ pe.fileName }}</span>
+                    <span>{{ formatDate(pe.validFrom || pe.createdAt) }} 기준</span>
+                    <span v-if="pe.expiresAt" class="flex items-center gap-1">
+                      ~{{ formatYmd(pe.expiresAt) }}
+                      <span :class="['px-1.5 py-px rounded border text-[11px] font-medium', expiryState(pe.expiresAt).cls]">
+                        {{ expiryState(pe.expiresAt).text }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <label v-if="prevEvidences.length" class="mt-3 flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input type="checkbox" v-model="prevIncludeNote"
+              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"/>
+            현재 상태 · 의견도 가져오기
+            <span class="text-xs text-gray-400">({{ selectedYear }}년에 작성된 내용이 없을 때만)</span>
+          </label>
+          <div class="flex justify-end gap-2 mt-4">
+            <button @click="resetForm"
+              class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              {{ $t('common.cancel') }}
+            </button>
+            <button @click="submitCopyPrevious" :disabled="!prevSelected.length || submitting"
+              class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors">
+              {{ prevSelected.length ? `${prevSelected.length}건 가져오기` : '가져오기' }}
+            </button>
+          </div>
         </div>
 
         <!-- 직접 등록 -->
@@ -322,9 +404,15 @@
           <div v-if="editingId !== ev.id">
             <div class="flex items-start justify-between">
               <div class="flex-1 min-w-0">
-                <div v-if="ev.sourceEvidenceId"
-                  class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded mb-2">
-                  🔗 참조
+                <div v-if="ev.sourceEvidenceId || ev.copiedFromYear" class="flex items-center gap-1.5 mb-2">
+                  <span v-if="ev.sourceEvidenceId"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+                    🔗 참조
+                  </span>
+                  <span v-if="ev.copiedFromYear"
+                    class="inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
+                    📋 {{ ev.copiedFromYear }}년 증적 가져옴
+                  </span>
                 </div>
                 <div class="flex items-center gap-2 mb-2">
                   <StatusBadge :status="ev.status" />
@@ -347,6 +435,12 @@
                   </span>
                   <span>{{ ev.registrantName }}</span>
                   <span>{{ formatDate(ev.createdAt) }}</span>
+                  <span v-if="ev.expiresAt" class="flex items-center gap-1" :title="`유효기간 기준일 ${formatDate(ev.validFrom)}`">
+                    ⏱ 유효기간 ~{{ formatYmd(ev.expiresAt) }}
+                    <span :class="['px-1.5 py-px rounded border text-[11px] font-medium', expiryState(ev.expiresAt).cls]">
+                      {{ expiryState(ev.expiresAt).text }}
+                    </span>
+                  </span>
                 </div>
               </div>
               <div class="flex items-center gap-2 ml-4 flex-shrink-0">
@@ -363,6 +457,20 @@
           </div>
           <div v-else>
             <div class="grid grid-cols-1 gap-3">
+              <!-- 증적 유효기간 (항목 속성 · 코드관리에서 설정) -->
+              <div class="flex items-center gap-2 flex-wrap px-3 py-2 rounded-lg bg-indigo-50/60 border border-indigo-100 text-xs text-gray-600">
+                <span class="font-medium text-indigo-700">⏱ 증적 유효기간 {{ validityLabel(item?.evidenceValidityMonths) }}</span>
+                <template v-if="ev.expiresAt">
+                  <span class="text-gray-300">|</span>
+                  <span>기준일 {{ formatDate(ev.validFrom) }} → 만료일 {{ formatYmd(ev.expiresAt) }}</span>
+                  <span :class="['px-1.5 py-px rounded border text-[11px] font-medium', expiryState(ev.expiresAt).cls]">
+                    {{ expiryState(ev.expiresAt).text }}
+                  </span>
+                </template>
+                <span v-if="item?.evidenceValidityMonths && !editingIsRef" class="text-gray-400 w-full sm:w-auto sm:ml-auto">
+                  새 첨부파일을 올리면 유효기간이 저장 시점부터 다시 계산됩니다.
+                </span>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <input v-model="editForm.title" type="text"
                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
@@ -405,6 +513,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ismsApi } from '@/api'
 import StatusBadge from './IsmsStatusBadge.vue'
+import { validityLabel, expiryState, formatYmd } from './ismsValidity'
 
 const props = defineProps({
   itemId: { type: [Number, String], required: true },
@@ -434,6 +543,66 @@ const refResults = ref([])
 const refSearching = ref(false)
 const refSearched = ref(false)
 const selectedRef = ref(null)
+
+// 전년도 증적 가져오기 (이 항목만)
+const prevEvidences = ref([])
+const prevSelected = ref([])
+const prevIncludeNote = ref(true)
+const prevLoading = ref(false)
+/** 연도별로 묶은 이전 증적 (최신 연도 먼저) */
+const prevGroups = computed(() => {
+  const map = new Map()
+  for (const e of prevEvidences.value) {
+    if (!map.has(e.year)) map.set(e.year, [])
+    map.get(e.year).push(e)
+  }
+  return [...map.entries()].map(([year, items]) => ({ year, items }))
+})
+function isGroupChecked(grp) {
+  return grp.items.every(e => prevSelected.value.includes(e.id))
+}
+function toggleGroup(grp, checked) {
+  const ids = grp.items.map(e => e.id)
+  prevSelected.value = checked
+    ? [...new Set([...prevSelected.value, ...ids])]
+    : prevSelected.value.filter(id => !ids.includes(id))
+}
+async function loadPrevEvidences() {
+  prevLoading.value = true
+  prevSelected.value = []
+  try {
+    const res = await ismsApi.listPreviousEvidences(props.itemId, selectedYear.value)
+    prevEvidences.value = res.data || []
+    // 기본 선택: 가장 최근 연도의 증적 전체
+    if (prevGroups.value.length) prevSelected.value = prevGroups.value[0].items.map(e => e.id)
+  } catch (e) {
+    prevEvidences.value = []
+    showSaveError(e || '이전 연도 증적을 불러오지 못했습니다.')
+  } finally {
+    prevLoading.value = false
+  }
+}
+async function submitCopyPrevious() {
+  if (!prevSelected.value.length) return
+  if (evidences.value.length &&
+      !confirm(`${selectedYear.value}년에 이미 증적 ${evidences.value.length}건이 있습니다. 선택한 증적을 추가로 가져오시겠습니까?`)) return
+  submitting.value = true
+  try {
+    const res = await ismsApi.copyPreviousForItem(props.itemId, selectedYear.value, {
+      evidenceIds: prevSelected.value,
+      includeNote: prevIncludeNote.value,
+    })
+    const r = res.data || {}
+    resetForm()
+    await Promise.all([loadEvidences(), loadNote()])
+    emit('changed')
+    showSaveSuccess(`전년도 증적 ${r.copiedEvidences ?? 0}건을 가져왔습니다.${r.copiedNote ? ' (현재 상태·의견 포함)' : ''}`)
+  } catch (e) {
+    showSaveError(e || '전년도 증적을 가져오지 못했습니다.')
+  } finally {
+    submitting.value = false
+  }
+}
 
 // 이행 가이드(항목 단위) / 현재상태·의견(연도 단위)
 const guideOpen = ref(false)
@@ -482,6 +651,7 @@ watch(() => props.year, (y) => {
     editingNote.value = false
     loadEvidences()
     loadNote()
+    if (showForm.value && formMode.value === 'copy') loadPrevEvidences()
   }
 })
 
@@ -505,16 +675,19 @@ function onYearChange() {
   editingNote.value = false
   loadEvidences()
   loadNote()
+  if (showForm.value && formMode.value === 'copy') loadPrevEvidences()
 }
 
 function openForm(mode) {
   formMode.value = mode
   showForm.value = true
+  if (mode === 'copy') loadPrevEvidences()
 }
 
 function switchFormMode(mode) {
   formMode.value = mode
   resetFormState()
+  if (mode === 'copy') loadPrevEvidences()
 }
 
 function resetFormState() {
@@ -525,6 +698,9 @@ function resetFormState() {
   refResults.value = []
   refSearched.value = false
   selectedRef.value = null
+  prevEvidences.value = []
+  prevSelected.value = []
+  prevIncludeNote.value = true
 }
 
 async function loadItem() {

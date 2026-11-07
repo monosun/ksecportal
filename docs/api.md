@@ -418,7 +418,9 @@ ISMS-P 인증 항목 목록 조회.
   "defaultEvidenceTitle": "경영진의 참여 증적",
   "defaultEvidenceContent": "…증적예시…",
   "evidenceExamples": "정보보호위원회 회의록\n경영진 정보보호 현황 보고자료\n…",
+  "evidenceValidityMonths": 12,
   "evidenceCount": 2, "latestStatus": "COMPLIANT",
+  "evidenceExpiresAt": "2027-03-15",
   "mappedPolicies": [
     { "id": 96, "title": "개인정보보호 지침 - 제1장 총칙", "status": "PUBLISHED", "category": "DATA_PROTECTION",
       "guidelineName": "개인정보보호 지침", "chapterLabel": "제1장", "chapterTitle": "총칙",
@@ -435,6 +437,10 @@ ISMS-P 인증 항목 목록 조회.
 
 `evidenceExamples` 는 **예시 증적자료명** 목록이다 — 줄바꿈(`\n`)으로 구분된 한 줄이 자료명 하나이며, 증적관리 화면의 이행 가이드 영역에 함께 표시된다. 101개 항목 모두 기본값을 시드하며, 비어 있는 항목에만 채워지므로(seed-when-empty) 사용자가 고친 값은 유지된다.
 
+`evidenceValidityMonths` *(v1.44.0)* 는 **증적 유효기간(개월)** 으로 항목 속성(연도 무관)이며 `null` 이면 미설정이다.
+`evidenceExpiresAt` 은 `year` 를 지정했을 때만 채워지며, 그 연도 증적 중 **가장 늦은 만료일**(증적 기준일 + 유효기간)이다.
+유효기간 미설정이거나 해당 연도 증적이 없으면 `null`.
+
 `mappedPolicies` 는 **지침 &gt; 장 &gt; 조** 계층을 그대로 싣는다. `articleId` 가 `null` 이면 **장(章) 전체** 매핑,
 값이 있으면 그 장 안의 **조(條) 단위** 매핑이다. 같은 장에 장 전체와 여러 조가 함께 걸릴 수 있으므로
 `id`(정책 id) 하나로는 항목을 구분할 수 없다 — 화면에서 키를 만들 때는 `articleId` 까지 조합해야 한다.
@@ -446,11 +452,14 @@ ISMS-P 인증 항목 목록 조회.
 
 ### PATCH /isms/items/:id/defaults *(MANAGER+)*
 
-항목별 기본 증적제목·증적내용·이행가이드·예시 증적자료명 수정 (관리 > 코드관리 `ISMS-P 101항목` 탭).
+항목별 기본 증적제목·증적내용·이행가이드·예시 증적자료명·증적 유효기간 수정 (관리 > 코드관리 `ISMS-P 101항목` 탭).
 
 ```json
-{ "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "evidenceExamples": "자료명1\n자료명2", "guide": "…" }
+{ "defaultEvidenceTitle": "…", "defaultEvidenceContent": "…", "evidenceExamples": "자료명1\n자료명2", "guide": "…",
+  "evidenceValidityMonths": 12 }
 ```
+
+요청은 전체 값을 덮어쓴다. `evidenceValidityMonths` 를 생략하거나 `null`·0 이하로 보내면 **미설정**으로 저장되며, 120 초과는 `400`.
 
 ### 통제항목 × 정책 매핑
 
@@ -530,9 +539,46 @@ ISMS-P 인증 항목 목록 조회.
   "filePath": "isms/1/a3f9c2d1-uuid.pdf",
   "status": "COMPLIANT",
   "registrantId": 1, "registrantName": "System Admin",
-  "createdAt": "2026-05-17 10:00:00", "updatedAt": "2026-05-17 10:00:00"
+  "createdAt": "2026-05-17 10:00:00", "updatedAt": "2026-05-17 10:00:00",
+  "copiedFromYear": null,
+  "validFrom": "2026-05-17 10:00:00",
+  "expiresAt": "2027-05-17"
 }
 ```
+
+*(v1.44.0)* `copiedFromYear` — 전년도 가져오기로 생성된 증적이면 원본 연도.
+`validFrom` — 유효기간 기준일시: 등록일시이며, 수정 시 **첨부파일을 새로 올리면 그 시점**으로 갱신되고,
+전년도에서 복사한 증적은 **원본의 기준일시를 승계**한다(복사만으로 유효기간이 연장되지 않음).
+`expiresAt` — `validFrom` + 항목 유효기간(개월). 유효기간 미설정이면 `null`.
+
+### GET /isms/items/:id/previous-evidences *(v1.44.0)*
+
+**항목별 전년도 가져오기 후보** — 대상 연도보다 앞선 연도에 이 항목에 등록된 증적 (연도 최신순 → 등록일 최신순).
+응답 항목 형식은 `GET /isms/items/:id/evidences` 와 같다.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 대상 연도 (생략 시 현재 연도) |
+
+### POST /isms/items/:id/copy-previous *(v1.44.0, ISMS-P 메뉴 쓰기 권한)*
+
+**항목별 전년도 증적 가져오기** — 선택한 이전 연도 증적을 대상 연도로 복사한다.
+증적제목·내용·준수상태·첨부파일(실물 복제)을 이어받고 `copied_from_year` 에 원본 연도를 기록하므로
+`DELETE /isms/copy-previous`(가져오기 초기화) 대상에 포함된다. 대상 연도에 증적이 이미 있어도 추가로 복사한다.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `year` | int | 복사 대상(붙여넣을) 연도 (생략 시 현재 연도) |
+
+```json
+// Request
+{ "evidenceIds": [101, 102], "includeNote": true }
+// Response
+{ "targetYear": 2026, "copiedEvidences": 2, "copiedNote": true }
+```
+
+- `evidenceIds` 는 **이 항목의 대상 연도 이전 증적**만 허용 — 다른 항목·같은/이후 연도·없는 ID 가 섞이면 `400`, 빈 목록도 `400`
+- `includeNote: true` 면 대상 연도에 현재상태·의견이 없을 때만, 선택한 증적 중 가장 최근 연도의 현재상태·의견을 함께 복사한다
 
 ### POST /isms/items/:id/evidences *(multipart/form-data)*
 
@@ -631,6 +677,7 @@ ISMS-P 인증 항목 목록 조회.
 
 가져올 이전 연도 증적이 없으면 `400` (`가져올 이전 연도 증적이 없습니다.`).
 복사된 레코드에는 `copied_from_year` 에 원본 연도가 기록되어 초기화(되돌리기) 대상으로 식별된다.
+v1.44.0 부터 복사된 증적은 원본의 유효기간 기준일(`valid_from`)을 승계한다.
 
 ### DELETE /isms/copy-previous *(MANAGER+)*
 

@@ -676,6 +676,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">기본 증적내용</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이행가이드</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">예시 증적자료</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">증적 유효기간</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-16">관리</th>
             </tr>
           </thead>
@@ -688,6 +689,10 @@
               <td class="px-4 py-3 text-gray-500 text-xs max-w-xs truncate" :title="it.guide">{{ it.guide || '-' }}</td>
               <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap" :title="it.evidenceExamples">
                 {{ ismsExampleCount(it) ? ismsExampleCount(it) + '건' : '-' }}
+              </td>
+              <td class="px-4 py-3 text-xs whitespace-nowrap"
+                :class="it.evidenceValidityMonths ? 'text-indigo-700 font-medium' : 'text-gray-300'">
+                {{ it.evidenceValidityMonths ? validityLabel(it.evidenceValidityMonths) : '-' }}
               </td>
               <td class="px-4 py-3 text-right">
                 <button @click="openIsmsItemModal(it)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">수정</button>
@@ -1098,6 +1103,16 @@
         </p>
         <div class="space-y-4">
           <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">증적 유효기간</label>
+            <select v-model="ismsItemModal.form.evidenceValidityMonths" class="input w-full sm:w-60">
+              <option v-for="o in ismsValidityOptions" :key="String(o.value)" :value="o.value">{{ o.label }}</option>
+            </select>
+            <p class="text-xs text-gray-400 mt-1">
+              증적 등록일(첨부파일을 새로 올린 날)부터 이 기간이 지나면 증적관리 목록에 '만료'로 표시됩니다.
+              전년도에서 가져온 증적은 원본 증적의 기준일을 그대로 따릅니다.
+            </p>
+          </div>
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">기본 증적제목</label>
             <input v-model="ismsItemModal.form.defaultEvidenceTitle" class="input w-full" placeholder="예: 경영진의 참여 증적"/>
           </div>
@@ -1429,6 +1444,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { adminApi, monthlyCheckDefaultApi, threatDefaultApi, contractorCheckItemApi, ismsApi, operationStatusApi, glossaryApi } from '@/api'
 import BulkImportModal from '@/components/BulkImportModal.vue'
+import { VALIDITY_OPTIONS, validityLabel } from '@/views/isms/ismsValidity'
 
 const tabs = [
   { key: 'code', label: '코드 관리' },
@@ -2142,7 +2158,15 @@ const ISMS_PAGE_SIZE = 20
 const ismsItemModal = reactive({
   show: false, saving: false, error: '',
   editId: null, itemCode: '', itemName: '',
-  form: { defaultEvidenceTitle: '', defaultEvidenceContent: '', evidenceExamples: '', guide: '' }
+  form: { defaultEvidenceTitle: '', defaultEvidenceContent: '', evidenceExamples: '', guide: '', evidenceValidityMonths: null }
+})
+/** 목록에 없는 값(예: 일괄 수정으로 들어간 18개월)도 선택지로 보이게 한다 */
+const ismsValidityOptions = computed(() => {
+  const cur = ismsItemModal.form.evidenceValidityMonths
+  if (cur && !VALIDITY_OPTIONS.some(o => o.value === cur)) {
+    return [...VALIDITY_OPTIONS, { value: cur, label: validityLabel(cur) }]
+  }
+  return VALIDITY_OPTIONS
 })
 
 function ismsExampleCount(it) {
@@ -2189,7 +2213,8 @@ function openIsmsItemModal(it) {
     defaultEvidenceTitle: it.defaultEvidenceTitle || '',
     defaultEvidenceContent: it.defaultEvidenceContent || '',
     evidenceExamples: it.evidenceExamples || '',
-    guide: it.guide || ''
+    guide: it.guide || '',
+    evidenceValidityMonths: it.evidenceValidityMonths ?? null
   }
   ismsItemModal.show = true
 }

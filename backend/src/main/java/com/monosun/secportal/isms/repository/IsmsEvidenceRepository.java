@@ -18,6 +18,9 @@ public interface IsmsEvidenceRepository extends JpaRepository<IsmsEvidence, Long
 
     long countByItemIdAndYear(Long itemId, int year);
 
+    /** 개별 항목 전년도 가져오기 후보 — 대상 연도보다 앞선 연도의 해당 항목 증적 (최신 연도순) */
+    List<IsmsEvidence> findByItemIdAndYearLessThanOrderByYearDescCreatedAtDesc(Long itemId, int year);
+
     @Query("SELECT e FROM IsmsEvidence e JOIN FETCH e.item WHERE e.year = :year ORDER BY e.item.sortOrder ASC, e.createdAt DESC")
     List<IsmsEvidence> findByYearOrderByItemSortOrder(@Param("year") int year);
 

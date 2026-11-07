@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS isms_items (
     default_evidence_title TEXT COMMENT '기본 증적제목',
     default_evidence_content TEXT COMMENT '기본 증적내용(증적예시)',
     evidence_examples TEXT COMMENT '예시 증적자료명 (줄바꿈 구분)',
+    evidence_validity_months INT NULL COMMENT '증적 유효기간(개월), NULL=미설정',
     sort_order INT NOT NULL DEFAULT 0
 );
 
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS isms_evidences (
     source_evidence_id BIGINT NULL COMMENT '참조 증적 ID (자기참조)',
     registrant_id BIGINT,
     copied_from_year INT NULL COMMENT '전년도 증적 가져오기로 생성된 경우 원본 연도 (가져오기 초기화 대상 식별)',
+    valid_from DATETIME NULL COMMENT '유효기간 기준일시 (NULL이면 created_at 기준, 복사 시 원본 기준일 승계)',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES isms_items(id) ON DELETE CASCADE,

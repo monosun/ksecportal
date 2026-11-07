@@ -145,6 +145,7 @@
         <option value="NON_COMPLIANT">{{ $t('isms.statusNonCompliant') }}</option>
         <option value="NA">N/A</option>
         <option value="NONE">{{ $t('isms.noEvidence') }}</option>
+        <option value="EXPIRING">유효기간 만료·임박</option>
       </select>
       <button v-if="searchKeyword || statusFilter" @click="searchKeyword = ''; statusFilter = ''"
         class="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">초기화</button>
@@ -185,6 +186,9 @@
             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
               {{ $t('isms.evidenceCount') }}
             </th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+              증적 유효기간
+            </th>
             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
               {{ $t('common.status') }}
             </th>
@@ -192,7 +196,7 @@
         </thead>
         <tbody class="divide-y divide-gray-100">
           <tr v-if="filteredItems.length === 0">
-            <td colspan="5" class="px-6 py-8 text-center text-gray-400 text-sm">{{ $t('common.noData') }}</td>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-400 text-sm">{{ $t('common.noData') }}</td>
           </tr>
           <tr v-for="item in filteredItems" :key="item.id"
             class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -206,6 +210,18 @@
             </td>
             <td class="px-6 py-4 text-center">
               <span class="text-sm text-gray-700">{{ item.evidenceCount ?? 0 }}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <template v-if="item.evidenceValidityMonths">
+                <p class="text-sm text-gray-700">{{ validityLabel(item.evidenceValidityMonths) }}</p>
+                <p v-if="item.evidenceExpiresAt" class="mt-0.5 flex items-center justify-center gap-1 text-xs text-gray-500">
+                  ~{{ formatYmd(item.evidenceExpiresAt) }}
+                  <span :class="['px-1.5 py-px rounded border text-[11px] font-medium', expiryState(item.evidenceExpiresAt).cls]">
+                    {{ expiryState(item.evidenceExpiresAt).text }}
+                  </span>
+                </p>
+              </template>
+              <span v-else class="text-sm text-gray-300">-</span>
             </td>
             <td class="px-6 py-4 text-center">
               <StatusBadge :status="item.latestStatus" />
@@ -421,6 +437,7 @@ import { useRoute } from 'vue-router'
 import { ismsApi, exportApi } from '@/api'
 import StatusBadge from './IsmsStatusBadge.vue'
 import IsmsEvidenceModal from './IsmsEvidenceModal.vue'
+import { validityLabel, expiryState, formatYmd } from './ismsValidity'
 
 // 항목 클릭 시 상세 페이지로 이동하지 않고 팝업으로 연다.
 const evidenceOpen = ref(false)
@@ -509,10 +526,13 @@ const filteredItems = computed(() => {
       (i.domainName || '').toLowerCase().includes(kw))
   }
   // 준수상태 필터 (NONE = 증적없음/미제출)
-  if (statusFilter.value) {
-    list = statusFilter.value === 'NONE'
-      ? list.filter(i => !i.latestStatus)
-      : list.filter(i => i.latestStatus === statusFilter.value)
+  if (statusFilter.value === 'NONE') {
+    list = list.filter(i => !i.latestStatus)
+  } else if (statusFilter.value === 'EXPIRING') {
+    // 유효기간이 지났거나 곧 만료되는 증적만 있는 항목
+    list = list.filter(i => ['expired', 'soon'].includes(expiryState(i.evidenceExpiresAt)?.key))
+  } else if (statusFilter.value) {
+    list = list.filter(i => i.latestStatus === statusFilter.value)
   }
   return list
 })

@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -56,9 +57,13 @@ public class IsmsDto {
         private String defaultEvidenceTitle;
         private String defaultEvidenceContent;
         private String evidenceExamples;
+        /** 증적 유효기간(개월). null = 미설정 */
+        private Integer evidenceValidityMonths;
         private int sortOrder;
         private long evidenceCount;
         private String latestStatus;
+        /** 조회 연도 증적 중 가장 늦게 만료되는 날짜 (유효기간 미설정·증적 없음이면 null) */
+        private LocalDate evidenceExpiresAt;
         private List<PolicyRef> mappedPolicies;
 
         public static ItemResponse from(IsmsItem item) {
@@ -75,6 +80,7 @@ public class IsmsDto {
                     .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
                     .defaultEvidenceContent(item.getDefaultEvidenceContent())
                     .evidenceExamples(item.getEvidenceExamples())
+                    .evidenceValidityMonths(item.getEvidenceValidityMonths())
                     .sortOrder(item.getSortOrder())
                     .mappedPolicies(List.of())
                     .build();
@@ -82,6 +88,11 @@ public class IsmsDto {
 
         public static ItemResponse from(IsmsItem item, long evidenceCount, String latestStatus,
                                         List<PolicyRef> mappedPolicies) {
+            return from(item, evidenceCount, latestStatus, mappedPolicies, null);
+        }
+
+        public static ItemResponse from(IsmsItem item, long evidenceCount, String latestStatus,
+                                        List<PolicyRef> mappedPolicies, LocalDate evidenceExpiresAt) {
             return ItemResponse.builder()
                     .id(item.getId())
                     .itemCode(item.getItemCode())
@@ -95,8 +106,10 @@ public class IsmsDto {
                     .defaultEvidenceTitle(item.getDefaultEvidenceTitle())
                     .defaultEvidenceContent(item.getDefaultEvidenceContent())
                     .evidenceExamples(item.getEvidenceExamples())
+                    .evidenceValidityMonths(item.getEvidenceValidityMonths())
                     .sortOrder(item.getSortOrder())
                     .evidenceCount(evidenceCount)
+                    .evidenceExpiresAt(evidenceExpiresAt)
                     .latestStatus(latestStatus)
                     .mappedPolicies(mappedPolicies != null ? mappedPolicies : List.of())
                     .build();
@@ -125,6 +138,20 @@ public class IsmsDto {
         private String sourceItemName;
         private String sourceEvidenceTitle;
         private String sourceFileName;
+        /** 전년도 증적 가져오기로 생성된 경우 원본 연도 */
+        private Integer copiedFromYear;
+        /** 유효기간 기준일시 (등록일시 또는 복사 원본의 기준일시) */
+        private LocalDateTime validFrom;
+        /** 만료일 = 기준일 + 항목 유효기간. 유효기간 미설정이면 null */
+        private LocalDate expiresAt;
+
+        /** 기준일시 + 유효기간(개월). 둘 중 하나라도 없으면 null */
+        public static LocalDate expiryOf(IsmsEvidence e) {
+            Integer months = e.getItem().getEvidenceValidityMonths();
+            LocalDateTime base = e.getEffectiveValidFrom();
+            if (months == null || months <= 0 || base == null) return null;
+            return base.toLocalDate().plusMonths(months);
+        }
 
         public static EvidenceResponse from(IsmsEvidence e) {
             IsmsEvidence src = e.getSourceEvidence();
@@ -148,6 +175,9 @@ public class IsmsDto {
                     .sourceItemName(src != null ? src.getItem().getItemName() : null)
                     .sourceEvidenceTitle(src != null ? src.getTitle() : null)
                     .sourceFileName(src != null ? src.getFileName() : null)
+                    .copiedFromYear(e.getCopiedFromYear())
+                    .validFrom(e.getEffectiveValidFrom())
+                    .expiresAt(expiryOf(e))
                     .build();
         }
     }
@@ -240,6 +270,29 @@ public class IsmsDto {
         private String defaultEvidenceContent;
         private String evidenceExamples;
         private String guide;
+        /** 증적 유효기간(개월). null 또는 0 이하 = 미설정 */
+        private Integer evidenceValidityMonths;
+    }
+
+    /** 개별 항목 전년도 증적 가져오기 요청 */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class ItemCopyPreviousRequest {
+        /** 복사할 이전 연도 증적 ID (같은 항목·대상 연도 이전 증적만 허용) */
+        @NotNull
+        private List<Long> evidenceIds;
+        /** 대상 연도에 현재상태·의견이 없으면 원본 연도 것을 함께 가져온다 */
+        private boolean includeNote;
+    }
+
+    /** 개별 항목 전년도 증적 가져오기 결과 */
+    @Getter
+    @Builder
+    public static class ItemCopyPreviousResult {
+        private int targetYear;
+        private int copiedEvidences;
+        private boolean copiedNote;
     }
 
     @Getter

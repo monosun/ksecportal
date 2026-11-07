@@ -61,6 +61,11 @@ public class IsmsItem {
     @Column(columnDefinition = "TEXT")
     private String evidenceExamples;
 
+    /** 증적 유효기간(개월) — 증적 등록(기준)일로부터 이 기간이 지나면 갱신이 필요하다.
+     *  null 이면 미설정(만료 없음). 연도와 무관한 항목 속성이며 코드관리 화면에서 편집한다. */
+    @Column(name = "evidence_validity_months")
+    private Integer evidenceValidityMonths;
+
     @Column(nullable = false)
     private int sortOrder;
 

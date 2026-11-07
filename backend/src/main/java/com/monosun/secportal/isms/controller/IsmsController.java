@@ -189,6 +189,27 @@ public class IsmsController {
         return ApiResponse.ok(ismsService.removeEvidenceFile(evidenceId));
     }
 
+    /** 개별 항목 전년도 가져오기 후보 — 대상 연도 이전에 이 항목에 등록된 증적 */
+    @GetMapping("/items/{id}/previous-evidences")
+    public ApiResponse<List<IsmsDto.EvidenceResponse>> listPreviousEvidences(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.listPreviousEvidences(id, targetYear));
+    }
+
+    /** 개별 항목 전년도 증적 가져오기 — 선택한 이전 연도 증적을 대상 연도로 복사 */
+    @PostMapping("/items/{id}/copy-previous")
+    @PreAuthorize("@menuAuth.canWrite('isms')")
+    public ApiResponse<IsmsDto.ItemCopyPreviousResult> copyPreviousForItem(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer year,
+            @RequestBody @Valid IsmsDto.ItemCopyPreviousRequest request,
+            @AuthenticationPrincipal User user) throws IOException {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        return ApiResponse.ok(ismsService.copyPreviousForItem(id, targetYear, request, user));
+    }
+
     /** 가져오기/초기화 버튼 상태 — 가져올 수 있는 이전 연도와 되돌릴 수 있는 건수 */
     @GetMapping("/copy-previous/status")
     public ApiResponse<IsmsDto.CopyPreviousStatus> copyPreviousStatus(

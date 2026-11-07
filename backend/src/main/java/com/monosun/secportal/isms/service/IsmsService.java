@@ -31,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -71,11 +73,19 @@ public class IsmsService {
             statsMap.computeIfAbsent(itemId, k -> new HashMap<>()).put(status, count);
         }
 
+        // 항목별 증적 만료일 — 해당 연도 증적 중 가장 늦게 만료되는 날짜(가장 최근에 갱신된 증적 기준)
+        Map<Long, LocalDate> expiryMap = new HashMap<>();
+        for (IsmsEvidence e : evidenceRepository.findByYearOrderByItemSortOrder(year)) {
+            LocalDate exp = IsmsDto.EvidenceResponse.expiryOf(e);
+            if (exp != null) expiryMap.merge(e.getItem().getId(), exp, (a, b) -> a.isAfter(b) ? a : b);
+        }
+
         return items.stream().map(item -> {
             Map<String, Long> stats = statsMap.getOrDefault(item.getId(), Collections.emptyMap());
             long evidenceCount = stats.values().stream().mapToLong(Long::longValue).sum();
             String latestStatus = deriveStatus(stats);
-            return IsmsDto.ItemResponse.from(item, evidenceCount, latestStatus, mappingsMap.get(item.getId()));
+            return IsmsDto.ItemResponse.from(item, evidenceCount, latestStatus,
+                    mappingsMap.get(item.getId()), expiryMap.get(item.getId()));
         }).collect(Collectors.toList());
     }
 
@@ -197,6 +207,9 @@ public class IsmsService {
         item.setDefaultEvidenceContent(req.getDefaultEvidenceContent());
         item.setEvidenceExamples(req.getEvidenceExamples());
         item.setGuide(req.getGuide());
+        Integer months = req.getEvidenceValidityMonths();
+        if (months != null && months > 120) throw new BusinessException("증적 유효기간은 최대 120개월까지 설정할 수 있습니다.");
+        item.setEvidenceValidityMonths(months != null && months > 0 ? months : null);
         return IsmsDto.ItemResponse.from(itemRepository.save(item));
     }
 
@@ -244,6 +257,8 @@ public class IsmsService {
             String path = fileStorageService.store(file, "isms/" + evidence.getId());
             evidence.setFilePath(path);
             evidence.setFileName(file.getOriginalFilename());
+            // 증적 파일을 새로 올리면 유효기간을 이 시점부터 다시 계산한다.
+            evidence.setValidFrom(LocalDateTime.now());
         }
         return IsmsDto.EvidenceResponse.from(evidence);
     }
@@ -362,23 +377,7 @@ public class IsmsService {
                 skippedItems.add(itemId);
                 continue;
             }
-            IsmsEvidence copy = evidenceRepository.save(IsmsEvidence.builder()
-                    .item(src.getItem())
-                    .year(targetYear)
-                    .title(src.getTitle())
-                    .content(src.getContent())
-                    .fileName(src.getFileName())
-                    .status(src.getStatus())
-                    // 참조 증적은 원본 참조를 그대로 이어받는다(파일은 원본에서 내려받는다)
-                    .sourceEvidence(src.getSourceEvidence())
-                    .registrant(user)
-                    .copiedFromYear(sourceYear)
-                    .build());
-            if (src.getFilePath() != null) {
-                // 첨부 파일은 실물을 복제한다 — 한쪽 연도의 증적을 지워도 다른 연도가 깨지지 않도록.
-                String path = fileStorageService.copy(src.getFilePath(), "isms/" + copy.getId());
-                copy.setFilePath(path);
-            }
+            copyEvidence(src, targetYear, user);
             copiedEvidences++;
         }
 
@@ -406,6 +405,91 @@ public class IsmsService {
                 .copiedEvidences(copiedEvidences)
                 .copiedNotes(copiedNotes)
                 .skippedItems(skippedItems.size())
+                .build();
+    }
+
+    /**
+     * 증적 1건을 대상 연도로 복사한다. 증적제목·내용·준수상태·첨부파일을 이어받고,
+     * 유효기간 기준일은 원본의 것을 그대로 가져가 복사만으로 유효기간이 연장되지 않게 한다.
+     */
+    private IsmsEvidence copyEvidence(IsmsEvidence src, int targetYear, User user) throws IOException {
+        IsmsEvidence copy = evidenceRepository.save(IsmsEvidence.builder()
+                .item(src.getItem())
+                .year(targetYear)
+                .title(src.getTitle())
+                .content(src.getContent())
+                .fileName(src.getFileName())
+                .status(src.getStatus())
+                // 참조 증적은 원본 참조를 그대로 이어받는다(파일은 원본에서 내려받는다)
+                .sourceEvidence(src.getSourceEvidence())
+                .registrant(user)
+                .copiedFromYear(src.getYear())
+                .validFrom(src.getEffectiveValidFrom())
+                .build());
+        if (src.getFilePath() != null) {
+            // 첨부 파일은 실물을 복제한다 — 한쪽 연도의 증적을 지워도 다른 연도가 깨지지 않도록.
+            String path = fileStorageService.copy(src.getFilePath(), "isms/" + copy.getId());
+            copy.setFilePath(path);
+        }
+        return copy;
+    }
+
+    /** 개별 항목 전년도 가져오기 후보 — 대상 연도 이전에 이 항목에 등록된 증적 (최신 연도순) */
+    @Transactional(readOnly = true)
+    public List<IsmsDto.EvidenceResponse> listPreviousEvidences(Long itemId, int targetYear) {
+        return evidenceRepository.findByItemIdAndYearLessThanOrderByYearDescCreatedAtDesc(itemId, targetYear)
+                .stream().map(IsmsDto.EvidenceResponse::from).collect(Collectors.toList());
+    }
+
+    /**
+     * 개별 항목 전년도 증적 가져오기 — 선택한 이전 연도 증적을 대상 연도로 복사한다.
+     * 가져온 증적은 copiedFromYear 가 기록되어 '가져오기 초기화' 대상에 포함된다.
+     */
+    @Transactional
+    public IsmsDto.ItemCopyPreviousResult copyPreviousForItem(Long itemId, int targetYear,
+                                                              IsmsDto.ItemCopyPreviousRequest req,
+                                                              User user) throws IOException {
+        IsmsItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("IsmsItem", itemId));
+        List<Long> ids = req.getEvidenceIds() == null ? List.of()
+                : req.getEvidenceIds().stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+        if (ids.isEmpty()) throw new BusinessException("가져올 증적을 선택하세요.");
+
+        List<IsmsEvidence> sources = new ArrayList<>(evidenceRepository.findAllById(ids));
+        if (sources.size() != ids.size()) throw new BusinessException("선택한 증적 중 존재하지 않는 증적이 있습니다.");
+        for (IsmsEvidence src : sources) {
+            if (!src.getItem().getId().equals(itemId) || src.getYear() >= targetYear) {
+                throw new BusinessException("이 항목의 " + targetYear + "년 이전 증적만 가져올 수 있습니다.");
+            }
+        }
+        // 오래된 것부터 저장해 최신순 목록에서 원본과 같은 순서로 보이게 한다.
+        sources.sort(Comparator.comparing(IsmsEvidence::getYear)
+                .thenComparing(IsmsEvidence::getCreatedAt, Comparator.nullsFirst(Comparator.naturalOrder())));
+        for (IsmsEvidence src : sources) copyEvidence(src, targetYear, user);
+
+        // 현재상태·의견 — 대상 연도에 아직 없을 때만, 선택한 증적 중 가장 최근 연도 것을 가져온다.
+        boolean copiedNote = false;
+        if (req.isIncludeNote() && itemNoteRepository.findByItemIdAndYear(itemId, targetYear).isEmpty()) {
+            int noteYear = sources.stream().mapToInt(IsmsEvidence::getYear).max().getAsInt();
+            Optional<IsmsItemNote> srcNote = itemNoteRepository.findByItemIdAndYear(itemId, noteYear);
+            if (srcNote.isPresent()
+                    && (notBlank(srcNote.get().getStatusNote()) || notBlank(srcNote.get().getOpinion()))) {
+                itemNoteRepository.save(IsmsItemNote.builder()
+                        .item(item)
+                        .year(targetYear)
+                        .statusNote(srcNote.get().getStatusNote())
+                        .opinion(srcNote.get().getOpinion())
+                        .updater(user)
+                        .copiedFromYear(noteYear)
+                        .build());
+                copiedNote = true;
+            }
+        }
+
+        return IsmsDto.ItemCopyPreviousResult.builder()
+                .targetYear(targetYear)
+                .copiedEvidences(sources.size())
+                .copiedNote(copiedNote)
                 .build();
     }
 

@@ -467,6 +467,9 @@ export const ismsApi = {
   removeFile: (evidenceId) => api.delete(`/isms/evidences/${evidenceId}/file`),
   searchEvidences: (params) => api.get('/isms/evidences/search', { params }),
   createEvidenceRef: (itemId, data) => api.post(`/isms/items/${itemId}/evidence-refs`, data),
+  // 개별 항목 전년도 증적 가져오기
+  listPreviousEvidences: (itemId, year) => api.get(`/isms/items/${itemId}/previous-evidences`, { params: { year } }),
+  copyPreviousForItem: (itemId, year, data) => api.post(`/isms/items/${itemId}/copy-previous`, data, { params: { year } }),
   summary: (year) => api.get('/isms/summary', { params: { year } }),
   copyPreviousStatus: (year) => api.get('/isms/copy-previous/status', { params: { year } }),
   copyPrevious: (year) => api.post('/isms/copy-previous', null, { params: { year } }),
