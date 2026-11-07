@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [main]
 
+# GITHUB_TOKEN 최소 권한 — 기본은 읽기 전용, 쓰기가 필요한 release 잡만 자체 permissions 로 넓힌다
+permissions:
+  contents: read
+
 jobs:
   # ──────────────────────────────────────────
   # 1. 빌드 검증 (모든 push/PR)

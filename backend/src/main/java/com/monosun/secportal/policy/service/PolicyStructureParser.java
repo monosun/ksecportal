@@ -26,18 +26,14 @@ public class PolicyStructureParser {
     /*
      * ReDoS 방어(CWE-1333) — 공백을 맞출 수 없는 토큰 사이 공백은 소유 수량자(\s*+),
      * 꼬리는 탐욕 ".*"(그룹 값은 호출부에서 trim), 괄호 안 제목은 "[^)]*+" 로 백트래킹을 없앤다.
-     * 지침명(guideline)은 "ISMS-P 지침" 처럼 하이픈을 품을 수 있어 게으른 매칭이 필요하므로
-     * 제목 길이를 MAX_TITLE_LENGTH 로 제한해 최악의 경우를 묶는다.
+     * 지침명(guideline)은 "ISMS-P 지침" 처럼 하이픈을 품을 수 있어 정규식으로 나누지 않고
+     * parseTitle 에서 대시 위치를 직접 찾는다. 제목 길이는 MAX_TITLE_LENGTH 로도 제한한다.
      */
     private static final int MAX_TITLE_LENGTH = 500;
     /** 조 머리글 후보로 볼 줄의 최대 길이 — 이보다 긴 줄은 본문으로 본다 */
     private static final int MAX_HEADING_LINE_LENGTH = 1000;
 
-    /** "지침명 - 제N장 장제목" / "지침명 - 부칙" */
-    private static final Pattern TITLE_PATTERN = Pattern.compile(
-            "^\\s*+(?<guideline>.+?)\\s*+[-–—]\\s*+(?:제\\s*+(?<no>\\d++)\\s*+장|(?<supplement>부\\s*+칙))\\s*+(?<ctitle>.*)$");
-
-    /** 제목 자체가 "제N장 …" 으로 시작하는 경우(지침명 없음) */
+    /** 제목 자체가 "제N장 …" 으로 시작하는 경우(지침명 없음). "지침명 - 제N장 …" 은 대시 뒤 부분에 이 패턴을 적용한다 */
     private static final Pattern CHAPTER_ONLY_PATTERN = Pattern.compile(
             "^\\s*+(?:제\\s*+(?<no>\\d++)\\s*+장|(?<supplement>부\\s*+칙))\\s*+(?<ctitle>.*)$");
 
@@ -73,11 +69,18 @@ public class PolicyStructureParser {
         // 비정상적으로 긴 제목은 장 구분을 시도하지 않는다 (정규식 최악 시간 제한)
         if (title.length() > MAX_TITLE_LENGTH) return new Chapter(title, null, null, null);
 
-        Matcher m = TITLE_PATTERN.matcher(title);
-        if (m.matches()) {
-            return toChapter(m.group("guideline").trim(), m);
+        // "지침명 - 제N장 …" — 지침명에 하이픈이 들어갈 수 있어("ISMS-P 지침") 정규식의 게으른 매칭 대신
+        // 왼쪽부터 대시를 찾아, 대시 뒤가 "제N장/부칙" 으로 시작하는 첫 위치에서 나눈다(기존 TITLE_PATTERN 과 같은 규칙).
+        for (int i = 1; i < title.length(); i++) {
+            char c = title.charAt(i);
+            if (c != '-' && c != '–' && c != '—') continue;
+            // region() 은 문자열을 복사하지 않고, 기본 anchoring bounds 로 ^·$ 가 영역 경계에 맞는다
+            Matcher rest = CHAPTER_ONLY_PATTERN.matcher(title).region(i + 1, title.length());
+            if (rest.matches()) {
+                return toChapter(title.substring(0, i).trim(), rest);
+            }
         }
-        m = CHAPTER_ONLY_PATTERN.matcher(title);
+        Matcher m = CHAPTER_ONLY_PATTERN.matcher(title);
         if (m.matches()) {
             return toChapter("", m);
         }

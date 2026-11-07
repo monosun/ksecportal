@@ -142,7 +142,8 @@ public class LawApiProxyController {
         } catch (RestClientException e) {
             return ApiResponse.ok(new TestResult(false, describeFailure(e)));
         } catch (Exception e) {
-            return ApiResponse.ok(new TestResult(false, "응답 처리에 실패했습니다: " + e.getMessage()));
+            log.warn("법제처 API 연결 테스트 응답 처리 실패", e);
+            return ApiResponse.ok(new TestResult(false, "법제처 응답을 해석하지 못했습니다. 서버 로그를 확인하세요."));
         }
     }
 
@@ -190,8 +191,9 @@ public class LawApiProxyController {
         if (cause instanceof ConnectException) {
             return "법제처(law.go.kr)에 접속하지 못했습니다 (연결 거부·방화벽 차단).";
         }
-        String msg = cause.getMessage();
-        return "법제처(law.go.kr) 연결에 실패했습니다" + (msg == null || msg.isBlank() ? "." : ": " + msg);
+        // 그 밖의 예외는 내부 정보(주소·스택 세부)가 담길 수 있어 화면에 내보내지 않는다(CWE-209) — 로그로만
+        log.warn("법제처 API 연결 실패(분류 외): {}", cause.toString());
+        return "법제처(law.go.kr) 연결에 실패했습니다. 잠시 후 다시 시도하고, 계속되면 서버 로그를 확인하세요.";
     }
 
     private ResponseEntity<String> upstreamError(String message) {
