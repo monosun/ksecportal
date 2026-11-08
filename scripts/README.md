@@ -62,8 +62,9 @@ bash scripts/build-release.sh v1.45.1 monosun     # <버전> <GitHub 조직/사�
   5. `secportal-<버전>.tar.gz` 배포 아카이브 생성 → `scp`·`tar -xzf` 로 서버에 전달
 - ⚠️ 일반 릴리즈 절차(`docker compose build` → git 태그 → `gh release`, 루트 `CLAUDE.md` 참고)와는 **별개**입니다.
   ghcr 이미지를 받아 배포하는 서버를 운영할 때만 사용하세요.
-- ⚠️ compose 파일·nginx https 설정·QUICKSTART 템플릿을 `release/v1.0.0/` 에서 복사합니다.
-  이 템플릿이 현재 설정과 다르면 산출물에 예전 설정이 들어가므로 실행 전에 확인하세요.
+- ⚠️ **현재 그대로는 실행되지 않습니다.** `docker-compose.yml`·`QUICKSTART.md`·`scripts/*.sh` 템플릿을
+  `release/v1.0.0/` 에서 복사하는데, 지금 그 폴더에는 `RELEASE_NOTES.md` 만 있어 1단계에서 오류로 중단됩니다(`set -e`).
+  사용하려면 해당 템플릿을 `release/v1.0.0/` 에 다시 두거나, 스크립트가 루트의 최신 파일을 복사하도록 고친 뒤 실행하세요.
 
 ---
 
