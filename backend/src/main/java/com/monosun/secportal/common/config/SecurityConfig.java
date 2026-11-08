@@ -80,6 +80,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/codes/pi-masking").authenticated()
                 .requestMatchers(HttpMethod.GET, "/codes/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
+                // 공격 탐지 허니팟: nginx 함정 location 만 이 경로로 넘긴다(외부에서 /api/detect-trap 직접 호출은 nginx 가 404)
+                .requestMatchers("/detect-trap/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)

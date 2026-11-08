@@ -356,11 +356,7 @@ public class ErrorLogService {
     private static String extractIp(HttpServletRequest req) {
         if (req == null) return null;
         try {
-            String ip = req.getHeader("X-Forwarded-For");
-            if (ip != null && !ip.isBlank()) return ip.split(",")[0].trim();
-            ip = req.getHeader("X-Real-IP");
-            if (ip != null && !ip.isBlank()) return ip.trim();
-            return req.getRemoteAddr();
+            return com.monosun.secportal.common.net.ClientIp.resolve(req);
         } catch (Exception e) {
             return null;
         }

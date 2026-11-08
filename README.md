@@ -4,10 +4,11 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-**최신 버전: v1.44.2**
+**최신 버전: v1.45.0**
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |
 | [v1.44.1](release/v1.44.1/RELEASE_NOTES.md) | **[보안 수정]** CodeQL·Dependabot·시크릿 스캔 심각/높음 조치 — **SSRF 차단**(관련 사이트 수집: 루프백·클라우드 메타데이터·사설망 주소와 그쪽 리다이렉트 차단, 홉마다 재검사, 폐쇄망용 `RELATED_SITE_ALLOW_PRIVATE_NETWORK`; 법제처 프록시 `target`·`mst` 파라미터 주입 차단), **ReDoS 17건 제거**(정책 문서 추출·장/조 분석·SAST 규칙·문자셋 탐지·비밀번호 검사, 비밀번호 최대 128자), **프론트 의존성 업데이트**(axios 1.21·dompurify 3.4.17·vue 3.5.45·vue-i18n 11·SheetJS 0.20.3·vite 6), 도움말 HTML 속성 이스케이프 보강, CSRF·Slack 웹훅 예시값 오탐 처리. 소스코드 점검 **Dependabot 조회 실패(page 파라미터 400) 수정**, CodeQL Java 분석용 **Gradle Wrapper 8.10.2** 추가 — DB 변경 없음 |
 | [v1.44.0](release/v1.44.0/RELEASE_NOTES.md) | ISMS-P 증적관리 **항목별 전년도 증적 가져오기**(통제항목 팝업에서 이 항목의 이전 연도 증적을 연도별로 골라 복사 — 첨부파일 실물 복제·현재상태/의견 선택 복사, `📋 N년 증적 가져옴` 표시, 가져오기 초기화 대상 포함), **증적 유효기간**(코드관리 `ISMS-P 101항목` 에서 항목별 설정 1개월~3년, 만료일 = 증적 기준일 + 유효기간 — 새 첨부파일 업로드 시 갱신·전년도 복사 시 원본 기준일 승계, 증적관리 목록 `증적 유효기간` 열·`유효/D-n/만료` 배지·**만료·임박 필터**, 팝업 항목 정보·증적별·수정 화면에 만료일 표시) — DB 자동 반영(마이그레이션 불필요) |
@@ -58,6 +59,7 @@ docker compose up -d --build
 | **자산 관리** | IT 자산 인벤토리, 온프레미스+클라우드(AWS/GCP/Azure) 통합, 13가지 유형, 환경·중요도 분류, 월 비용·계약 만료·점검 일정 관리, PDF/CSV 다운로드, **ISMS-P 자산식별 기준(자산유형 6종·기밀성/무결성/가용성 개별 등급·개인정보 포함 여부·보안관리 대상·연계 시스템·운영중/중지/폐기 상태 관리)**, **자산유형별 현황·유형 단위 일괄 삭제**, **자산 시점(스냅샷) 이력(저장 시점 자산 목록 보관)**, 등록/수정/상세 팝업 UX |
 | **SBOM 관리** | **CycloneDX 1.5 표준 기준** 소프트웨어(SW명+버전)별 구성요소 관리(type·group·name·version·PURL·SPDX 라이선스), **CycloneDX JSON 내보내기/가져오기(syft·cdxgen·trivy 등 SCA 도구 산출물 호환)**, 엑셀 템플릿 일괄등록(동일 SW 자동 병합·재업로드 시 중복 없이 갱신), SW 자산 등록 시 SBOM 맵핑(자산유형 SW 선택 시 등록된 SW 선택), 자산 상세에 맵핑 SW·라이브러리 수 표시 |
 | **보안이벤트 관리** | 방화벽·IDS/IPS·WAF·SIEM·EDR 등 10종 보안솔루션 연동, 이벤트 실시간 모니터링, 심각도 필터, 30초 자동 새로고침 |
+| **공격 탐지(자동화·AI)** | 포탈 자체를 노리는 자동화 도구·AI 에이전트 공격 탐지 — **허니팟**(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**(프롬프트 인젝션 미끼를 따르면 에이전트로 확인), **허니토큰·미끼 계정**, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA), **IP 단위 로그인 차단**(크리덴셜 스터핑), 심각 등급 **IP 자동 차단**·허용 목록, 메일·Slack·수신함 알림, 침해사고 전환, 관리자 MFA 필수 옵션 |
 | **로그 통합관리** | 개인정보처리시스템·AD·NAC·망연계 로그 조회(연동 준비), 날짜·결과 필터, 통합검색 UI |
 | **IT 및 정보보호 교육** | 코스 관리, 객관식 퀴즈(한 문항씩 풀이·진행률 바·문항 번호 점프·미답변 안내), **퀴즈 오답 리뷰(내가 선택한 답·정답·해설 표시)**, **문제은행(분류·난이도·키워드 검색, 엑셀 일괄 업로드, 난이도별 랜덤 출제, 기본 샘플 문항)**, **교육·훈련 결과 화면(교육 이수 현황·모의훈련 결과·재해복구 BCP 훈련 결과 탭)**, 이수율·점수 추적 |
 | **모의 악성메일 훈련** | 피싱 이메일 템플릿 CRUD(HTML 편집·변수 치환), 발송대상 관리, 캠페인 생성·실시·완료·취소, 클릭/열람/신고 실시간 추적, **발송 처리 결과 로그(대상별 성공/실패·실패 사유·발송/열람/클릭 시각)**, 결과 통계 대시보드 |
@@ -289,6 +291,23 @@ PATCH  /api/sbom/components/:id           # 라이브러리 수정 (MANAGER+)
 DELETE /api/sbom/components/:id           # 라이브러리 삭제 (MANAGER+)
 GET    /api/sbom/software/:id/cyclonedx   # CycloneDX 1.5 JSON 내보내기
 POST   /api/sbom/import/cyclonedx         # CycloneDX JSON 가져오기 (MANAGER+)
+
+# 공격 탐지 (MANAGER+, 설정 변경·이벤트 삭제는 ADMIN)
+GET    /api/detection/summary             # 개요(24시간·7일 집계, 상위 IP)
+GET    /api/detection/events              # 이벤트 목록 (category·severity·status·ip·days 필터, 페이지네이션)
+GET    /api/detection/events/:id
+PATCH  /api/detection/events/:id/status   # 상태 변경 {status, note}
+POST   /api/detection/events/:id/escalate # 침해사고로 전환
+DELETE /api/detection/events/:id          # 삭제 (ADMIN)
+POST   /api/detection/events/test         # 알림 테스트 이벤트
+GET    /api/detection/live                # 실시간 의심 IP(행위 점수)
+GET    /api/detection/blocks              # 차단 IP 이력
+POST   /api/detection/blocks              # 수동 차단 {ip, minutes(0=무기한), reason}
+DELETE /api/detection/blocks/:id          # 차단 해제
+DELETE /api/detection/login-blocks/:ip    # IP 로그인 일시 차단 해제
+GET    /api/detection/settings            # 설정
+PUT    /api/detection/settings            # 설정 저장 (ADMIN)
+POST   /api/detection/settings/honey-token # 허니토큰 재발급 (ADMIN)
 
 # 보안이벤트 관리
 GET    /api/security-integrations         # 연동 솔루션 목록
@@ -896,6 +915,8 @@ ksecportal/
 | `incidents` | 보안 인시던트 |
 | `security_integrations` | 보안솔루션 연동 정보 |
 | `security_events` | 보안 이벤트 수집 기록 |
+| `detection_events` | 공격 탐지 이벤트 — 유형(허니팟·LLM 에이전트·허니토큰·미끼 계정·행위·로그인 공격)·심각도·출발지 IP·횟수·처리 상태·침해사고 연결 |
+| `detection_blocked_ips` | 공격 탐지 IP 차단 이력 — 자동/수동, 만료 시각, 해제 이력 |
 | `code_groups` | 공통 코드 그룹 |
 | `code_values` | 공통 코드값 |
 | `notification_config` | 알림 방식 설정 |
@@ -966,6 +987,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |
 | [v1.44.1](release/v1.44.1/RELEASE_NOTES.md) | **[보안 수정]** CodeQL·Dependabot·시크릿 스캔 심각/높음 조치 — **SSRF 차단**(관련 사이트 수집: 루프백·클라우드 메타데이터·사설망 주소와 그쪽 리다이렉트 차단, 홉마다 재검사, 폐쇄망용 `RELATED_SITE_ALLOW_PRIVATE_NETWORK`; 법제처 프록시 `target`·`mst` 파라미터 주입 차단), **ReDoS 17건 제거**(정책 문서 추출·장/조 분석·SAST 규칙·문자셋 탐지·비밀번호 검사, 비밀번호 최대 128자), **프론트 의존성 업데이트**(axios 1.21·dompurify 3.4.17·vue 3.5.45·vue-i18n 11·SheetJS 0.20.3·vite 6), 도움말 HTML 속성 이스케이프 보강, CSRF·Slack 웹훅 예시값 오탐 처리. 소스코드 점검 **Dependabot 조회 실패(page 파라미터 400) 수정**, CodeQL Java 분석용 **Gradle Wrapper 8.10.2** 추가 — DB 변경 없음 |
 | [v1.44.0](release/v1.44.0/RELEASE_NOTES.md) | ISMS-P 증적관리 **항목별 전년도 증적 가져오기**(통제항목 팝업에서 이 항목의 이전 연도 증적을 연도별로 골라 복사 — 첨부파일 실물 복제·현재상태/의견 선택 복사, `📋 N년 증적 가져옴` 표시, 가져오기 초기화 대상 포함), **증적 유효기간**(코드관리 `ISMS-P 101항목` 에서 항목별 설정 1개월~3년, 만료일 = 증적 기준일 + 유효기간 — 새 첨부파일 업로드 시 갱신·전년도 복사 시 원본 기준일 승계, 증적관리 목록 `증적 유효기간` 열·`유효/D-n/만료` 배지·**만료·임박 필터**, 팝업 항목 정보·증적별·수정 화면에 만료일 표시) — DB 자동 반영(마이그레이션 불필요) |

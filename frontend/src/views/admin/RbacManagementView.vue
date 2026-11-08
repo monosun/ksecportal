@@ -302,6 +302,7 @@ const MENUS = [
   { key: 'isms_defects',      label: 'ISMS 결함관리' },
   // 보안 운영
   { key: 'security_events',   label: '보안이벤트 관리' },
+  { key: 'attack_detection',  label: '공격 탐지(자동화·AI)' },
   { key: 'incidents',         label: '보안 인시던트' },
   { key: 'sec_findings',      label: '보안 결함사항' },
   { key: 'monthly_checks',    label: '월간 보안점검' },

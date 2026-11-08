@@ -26,6 +26,7 @@
     "assets": "자산 관리",
     "sbom": "SBOM 관리",
     "securityEvents": "보안이벤트 관리",
+    "attackDetection": "공격 탐지",
     "incidents": "보안 인시던트",
     "isms": "ISMS-P 증적관리",
     "ismsDefects": "ISMS 결함관리",

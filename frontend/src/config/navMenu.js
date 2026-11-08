@@ -41,6 +41,7 @@ export const navGroups = [
     icon: ShieldExclamationIcon,
     items: [
       { to: '/security-events',   label: 'nav.securityEvents', icon: ShieldExclamationIcon, menuKey: 'security_events' },
+      { to: '/attack-detection',  label: 'nav.attackDetection', icon: ShieldExclamationIcon, menuKey: 'attack_detection' },
       { to: '/incidents',          label: 'nav.incidents',       icon: ShieldExclamationIcon, menuKey: 'incidents' },
       { to: '/security-findings',  label: 'nav.secFindings',    icon: ShieldExclamationIcon, menuKey: 'sec_findings' },
       { to: '/monthly-checks',     label: 'nav.monthlyChecks',   icon: ClipboardCheckIcon,    menuKey: 'monthly_checks' },

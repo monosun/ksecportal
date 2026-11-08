@@ -5,6 +5,8 @@ import com.monosun.secportal.auth.dto.AuthDto;
 import com.monosun.secportal.auth.entity.User;
 import com.monosun.secportal.auth.repository.UserRepository;
 import com.monosun.secportal.common.exception.BusinessException;
+import com.monosun.secportal.common.net.ClientIp;
+import com.monosun.secportal.detection.service.LoginGuardService;
 import com.monosun.secportal.common.security.JwtTokenProvider;
 import com.monosun.secportal.setting.service.AppSettingService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,14 @@ public class AuthService {
     private final MfaService mfaService;
     private final SecurityConfigService securityConfigService;
     private final AppSettingService appSettingService;
+    private final LoginGuardService loginGuard;
+
+    /** 관리자 MFA 필수 정책 대상인데 MFA 를 아직 등록하지 않았는지 (Okta SSO 계정은 IdP 가 MFA 를 담당하므로 제외) */
+    public boolean mfaSetupRequired(User user) {
+        return user != null && user.getRole() == User.Role.ADMIN && !user.isMfaEnabled()
+                && (user.getOktaId() == null || user.getOktaId().isBlank())
+                && securityConfigService.isAdminMfaRequired();
+    }
 
     private long sessionExpirationMs() {
         try {
@@ -44,15 +54,22 @@ public class AuthService {
 
     @Transactional(noRollbackFor = BusinessException.class)
     public AuthDto.TokenResponse login(AuthDto.LoginRequest request) {
+        String clientIp = ClientIp.current();
+        String userAgent = ClientIp.currentUserAgent();
+        // IP 단위 보완: 크리덴셜 스터핑으로 일시 차단된 IP 거절, 미끼 계정 로그인 탐지
+        loginGuard.beforeLogin(clientIp, request.getEmail(), userAgent);
+
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
         if (user == null || !user.isActive()) {
             auditLogService.log("LOGIN_FAILED", "USER", null, "email=" + request.getEmail());
+            loginGuard.onLoginFailure(clientIp, request.getEmail(), userAgent);
             throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
             long remaining = Math.max(1, ChronoUnit.MINUTES.between(LocalDateTime.now(), user.getLockedUntil()));
+            loginGuard.onLoginFailure(clientIp, request.getEmail(), userAgent);
             throw new BusinessException("계정이 잠겼습니다. " + remaining + "분 후 다시 시도하세요.");
         }
 
@@ -76,6 +93,7 @@ public class AuthService {
                 user.setLockedUntil(LocalDateTime.now().plusMinutes(lockMins));
             }
             auditLogService.log("LOGIN_FAILED", "USER", user.getId(), "email=" + request.getEmail());
+            loginGuard.onLoginFailure(clientIp, request.getEmail(), userAgent);
             throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
@@ -89,7 +107,8 @@ public class AuthService {
         long expiresIn = sessionExpirationMs();
         Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
         auditLogService.log("LOGIN_SUCCESS", "USER", user.getId(), "email=" + user.getEmail());
-        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn), user, expiresIn);
+        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn),
+                AuthDto.UserInfo.from(user, mfaSetupRequired(user)), expiresIn);
     }
 
     @Transactional
@@ -111,7 +130,8 @@ public class AuthService {
         long expiresIn = sessionExpirationMs();
         Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
         auditLogService.log("LOGIN_SUCCESS", "USER", user.getId(), "email=" + user.getEmail());
-        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn), user, expiresIn);
+        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn),
+                AuthDto.UserInfo.from(user, mfaSetupRequired(user)), expiresIn);
     }
 
     @Transactional
@@ -121,7 +141,8 @@ public class AuthService {
         long expiresIn = sessionExpirationMs();
         Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
         auditLogService.log("SESSION_EXTENDED", "USER", user.getId(), "email=" + user.getEmail());
-        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn), user, expiresIn);
+        return AuthDto.TokenResponse.of(tokenProvider.generateToken(auth, expiresIn),
+                AuthDto.UserInfo.from(user, mfaSetupRequired(user)), expiresIn);
     }
 
     @Transactional(readOnly = true)
@@ -180,7 +201,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthDto.UserInfo getMe(String email) {
         return userRepository.findByEmail(email)
-                .map(AuthDto.UserInfo::from)
+                .map(u -> AuthDto.UserInfo.from(u, mfaSetupRequired(u)))
                 .orElseThrow(() -> new BusinessException("User not found"));
     }
 

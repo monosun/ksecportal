@@ -267,7 +267,11 @@
       </div>
 
       <!-- MFA 설정 -->
-      <div class="card">
+      <div id="mfa-section" class="card" :class="auth.user?.mfaSetupRequired ? 'ring-2 ring-red-300' : ''">
+        <div v-if="auth.user?.mfaSetupRequired"
+          class="mb-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+          <b>관리자 MFA 필수 정책</b>이 적용되어 있습니다. MFA 를 등록해야 다른 메뉴를 이용하고 변경 작업을 할 수 있습니다.
+        </div>
         <h2 class="text-sm font-bold text-gray-800 mb-0.5">MFA (다중 인증)</h2>
         <p class="text-xs text-gray-400 mb-3">Google Authenticator 등 TOTP 앱으로 2단계 인증을 설정합니다.</p>
 
@@ -501,7 +505,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useUiSettingsStore, THEMES, FONTS, FONT_SIZES } from '@/stores/uiSettings'
 import { inboxApi, authApi, systemApi } from '@/api/index.js'
 import { useInboxStore } from '@/stores/inbox'
@@ -563,6 +567,7 @@ async function loadVersions() {
 const ui = useUiSettingsStore()
 const inboxStore = useInboxStore()
 const auth = useAuthStore()
+const route = useRoute()
 
 const activeTab = ref('ui')
 
@@ -616,6 +621,9 @@ onMounted(async () => {
   loadInbox()
   loadMfaStatus()
   loadVersions()
+  if (route.query.mfa === 'required') {
+    nextTick(() => document.getElementById('mfa-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }
 })
 
 async function loadMfaStatus() {
@@ -653,6 +661,8 @@ async function handleMfaEnable() {
     mfaCode.value = ''
     mfaSetupData.value = null
     mfaResult.value = { message: 'MFA가 활성화되었습니다.', success: true }
+    // 관리자 MFA 필수 정책으로 막혀 있던 경우 사용자 정보를 다시 받아 제한을 푼다
+    if (auth.user?.mfaSetupRequired) { try { await auth.fetchMe() } catch {} }
     setTimeout(() => { mfaResult.value.message = '' }, 4000)
   } catch (e) {
     mfaResult.value = { message: e || '활성화에 실패했습니다.', success: false }

@@ -22,7 +22,9 @@ public class SecurityConfigController {
     }
 
     @PutMapping
-    public ApiResponse<Void> update(@RequestBody Map<String, Object> body) {
+    public ApiResponse<Void> update(@RequestBody Map<String, Object> body,
+                                    @org.springframework.security.core.annotation.AuthenticationPrincipal
+                                    com.monosun.secportal.auth.entity.User user) {
         int maxAttempts = body.containsKey("maxAttempts")
                 ? Integer.parseInt(body.get("maxAttempts").toString())
                 : service.getMaxAttempts();
@@ -34,6 +36,16 @@ public class SecurityConfigController {
         }
         if (lockoutMinutes < 1 || lockoutMinutes > 1440) {
             throw new com.monosun.secportal.common.exception.BusinessException("잠금 시간은 1~1440분 사이여야 합니다.");
+        }
+        if (body.containsKey("requireAdminMfa") && body.get("requireAdminMfa") != null) {
+            boolean require = Boolean.parseBoolean(body.get("requireAdminMfa").toString());
+            // 본인이 MFA 없이 켜면 즉시 스스로 잠기므로 막는다
+            if (require && user != null && !user.isMfaEnabled()
+                    && (user.getOktaId() == null || user.getOktaId().isBlank())) {
+                throw new com.monosun.secportal.common.exception.BusinessException(
+                        "관리자 MFA 필수를 켜기 전에 본인 계정의 MFA 를 먼저 등록하세요(설정 > MFA).");
+            }
+            service.setAdminMfaRequired(require);
         }
         service.save(maxAttempts, lockoutMinutes);
         return ApiResponse.ok(null);

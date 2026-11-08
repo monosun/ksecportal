@@ -2147,3 +2147,43 @@ http/https 만, 계정정보 포함 URL 거부, 호스트가 풀리는 **모든*
 - [FAQ — 자주 묻는 오류](faq.md)
 - [아키텍처](architecture.md)
 - [개발 환경 설정](development-setup.md)
+
+---
+
+## 공격 탐지 (Detection) *(MANAGER+)*
+
+포탈 자체를 노리는 자동화 도구·AI 에이전트 공격의 탐지 이벤트·IP 차단·설정. 설정 변경·이벤트 삭제는 ADMIN.
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/detection/summary` | `last24h`·`openCount`·`activeBlocks`·`bySeverity24h`·`byCategory7d`·`daily7d`·`topIps` |
+| GET | `/detection/events` | 쿼리 `category`·`severity`·`status`·`ip`(부분 일치)·`days`·`page`·`size` — 최근 탐지 순 |
+| GET | `/detection/events/:id` | 이벤트 상세 |
+| PATCH | `/detection/events/:id/status` | `{ "status": "ACKNOWLEDGED\|FALSE_POSITIVE\|RESOLVED", "note": "..." }` |
+| POST | `/detection/events/:id/escalate` | 침해사고(Incident) 생성 후 이벤트를 `ESCALATED` 로 표시, `incidentId` 반환 |
+| DELETE | `/detection/events/:id` | 삭제 *(ADMIN)* |
+| POST | `/detection/events/test` | 알림 경로 점검용 `TEST` 이벤트(자동 차단 없음) |
+| GET | `/detection/live` | 마지막 행위 분석 결과: `analyzedAt`·`windowMinutes`·`scoreThreshold`·`trackedIps`·`ips[]`(`ip`·`score`·`reasons`·`requests`·`distinctPaths`·`notFound`·`denied`·`rateLimited`·`userAgent`·`lastUser`·`blocked`·`whitelisted`) |
+| GET | `/detection/blocks` | 차단 이력(`effective` = 현재 차단 중) |
+| POST | `/detection/blocks` | `{ "ip": "203.0.113.10", "minutes": 1440, "reason": "..." }` — `minutes: 0` 은 해제할 때까지. 본인 IP 는 거부 |
+| DELETE | `/detection/blocks/:id` | 차단 해제 |
+| DELETE | `/detection/login-blocks/:ip` | IP 로그인 일시 차단(크리덴셜 스터핑 대응) 해제 |
+| GET | `/detection/settings` | 설정 + `honeyToken`·`yourIp`(요청자 IP) |
+| PUT | `/detection/settings` | *(ADMIN)* `enabled`·`windowMinutes`·`scoreThreshold`·`autoBlockEnabled`·`autoBlockMinSeverity`·`blockMinutes`·`whitelistIps`(줄바꿈/쉼표, CIDR)·`honeyAccounts`·`loginWindowMinutes`·`loginFailThreshold`·`loginDistinctAccounts`·`loginLockMinutes`·`notifyMinSeverity`·`retentionDays` |
+| POST | `/detection/settings/honey-token` | *(ADMIN)* 허니토큰 재발급 |
+
+**이벤트 유형(category)**: `HONEYPOT_SCAN`·`HONEYPOT_BAIT`·`LLM_AGENT`·`HONEYTOKEN`·`HONEY_ACCOUNT`·`BEHAVIOR`·`LOGIN_ATTACK`·`TEST`
+**심각도**: `CRITICAL`·`HIGH`·`MEDIUM`·`LOW`·`INFO` · **상태**: `NEW`·`ACKNOWLEDGED`·`FALSE_POSITIVE`·`RESOLVED`·`ESCALATED`
+
+**허니팟 경로(nginx)** — `/api/detect-trap/*` 백엔드 엔드포인트는 외부 직접 호출 시 404 이며, nginx 함정 location 만 원래 경로를 `X-Trap-Path` 헤더로 넘깁니다.
+공격 도구 경로(`.env`·`.git`·`wp-admin`·`/api/actuator/*` 등) → `scan`, `/internal-admin`·`/api/internal/*` → `bait`, `/api/internal/agent-handshake` → `agent`, 속도 제한 429 의 약 10% 표본 → `ratelimit`.
+
+**차단된 IP** 의 모든 API 요청은 `403 {"success":false,"message":"보안 정책에 따라 이 위치(IP)의 접근이 차단되었습니다. …"}` 로 응답합니다.
+**IP 로그인 일시 차단** 중인 IP 의 `POST /auth/login` 은 `400 "이 위치(IP)에서 로그인 실패가 많아 일시적으로 차단되었습니다. N분 후 다시 시도하세요."` 입니다.
+
+### 관리자 MFA 필수
+
+`GET/PUT /admin/security-config` 에 `requireAdminMfa`(boolean) 추가. 켜져 있으면 MFA 미등록 관리자(Okta 계정 제외)의
+`POST·PUT·PATCH·DELETE` 요청은 `/auth/**` 를 제외하고 `403` 으로 거절되며, `GET /auth/me`·로그인 응답의 `user.mfaSetupRequired` 가 `true` 가 됩니다.
+본인 MFA 가 없는 관리자가 켜려고 하면 `400` 으로 거부합니다.
+

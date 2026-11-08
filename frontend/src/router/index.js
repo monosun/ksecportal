@@ -135,6 +135,11 @@ const routes = [
         component: () => import('@/views/security/SecurityEventView.vue')
       },
       {
+        path: 'attack-detection',
+        name: 'AttackDetection',
+        component: () => import('@/views/detection/AttackDetectionView.vue')
+      },
+      {
         path: 'assets/new',
         name: 'AssetCreate',
         component: () => import('@/views/asset/AssetFormView.vue')
@@ -508,6 +513,10 @@ router.beforeEach(async (to) => {
   }
   if (auth.isAuthenticated && auth.user?.mustChangePassword && to.name !== 'ForceChangePassword') {
     return { name: 'ForceChangePassword' }
+  }
+  // 관리자 MFA 필수 정책: MFA 미등록 관리자는 등록할 때까지 설정 화면(MFA 등록)으로 보낸다
+  if (auth.isAuthenticated && auth.user?.mfaSetupRequired && to.name !== 'Settings' && to.name !== 'ForceChangePassword') {
+    return { name: 'Settings', query: { mfa: 'required' } }
   }
   if (to.meta.adminOnly && !auth.isAdmin) {
     return { name: 'Dashboard' }

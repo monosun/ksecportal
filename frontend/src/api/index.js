@@ -279,6 +279,24 @@ export const rssApi = {
   krcert: (days) => api.get('/rss/krcert', { params: days ? { days } : {} })
 }
 
+export const detectionApi = {
+  summary: () => api.get('/detection/summary'),
+  events: (params) => api.get('/detection/events', { params }),
+  event: (id) => api.get(`/detection/events/${id}`),
+  updateStatus: (id, data) => api.patch(`/detection/events/${id}/status`, data),
+  escalate: (id) => api.post(`/detection/events/${id}/escalate`),
+  deleteEvent: (id) => api.delete(`/detection/events/${id}`),
+  test: () => api.post('/detection/events/test'),
+  live: () => api.get('/detection/live'),
+  blocks: () => api.get('/detection/blocks'),
+  block: (data) => api.post('/detection/blocks', data),
+  release: (id) => api.delete(`/detection/blocks/${id}`),
+  releaseLoginBlock: (ip) => api.delete(`/detection/login-blocks/${encodeURIComponent(ip)}`),
+  getSettings: () => api.get('/detection/settings'),
+  saveSettings: (data) => api.put('/detection/settings', data),
+  regenerateHoneyToken: () => api.post('/detection/settings/honey-token')
+}
+
 export const securityIntegrationApi = {
   list: () => api.get('/security-integrations'),
   create: (data) => api.post('/security-integrations', data),

@@ -49,6 +49,16 @@ public class AuthDto {
                     .build();
         }
 
+        public static TokenResponse of(String token, UserInfo info, long expiresIn) {
+            return TokenResponse.builder()
+                    .mfaRequired(false)
+                    .accessToken(token)
+                    .tokenType("Bearer")
+                    .expiresIn(expiresIn)
+                    .user(info)
+                    .build();
+        }
+
         public static TokenResponse mfaPending(String tempToken) {
             return TokenResponse.builder()
                     .mfaRequired(true)
@@ -118,6 +128,14 @@ public class AuthDto {
         private String role;
         private String department;
         private boolean mustChangePassword;
+        /** 관리자 MFA 필수 정책이 켜져 있는데 이 관리자가 아직 MFA 를 등록하지 않음 */
+        private boolean mfaSetupRequired;
+
+        public static UserInfo from(User user, boolean mfaSetupRequired) {
+            UserInfo info = from(user);
+            info.mfaSetupRequired = mfaSetupRequired;
+            return info;
+        }
 
         public static UserInfo from(User user) {
             return UserInfo.builder()

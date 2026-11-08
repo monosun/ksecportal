@@ -44,12 +44,25 @@
                 <span class="text-sm text-gray-400">분, 재시도 실패 시 2배씩 증가</span>
               </div>
             </div>
+            <div>
+              <label class="flex items-start gap-2 cursor-pointer">
+                <input v-model="secCfg.requireAdminMfa" type="checkbox" class="mt-0.5 rounded border-gray-300" />
+                <span>
+                  <span class="block text-sm font-semibold text-gray-700">관리자 계정 MFA 필수</span>
+                  <span class="block text-xs text-gray-400 mt-0.5">
+                    켜면 MFA 를 등록하지 않은 관리자(ADMIN)는 등록할 때까지 다른 메뉴 이용과 변경 작업이 막힙니다.
+                    Okta SSO 계정은 IdP 가 MFA 를 담당하므로 제외됩니다. 켜기 전에 본인 계정의 MFA 를 먼저 등록하세요.
+                  </span>
+                </span>
+              </label>
+            </div>
             <div class="flex items-center gap-3 pt-1">
               <button @click="saveSecurityConfig" :disabled="secSaving"
                 class="btn-primary px-6 py-2 text-sm rounded-xl disabled:opacity-50">
                 {{ secSaving ? '저장 중...' : '저장' }}
               </button>
               <span v-if="secSaved" class="text-sm text-green-600 font-semibold">저장되었습니다.</span>
+              <span v-if="secError" class="text-sm text-red-600">{{ secError }}</span>
             </div>
           </div>
         </div>
@@ -1307,7 +1320,8 @@ async function testAiConnection() {
 }
 
 // ── 보안 설정 ──────────────────────────────────────
-const secCfg = ref({ maxAttempts: 5, lockoutMinutes: 10 })
+const secCfg = ref({ maxAttempts: 5, lockoutMinutes: 10, requireAdminMfa: false })
+const secError = ref('')
 const secSaving = ref(false)
 const secSaved = ref(false)
 
@@ -1322,11 +1336,13 @@ async function loadSecurityConfig() {
   try { const res = await securityConfigApi.get(); secCfg.value = res.data } catch {}
 }
 async function saveSecurityConfig() {
-  secSaving.value = true; secSaved.value = false
+  secSaving.value = true; secSaved.value = false; secError.value = ''
   try {
     await securityConfigApi.update(secCfg.value)
     secSaved.value = true
     setTimeout(() => { secSaved.value = false }, 3000)
+  } catch (e) {
+    secError.value = typeof e === 'string' ? e : '저장에 실패했습니다.'
   } finally { secSaving.value = false }
 }
 async function loadOktaConfig() {
