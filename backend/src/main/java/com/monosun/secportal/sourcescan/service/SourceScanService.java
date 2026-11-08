@@ -215,6 +215,22 @@ public class SourceScanService {
         scanRepository.delete(scan);
     }
 
+    /** 여러 점검 이력을 한 번에 삭제한다. 이미 없는 ID 는 건너뛰고 실제 삭제 건수를 돌려준다. */
+    @Transactional
+    public int deleteScans(java.util.List<Long> ids) {
+        if (ids == null || ids.isEmpty()) throw new BusinessException("삭제할 점검 이력을 선택하세요.");
+        if (ids.size() > 500) throw new BusinessException("한 번에 500건까지 삭제할 수 있습니다.");
+        int deleted = 0;
+        for (Long id : new java.util.LinkedHashSet<>(ids)) {
+            var scan = scanRepository.findById(id).orElse(null);
+            if (scan == null) continue;
+            auditLogService.log("SOURCE_SCAN_DELETED", "SOURCE_SCAN", id, scan.getRepository());
+            scanRepository.delete(scan);
+            deleted++;
+        }
+        return deleted;
+    }
+
     // ── 내부 유틸 ────────────────────────────────────────────────────────────
 
     private void addFinding(SourceScan scan, SourceScanFinding.Category category,

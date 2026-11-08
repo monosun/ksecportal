@@ -4,10 +4,11 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-**최신 버전: v1.45.0**
+**최신 버전: v1.45.1**
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.1](release/v1.45.1/RELEASE_NOTES.md) | 소스 취약점 점검 **점검 이력 일괄 삭제** — 목록 앞 체크박스(머리글로 현재 페이지 전체 선택)와 **선택 삭제 (N)** 버튼, `DELETE /api/source-scan/scans?ids=` (MANAGER+, 최대 500건, 건별 감사 로그), 공격 탐지 화면 라벨의 SAST 하드코딩 비밀 오탐 2건 정리 — DB 변경 없음 |
 | [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |
 | [v1.44.1](release/v1.44.1/RELEASE_NOTES.md) | **[보안 수정]** CodeQL·Dependabot·시크릿 스캔 심각/높음 조치 — **SSRF 차단**(관련 사이트 수집: 루프백·클라우드 메타데이터·사설망 주소와 그쪽 리다이렉트 차단, 홉마다 재검사, 폐쇄망용 `RELATED_SITE_ALLOW_PRIVATE_NETWORK`; 법제처 프록시 `target`·`mst` 파라미터 주입 차단), **ReDoS 17건 제거**(정책 문서 추출·장/조 분석·SAST 규칙·문자셋 탐지·비밀번호 검사, 비밀번호 최대 128자), **프론트 의존성 업데이트**(axios 1.21·dompurify 3.4.17·vue 3.5.45·vue-i18n 11·SheetJS 0.20.3·vite 6), 도움말 HTML 속성 이스케이프 보강, CSRF·Slack 웹훅 예시값 오탐 처리. 소스코드 점검 **Dependabot 조회 실패(page 파라미터 400) 수정**, CodeQL Java 분석용 **Gradle Wrapper 8.10.2** 추가 — DB 변경 없음 |
@@ -405,6 +406,7 @@ POST   /api/source-scan/run               # 점검 실행 (의존성·코드·�
 GET    /api/source-scan/scans             # 점검 이력
 GET    /api/source-scan/scans/:id         # 점검 상세 (발견 목록)
 DELETE /api/source-scan/scans/:id         # 점검 이력 삭제
+DELETE /api/source-scan/scans?ids=1,2,3   # 점검 이력 일괄 삭제 (MANAGER+)
 GET    /api/admin/github-config           # GitHub PAT 설정 조회 (ADMIN, 마스킹)
 PUT    /api/admin/github-config           # 설정 저장 (ADMIN)
 POST   /api/admin/github-config/test      # 연결 테스트 (ADMIN)
@@ -987,6 +989,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.1](release/v1.45.1/RELEASE_NOTES.md) | 소스 취약점 점검 **점검 이력 일괄 삭제** — 목록 앞 체크박스(머리글로 현재 페이지 전체 선택)와 **선택 삭제 (N)** 버튼, `DELETE /api/source-scan/scans?ids=` (MANAGER+, 최대 500건, 건별 감사 로그), 공격 탐지 화면 라벨의 SAST 하드코딩 비밀 오탐 2건 정리 — DB 변경 없음 |
 | [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |
 | [v1.44.1](release/v1.44.1/RELEASE_NOTES.md) | **[보안 수정]** CodeQL·Dependabot·시크릿 스캔 심각/높음 조치 — **SSRF 차단**(관련 사이트 수집: 루프백·클라우드 메타데이터·사설망 주소와 그쪽 리다이렉트 차단, 홉마다 재검사, 폐쇄망용 `RELATED_SITE_ALLOW_PRIVATE_NETWORK`; 법제처 프록시 `target`·`mst` 파라미터 주입 차단), **ReDoS 17건 제거**(정책 문서 추출·장/조 분석·SAST 규칙·문자셋 탐지·비밀번호 검사, 비밀번호 최대 128자), **프론트 의존성 업데이트**(axios 1.21·dompurify 3.4.17·vue 3.5.45·vue-i18n 11·SheetJS 0.20.3·vite 6), 도움말 HTML 속성 이스케이프 보강, CSRF·Slack 웹훅 예시값 오탐 처리. 소스코드 점검 **Dependabot 조회 실패(page 파라미터 400) 수정**, CodeQL Java 분석용 **Gradle Wrapper 8.10.2** 추가 — DB 변경 없음 |

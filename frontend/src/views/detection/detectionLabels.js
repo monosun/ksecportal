@@ -4,7 +4,7 @@ export const CATEGORY_LABEL = {
   HONEYPOT_SCAN: '공격 도구 경로 탐색',
   HONEYPOT_BAIT: '미끼 경로 접근',
   LLM_AGENT: 'LLM 에이전트 확인',
-  HONEYTOKEN: '허니토큰 사용',
+  HONEYTOKEN: '허니토큰 사용', // sast:ignore 탐지 유형 이름(HONEYTOKEN)의 화면 라벨일 뿐 자격증명이 아니다
   HONEY_ACCOUNT: '미끼 계정 로그인',
   BEHAVIOR: '자동화 행위',
   LOGIN_ATTACK: '로그인 공격',
@@ -15,7 +15,7 @@ export const CATEGORY_HINT = {
   HONEYPOT_SCAN: '.env·.git·wp-admin 등 공격 도구가 흔히 찔러 보는 경로 접근',
   HONEYPOT_BAIT: 'robots.txt·숨김 링크로만 알 수 있는 미끼 경로 접근(HTML 파싱 자동화)',
   LLM_AGENT: '미끼 페이지의 AI 에이전트용 지시문을 그대로 따른 요청',
-  HONEYTOKEN: '미끼에만 노출한 가짜 API 키 사용',
+  HONEYTOKEN: '미끼에만 노출한 가짜 API 키 사용', // sast:ignore 탐지 유형 설명 문구 — 자격증명 아님
   HONEY_ACCOUNT: '존재하지 않는 미끼 계정으로 로그인 시도',
   BEHAVIOR: '속도·간격 균일성·404/403 열거·즉시 재시도·도구 UA 점수 초과',
   LOGIN_ATTACK: '한 IP 에서 여러 계정·다수 로그인 실패(크리덴셜 스터핑·무차별 대입)',

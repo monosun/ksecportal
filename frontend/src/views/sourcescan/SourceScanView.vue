@@ -49,7 +49,13 @@
     <div ref="listEl" class="card p-0 overflow-hidden mb-6">
       <div class="px-5 py-3 border-b flex items-center justify-between">
         <h2 class="text-base font-semibold text-gray-800">점검 이력</h2>
-        <button @click="loadScans" class="text-xs text-blue-600 hover:underline">새로고침</button>
+        <div class="flex items-center gap-3">
+          <button v-if="isManager" @click="deleteSelected" :disabled="!selectedIds.length || bulkDeleting"
+            class="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            {{ bulkDeleting ? '삭제 중…' : `선택 삭제${selectedIds.length ? ` (${selectedIds.length})` : ''}` }}
+          </button>
+          <button @click="loadScans" class="text-xs text-blue-600 hover:underline">새로고침</button>
+        </div>
       </div>
       <div v-if="scansLoading" class="p-8 text-center text-gray-400">{{ $t('common.loading') }}</div>
       <div v-else-if="!scans.length" class="p-8 text-center text-gray-400">점검 이력이 없습니다. 저장소를 선택하고 점검을 실행하세요.</div>
@@ -57,6 +63,10 @@
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b">
             <tr>
+              <th v-if="isManager" class="w-10 pl-5 pr-1 py-3">
+                <input type="checkbox" class="rounded border-gray-300 cursor-pointer" aria-label="현재 페이지 전체 선택"
+                  :checked="allSelected" :indeterminate.prop="someSelected" @change="toggleAll($event.target.checked)" />
+              </th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">저장소</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">점검 일시</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">상태</th>
@@ -68,6 +78,10 @@
           <tbody class="divide-y divide-gray-50">
             <tr v-for="s in scans" :key="s.id" class="hover:bg-gray-50 cursor-pointer"
               :class="detail?.scan?.id === s.id ? 'bg-blue-50/50' : ''" @click="openDetail(s.id)">
+              <td v-if="isManager" class="w-10 pl-5 pr-1 py-3" @click.stop>
+                <input type="checkbox" class="rounded border-gray-300 cursor-pointer" :aria-label="`${s.repository} 선택`"
+                  :value="s.id" v-model="selectedIds" />
+              </td>
               <td class="px-5 py-3 font-mono text-gray-800">{{ s.repository }}</td>
               <td class="px-5 py-3 text-gray-500 text-xs">{{ formatDateTime(s.createdAt) }}</td>
               <td class="px-5 py-3"><span :class="statusBadge(s.status)">{{ statusLabel(s.status) }}</span></td>
@@ -274,6 +288,8 @@ async function runScan() {
 // ── 점검 이력 ────────────────────────────────────────────────────
 const scans = ref([])
 const scansLoading = ref(false)
+const selectedIds = ref([])      // 일괄 삭제용 선택 행
+const bulkDeleting = ref(false)
 const page = ref(0)
 const totalPages = ref(0)
 
@@ -288,8 +304,39 @@ async function loadScans() {
     const res = await sourceScanApi.scans({ page: page.value, size: pageSize.value })
     scans.value = res.data?.content || []
     totalPages.value = res.data?.page?.totalPages ?? res.data?.totalPages ?? 0
+    // 페이지가 바뀌면 보이지 않는 행이 선택된 채 남지 않도록 현재 목록에 있는 것만 유지
+    const visible = new Set(scans.value.map(x => x.id))
+    selectedIds.value = selectedIds.value.filter(id => visible.has(id))
   } finally {
     scansLoading.value = false
+  }
+}
+
+// ── 일괄 삭제 ──
+const allSelected = computed(() => scans.value.length > 0 && scans.value.every(x => selectedIds.value.includes(x.id)))
+const someSelected = computed(() => selectedIds.value.length > 0 && !allSelected.value)
+
+function toggleAll(checked) {
+  selectedIds.value = checked ? scans.value.map(x => x.id) : []
+}
+
+async function deleteSelected() {
+  const ids = [...selectedIds.value]
+  if (!ids.length) return
+  if (!confirm(`선택한 점검 이력 ${ids.length}건을 삭제하시겠습니까?
+삭제하면 점검 결과(발견 항목)도 함께 삭제되며 되돌릴 수 없습니다.`)) return
+  bulkDeleting.value = true
+  try {
+    await sourceScanApi.deleteMany(ids)
+    if (ids.includes(detail.value?.scan?.id)) detail.value = null
+    selectedIds.value = []
+    // 마지막 페이지의 행을 모두 지웠으면 앞 페이지로
+    if (ids.length >= scans.value.length && page.value > 0) page.value -= 1
+    await loadScans()
+  } catch (e) {
+    alert(typeof e === 'string' ? e : '삭제하지 못했습니다.')
+  } finally {
+    bulkDeleting.value = false
   }
 }
 

@@ -1877,6 +1877,10 @@ GitHub 연동 설정 조회. 토큰은 마스킹되어 반환됩니다 (`tokenSt
 
 점검 상세 (scan + findings).
 
+### DELETE /source-scan/scans?ids=1,2,3 *(MANAGER+)*
+
+점검 이력 일괄 삭제(최대 500건). 없는 ID 는 건너뛰며 응답은 `{ "deleted": 3 }`. 건별로 감사 로그 `SOURCE_SCAN_DELETED` 를 남깁니다.
+
 ### DELETE /source-scan/scans/:id *(MANAGER+)*
 
 점검 이력 삭제.

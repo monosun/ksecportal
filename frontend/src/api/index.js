@@ -1078,6 +1078,7 @@ export const sourceScanApi = {
   scans: (params) => api.get('/source-scan/scans', { params }),
   scan: (id) => api.get(`/source-scan/scans/${id}`),
   delete: (id) => api.delete(`/source-scan/scans/${id}`),
+  deleteMany: (ids) => api.delete('/source-scan/scans', { params: { ids: ids.join(',') } }),
 }
 
 export const adminToolsApi = {

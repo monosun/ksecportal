@@ -64,6 +64,13 @@ public class SourceScanController {
         return ApiResponse.ok(sourceScanService.getScan(id));
     }
 
+    /** 점검 이력 일괄 삭제 — DELETE /source-scan/scans?ids=1,2,3 */
+    @DeleteMapping("/source-scan/scans")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ApiResponse<java.util.Map<String, Integer>> deleteScans(@RequestParam List<Long> ids) {
+        return ApiResponse.ok(java.util.Map.of("deleted", sourceScanService.deleteScans(ids)));
+    }
+
     @DeleteMapping("/source-scan/scans/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ApiResponse<Void> deleteScan(@PathVariable Long id) {
