@@ -49,22 +49,32 @@ sudo bash <(curl -fsSL https://raw.githubusercontent.com/monosun/ksecportal/main
 
 ### `build-release.sh` — ghcr 이미지 릴리즈 패키지
 
+소스코드 없이 **이미지만 받아 실행하는 서버**용 배포 패키지를 만듭니다.
+
 ```bash
-bash scripts/build-release.sh v1.45.1 monosun     # <버전> <GitHub 조직/사용자>
+bash scripts/build-release.sh v1.45.1 monosun              # <버전> <GitHub 조직/사용자>
+bash scripts/build-release.sh v1.45.1 monosun --no-push    # 빌드·패키지만(레지스트리 업로드 없이 점검)
+bash scripts/build-release.sh v1.45.1 monosun --skip-build # 이미 빌드한 로컬 이미지로 push·패키지
 ```
 
-- 인자를 생략하면 버전·owner 를 대화형으로 묻습니다.
+- 인자를 생략하면 버전·owner(기본 `monosun`)를 묻습니다. `backend/build.gradle` 버전과 다르면 확인을 받습니다.
 - 수행 단계
-  1. `release/<버전>/` 디렉터리 구성 — `db/init/*.sql`, nginx 설정, compose·스크립트·QUICKSTART 복사
-  2. backend 이미지 빌드
-  3. frontend 이미지 빌드
-  4. `ghcr.io/<owner>/secportal-{backend,frontend}:<버전>` 및 `:latest` push (**ghcr.io 로그인 필요** — 미로그인 시 로그인 프롬프트)
-  5. `secportal-<버전>.tar.gz` 배포 아카이브 생성 → `scp`·`tar -xzf` 로 서버에 전달
-- ⚠️ 일반 릴리즈 절차(`docker compose build` → git 태그 → `gh release`, 루트 `CLAUDE.md` 참고)와는 **별개**입니다.
-  ghcr 이미지를 받아 배포하는 서버를 운영할 때만 사용하세요.
-- ⚠️ **현재 그대로는 실행되지 않습니다.** `docker-compose.yml`·`QUICKSTART.md`·`scripts/*.sh` 템플릿을
-  `release/v1.0.0/` 에서 복사하는데, 지금 그 폴더에는 `RELEASE_NOTES.md` 만 있어 1단계에서 오류로 중단됩니다(`set -e`).
-  사용하려면 해당 템플릿을 `release/v1.0.0/` 에 다시 두거나, 스크립트가 루트의 최신 파일을 복사하도록 고친 뒤 실행하세요.
+  1. `dist/release/<버전>/` 에 배포 패키지 구성
+     - `docker-compose.yml` — 루트 compose 에서 `build:` 를 `image: ghcr.io/<owner>/secportal-<서비스>:${VERSION}` 로 바꾸고, 디버깅용 DB 포트(127.0.0.1:3306) 노출을 제거
+     - `db/init/*.sql`, `.env.example`(루트 것 + `GITHUB_OWNER`·`VERSION`), `release/<버전>/RELEASE_NOTES.md`, `QUICKSTART.md`, `VERSION`
+  2. backend · frontend · gotenberg 이미지 빌드 — **운영 compose 와 같은 Dockerfile** 사용(frontend 는 nginx 보안·속도제한 설정과 도움말 문서 포함)
+  3. `ghcr.io/<owner>/secportal-{backend,frontend,gotenberg}` 의 `:<버전>`·`:latest` push (**ghcr.io 로그인 필요** — PAT `write:packages`)
+  4. `dist/secportal-<버전>.tar.gz` 생성 (`dist/` 는 git 추적 제외)
+- 배포 서버에서
+
+  ```bash
+  tar -xzf secportal-v1.45.1.tar.gz && cd v1.45.1
+  cp .env.example .env && nano .env      # 비밀번호·키·CORS·APP_BASE_URL 설정
+  docker compose pull && docker compose up -d
+  ```
+
+  업그레이드는 `.env` 의 `VERSION` 을 바꾸고 `docker compose pull && docker compose up -d`. 아카이브는 `gh release upload <버전> dist/secportal-<버전>.tar.gz` 로 GitHub 릴리즈에 첨부할 수 있습니다.
+- 일반 릴리즈 절차(`docker compose build` → git 태그 → `gh release`, 루트 `CLAUDE.md` 참고)와는 **별개**이며, 이미지 배포 서버를 운영할 때만 필요합니다.
 
 ---
 

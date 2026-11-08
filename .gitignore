@@ -57,3 +57,6 @@ backend/bin/
 
 # 매뉴얼용 화면 캡처 원본 작업 폴더 — 선별한 이미지만 docs/images/ 로 커밋한다
 capture/
+
+# scripts/build-release.sh 산출물(배포 패키지·아카이브)
+/dist/
