@@ -95,16 +95,51 @@ public final class ColumnCipher {
             return UNDECRYPTABLE;
         }
         try {
-            byte[] raw = Base64.getDecoder().decode(stored.substring(PREFIX.length()));
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, raw, 0, IV_LENGTH));
-            byte[] plain = cipher.doFinal(raw, IV_LENGTH, raw.length - IV_LENGTH);
-            return new String(plain, StandardCharsets.UTF_8);
+            return open(key, stored);
         } catch (Exception e) {
+            SecretKeySpec previous = previousKey();
+            if (previous != null) {
+                try {
+                    return open(previous, stored);
+                } catch (Exception ignored) {
+                    // 아래에서 복호화 실패로 처리한다
+                }
+            }
             // 키가 바뀌었거나 값이 손상된 경우 — 화면 전체가 실패하지 않도록 표시값만 대체한다
             warnOnce("개인정보 암호문 복호화에 실패했습니다(키 불일치 또는 값 손상): " + e.getMessage());
             return UNDECRYPTABLE;
         }
+    }
+
+    /** 키 교체 중인지 — {@code PI_ENCRYPTION_KEY_PREVIOUS} 가 있을 때만 true */
+    public static boolean isRotating() {
+        return key() != null && previousKey() != null;
+    }
+
+    /**
+     * 이전 키로 암호화된 값을 현재 키로 다시 암호화한다.
+     * 이미 현재 키로 풀리면 그대로, 어느 키로도 풀리지 않으면 값을 건드리지 않고 그대로 돌려준다.
+     */
+    public static String reencrypt(String stored) {
+        if (!isEncrypted(stored) || !isRotating()) return stored;
+        try {
+            open(key(), stored);
+            return stored;
+        } catch (Exception notCurrentKey) {
+            try {
+                return encrypt(open(previousKey(), stored));
+            } catch (Exception undecryptable) {
+                return stored;
+            }
+        }
+    }
+
+    private static String open(SecretKeySpec key, String stored) throws Exception {
+        byte[] raw = Base64.getDecoder().decode(stored.substring(PREFIX.length()));
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, raw, 0, IV_LENGTH));
+        byte[] plain = cipher.doFinal(raw, IV_LENGTH, raw.length - IV_LENGTH);
+        return new String(plain, StandardCharsets.UTF_8);
     }
 
     private static void warnOnce(String message) {
@@ -141,6 +176,15 @@ public final class ColumnCipher {
                     + "PI_ENCRYPTION_KEY 또는 JASYPT_ENCRYPTOR_PASSWORD 를 설정하세요.");
             return null;
         }
+        return deriveKey(passphrase);
+    }
+
+    private static SecretKeySpec previousKey() {
+        String passphrase = System.getenv("PI_ENCRYPTION_KEY_PREVIOUS");
+        return isBlank(passphrase) ? null : deriveKey(passphrase);
+    }
+
+    private static SecretKeySpec deriveKey(String passphrase) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(passphrase.getBytes(StandardCharsets.UTF_8));

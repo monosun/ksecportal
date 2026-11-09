@@ -54,6 +54,8 @@ services:
       # 이 키를 잃으면 암호화된 개인정보는 복구할 수 없다. 백업본과 분리해 보관할 것.
       PI_ENCRYPTION_KEY: ${PI_ENCRYPTION_KEY:-}
       PI_ENCRYPTION_KEY_FILE: ${PI_ENCRYPTION_KEY_FILE:-}
+      # 키 교체 때만 이전 키를 지정한다. 기동 시 현재 키로 재암호화하며, 완료 후 제거할 것
+      PI_ENCRYPTION_KEY_PREVIOUS: ${PI_ENCRYPTION_KEY_PREVIOUS:-}
       PI_COLUMN_ENCRYPTION_ENABLED: ${PI_COLUMN_ENCRYPTION_ENABLED:-true}
       # 보안문서 오피스 파일(PPT·DOC 등) 미리보기용 PDF 변환 서버. 비우면 변환 미리보기가 꺼진다.
       DOC_CONVERT_URL: ${DOC_CONVERT_URL:-http://gotenberg:3000}

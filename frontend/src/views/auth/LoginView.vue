@@ -113,11 +113,6 @@
           </button>
         </form>
       </div>
-
-      <!-- 버전 정보 -->
-      <p class="text-center mt-5 text-xs text-primary-300/50 select-none tracking-wide">
-        KSecPortal v{{ appVersion }}
-      </p>
     </div>
 
     <!-- Error Modal -->
@@ -151,9 +146,6 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiSettingsStore } from '@/stores/uiSettings'
 import { authApi } from '@/api'
-import { version } from '../../../package.json'
-
-const appVersion = version
 
 const SAVED_ID_KEY = 'login_saved_email'
 

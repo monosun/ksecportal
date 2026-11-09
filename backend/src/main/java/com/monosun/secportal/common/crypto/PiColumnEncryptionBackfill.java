@@ -38,7 +38,8 @@ public class PiColumnEncryptionBackfill implements ApplicationRunner {
             new Target("users", List.of("mfa_secret")),
             new Target("mail_config", List.of("password")),
             new Target("security_integrations", List.of("api_key")),
-            new Target("github_config", List.of("token"))
+            new Target("github_config", List.of("token")),
+            new Target("emergency_contacts", List.of("mobile", "email"))
     );
 
     private final JdbcTemplate jdbc;
@@ -58,6 +59,33 @@ public class PiColumnEncryptionBackfill implements ApplicationRunner {
         if (total > 0) {
             log.info("[개인정보 암호화] 평문으로 남아 있던 개인정보 {}건을 암호화했습니다.", total);
         }
+        if (ColumnCipher.isRotating()) rotate();
+    }
+
+    /** PI_ENCRYPTION_KEY_PREVIOUS 로 암호화된 값을 현재 키로 다시 암호화한다. 건별 처리라 중단돼도 재기동하면 이어진다. */
+    private void rotate() {
+        int rotated = 0;
+        int failed = 0;
+        for (Target target : TARGETS) {
+            for (String column : target.columns()) {
+                if (!hasEnoughLength(target.table(), column)) continue;
+                List<Map<String, Object>> rows = jdbc.queryForList(
+                        "SELECT id, " + column + " AS v FROM " + target.table()
+                                + " WHERE " + column + " LIKE '" + ColumnCipher.PREFIX + "%'");
+                for (Map<String, Object> row : rows) {
+                    String stored = (String) row.get("v");
+                    String next = ColumnCipher.reencrypt(stored);
+                    if (!next.equals(stored)) {
+                        jdbc.update("UPDATE " + target.table() + " SET " + column + " = ? WHERE id = ?", next, row.get("id"));
+                        rotated++;
+                    } else if (ColumnCipher.UNDECRYPTABLE.equals(ColumnCipher.decrypt(stored))) {
+                        failed++;
+                    }
+                }
+            }
+        }
+        log.warn("[개인정보 암호화] 키 교체: {}건 재암호화, 복호화 불가 {}건. 복호화 불가가 0건이면 PI_ENCRYPTION_KEY_PREVIOUS 를 제거하세요.",
+                rotated, failed);
     }
 
     private int backfill(Target target) {

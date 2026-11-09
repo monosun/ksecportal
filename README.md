@@ -4,10 +4,11 @@
 정보보호 관리체계(자산·위협·위험평가·ISMS-P 증적), 보안 운영(정책·취약점·인시던트·보안점검·SAST·보안성 심의),
 개인정보보호 라이프사이클(처리현황·수탁사·제공·파기·DPIA·유출·권리행사), 교육·모의훈련, 거버넌스(위원회·내부감사)를 단일 플랫폼에서 관리합니다.
 
-**최신 버전: v1.45.1**
+**최신 버전: v1.45.2**
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.2](release/v1.45.2/RELEASE_NOTES.md) | **[보안 수정]** 초기 비밀번호 변경을 **서버에서 강제**(변경 전 계정은 업무 API 403, 같은 비밀번호 재사용 거절), 비밀 키 교체 지원 `PI_ENCRYPTION_KEY_PREVIOUS`(이전 키로 복호화 후 기동 시 재암호화, 비상연락망 연락처 대상 추가), CSP `script-src` 인라인 차단·`base-uri`·`form-action`, 로그인 화면 버전 표기 제거, 소스맵 비활성 명시, 소스 보기 단축키 새로고침 — DB 변경 없음 |
 | [v1.45.1](release/v1.45.1/RELEASE_NOTES.md) | 소스 취약점 점검 **점검 이력 일괄 삭제** — 목록 앞 체크박스(머리글로 현재 페이지 전체 선택)와 **선택 삭제 (N)** 버튼, `DELETE /api/source-scan/scans?ids=` (MANAGER+, 최대 500건, 건별 감사 로그), 공격 탐지 화면 라벨의 SAST 하드코딩 비밀 오탐 2건 정리 — DB 변경 없음 |
 | [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |
@@ -212,6 +213,7 @@ docker compose up -d --build
 | `CORS_ALLOWED_ORIGINS` | `http://localhost,http://localhost:80` | CORS 허용 출처 |
 | `JASYPT_ENCRYPTOR_PASSWORD` | `dev-local-key` | 설정값 암호화 마스터 키 (모든 `ENC(...)` 복호화, 16자 이상 권장) |
 | `JASYPT_ENCRYPTOR_PASSWORD_FILE` | — | 마스터 키를 담은 파일 경로 (docker secret 등, 지정 시 파일 값 사용 — 권장) |
+| `PI_ENCRYPTION_KEY_PREVIOUS` | — | 키 교체 때만 이전 키(개인정보 전용 키가 없으면 이전 `JASYPT_ENCRYPTOR_PASSWORD`)를 지정 — 기동 시 암호문을 현재 키로 재암호화, 로그의 "복호화 불가 0건" 확인 후 비울 것 |
 | `SECURITY_FAIL_ON_INSECURE_SECRETS` | `.env.example`: `true` · 미지정: `false` | `true` 면 공개된 기본 키·샘플 비밀번호·짧은 키가 남아 있을 때 백엔드 기동 중단(개인정보 암호화·백필보다 먼저 점검) |
 | `OKTA_ENABLED` | `false` | Okta SSO 활성화 여부 (DB 설정 없을 때 폴백) |
 | `OKTA_CLIENT_ID` | — | Okta 애플리케이션 Client ID |
@@ -989,6 +991,7 @@ ksecportal/
 
 | 버전 | 주요 변경 |
 |------|-----------|
+| [v1.45.2](release/v1.45.2/RELEASE_NOTES.md) | **[보안 수정]** 초기 비밀번호 변경을 **서버에서 강제**(변경 전 계정은 업무 API 403, 같은 비밀번호 재사용 거절), 비밀 키 교체 지원 `PI_ENCRYPTION_KEY_PREVIOUS`(이전 키로 복호화 후 기동 시 재암호화, 비상연락망 연락처 대상 추가), CSP `script-src` 인라인 차단·`base-uri`·`form-action`, 로그인 화면 버전 표기 제거, 소스맵 비활성 명시, 소스 보기 단축키 새로고침 — DB 변경 없음 |
 | [v1.45.1](release/v1.45.1/RELEASE_NOTES.md) | 소스 취약점 점검 **점검 이력 일괄 삭제** — 목록 앞 체크박스(머리글로 현재 페이지 전체 선택)와 **선택 삭제 (N)** 버튼, `DELETE /api/source-scan/scans?ids=` (MANAGER+, 최대 500건, 건별 감사 로그), 공격 탐지 화면 라벨의 SAST 하드코딩 비밀 오탐 2건 정리 — DB 변경 없음 |
 | [v1.45.0](release/v1.45.0/RELEASE_NOTES.md) | **공격 탐지(자동화·AI) 신설**(보안 운영 > 공격 탐지) — 허니팟(공격 도구 경로·robots.txt/숨김 링크 미끼 경로), **LLM 에이전트 미끼 지시문**, 허니토큰·미끼 계정, **행위 점수**(속도·간격 균일성·404/403 열거·오류 후 즉시 재시도·429 초과·도구/AI 크롤러 UA, 1분 주기), 심각 등급 **IP 자동 차단**·허용 목록(CIDR), 메일·Slack·수신함 알림, 침해사고 전환. 보완: **IP 단위 로그인 차단**(크리덴셜 스터핑), **출발지 IP 위조 방지**(X-Real-IP 기준), **관리자 MFA 필수** 옵션, nginx 429 표본 보고. 신규 테이블 `detection_events`·`detection_blocked_ips`(자동 생성), 메뉴 권한 `attack_detection` |
 | [v1.44.2](release/v1.44.2/RELEASE_NOTES.md) | **[보안 수정]** CodeQL 재검사 잔여 조치 — 관리자 승인/거부 링크 결과 화면 **저장형 XSS 수정**(사용자 이름·이메일 HTML 이스케이프)·예외 메시지 노출 제거, 법제처 프록시 예외 메시지 노출 제거, 정책 문서 장 제목 분석 **ReDoS 잔여 1건 제거**(정규식 → 대시 위치 탐색), CI 워크플로 기본 `permissions: contents: read`, SSRF 3건·CSRF 오탐 처리 — DB 변경 없음 |

@@ -215,6 +215,9 @@ public class AuthService {
             throw new BusinessException("현재 비밀번호가 올바르지 않습니다.");
         }
         validatePasswordStrength(request.getNewPassword());
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BusinessException("새 비밀번호는 현재 비밀번호와 달라야 합니다.");
+        }
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setMustChangePassword(false);
         auditLogService.log("PASSWORD_CHANGED", "USER", user.getId(), "self");
