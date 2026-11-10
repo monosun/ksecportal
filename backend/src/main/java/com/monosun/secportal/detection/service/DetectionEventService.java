@@ -11,6 +11,7 @@ import com.monosun.secportal.detection.entity.DetectionEvent.Category;
 import com.monosun.secportal.detection.entity.DetectionEvent.Severity;
 import com.monosun.secportal.detection.entity.DetectionEvent.Status;
 import com.monosun.secportal.detection.repository.DetectionEventRepository;
+import com.monosun.secportal.detection.web.TarpitResponder;
 import com.monosun.secportal.inbox.entity.InboxMessage;
 import com.monosun.secportal.inbox.service.InboxService;
 import com.monosun.secportal.incident.dto.IncidentDto;
@@ -50,6 +51,7 @@ public class DetectionEventService {
     private final UserRepository userRepository;
     private final IncidentService incidentService;
     private final AuditLogService auditLogService;
+    private final TarpitResponder tarpitResponder;
 
     @Builder
     public record Signal(Category category, Severity severity, String ip, String title, String detail,
@@ -193,7 +195,7 @@ public class DetectionEventService {
             default -> Incident.Severity.LOW;
         });
         req.setType(e.getCategory() == Category.LOGIN_ATTACK || e.getCategory() == Category.HONEYTOKEN
-                || e.getCategory() == Category.HONEY_ACCOUNT
+                || e.getCategory() == Category.HONEY_ACCOUNT || e.getCategory() == Category.HONEY_DATA
                 ? Incident.IncidentType.UNAUTHORIZED_ACCESS : Incident.IncidentType.OTHER);
         req.setAffectedSystems("정보보호 포탈(KSecPortal)");
         req.setDetectedAt(e.getDetectedAt());
@@ -251,6 +253,8 @@ public class DetectionEventService {
                 .daily7d(daily)
                 .topIps(topIps)
                 .enabled(settingsService.get().enabled())
+                .responseMode(settingsService.get().responseMode())
+                .tarpitServed(tarpitResponder.servedCount())
                 .build();
     }
 
@@ -284,6 +288,7 @@ public class DetectionEventService {
             case HONEY_ACCOUNT -> "미끼 계정 로그인 시도";
             case BEHAVIOR -> "자동화 행위 탐지(행위 점수)";
             case LOGIN_ATTACK -> "로그인 공격(무차별 대입·크리덴셜 스터핑)";
+            case HONEY_DATA -> "미끼 데이터 재사용(가짜 레코드 조회)";
             case TEST -> "테스트";
         };
     }

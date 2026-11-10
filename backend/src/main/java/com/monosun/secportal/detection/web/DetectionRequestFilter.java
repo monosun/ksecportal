@@ -7,6 +7,7 @@ import com.monosun.secportal.detection.entity.DetectionEvent.Severity;
 import com.monosun.secportal.detection.service.DetectionEventService;
 import com.monosun.secportal.detection.service.DetectionSettingsService;
 import com.monosun.secportal.detection.service.DetectionSignals;
+import com.monosun.secportal.detection.service.HoneyDataService;
 import com.monosun.secportal.detection.service.IpBlockService;
 import com.monosun.secportal.detection.service.RequestTracker;
 import jakarta.servlet.FilterChain;
@@ -25,7 +26,9 @@ import java.nio.charset.StandardCharsets;
 /**
  * 모든 API 요청의 입구·출구에서 동작하는 공격 탐지 필터.
  * <ol>
- *   <li>차단된 IP 면 Spring Security 보다 먼저 403 으로 끊는다.</li>
+ *   <li>차단된 IP 면 Spring Security 보다 먼저 끊는다 — 응답 방식이 TARPIT 이면 지연 + 미끼 데이터({@link TarpitResponder}),
+ *       BLOCK 이면 즉시 403.</li>
+ *   <li>요청 경로·쿼리에 미끼 데이터의 서명 ID 가 있으면 수집 데이터 재사용으로 보고 CRITICAL 이벤트.</li>
  *   <li>요청 헤더·쿼리에 허니토큰(미끼에만 노출한 가짜 API 키)이 있으면 즉시 CRITICAL 이벤트.</li>
  *   <li>응답이 끝난 뒤 최종 상태코드(401·403·404 포함)를 IP 별 윈도에 기록 → {@code BehaviorAnalyzer} 가 1분마다 분석.</li>
  * </ol>
@@ -44,6 +47,8 @@ public class DetectionRequestFilter extends OncePerRequestFilter {
     private final RequestTracker tracker;
     private final DetectionSignals signals;
     private final JwtTokenProvider tokenProvider;
+    private final HoneyDataService honeyDataService;
+    private final TarpitResponder tarpitResponder;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -64,6 +69,11 @@ public class DetectionRequestFilter extends OncePerRequestFilter {
         String ua = req.getHeader("User-Agent");
 
         if (ipBlockService.isBlocked(ip)) {
+            if (s.tarpit()) {
+                tracker.record(ip, req.getMethod(), path, 403, null, ua);
+                tarpitResponder.respond(req, res, ip, path);
+                return;
+            }
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             res.setContentType("application/json;charset=UTF-8");
             res.getOutputStream().write(BLOCKED_BODY.getBytes(StandardCharsets.UTF_8));
@@ -78,6 +88,19 @@ public class DetectionRequestFilter extends OncePerRequestFilter {
                     .title("허니토큰(가짜 API 키) 사용 탐지")
                     .detail("미끼 페이지에만 노출한 가짜 API 키가 " + req.getMethod() + " " + path
                             + " 요청에 실려 왔습니다.\n미끼 페이지를 읽고 그 안의 자격증명을 사용한 자동화 도구·AI 에이전트 또는 공격자입니다.")
+                    .path(req.getMethod() + " " + path).userAgent(ua).build());
+        }
+
+        Long honeyId = honeyDataService.findHoneyId(path, req.getQueryString());
+        if (honeyId != null) {
+            String user = bearerUser(req);
+            signals.fire(DetectionEventService.Signal.builder()
+                    .category(Category.HONEY_DATA).severity(Severity.CRITICAL).ip(ip).user(user)
+                    .title("미끼 데이터 재사용 탐지(가짜 레코드 ID " + honeyId + ")")
+                    .detail("차단된 IP 에게만 응답한 미끼(가짜) 데이터의 레코드 ID 가 " + req.getMethod() + " " + path
+                            + " 요청에 나타났습니다.\n이전에 차단된 공격자가 수집한 데이터를 차단 해제 후 또는 다른 IP"
+                            + (user != null ? "·계정(" + user + ")" : "") + " 에서 다시 사용하고 있습니다. "
+                            + "같은 공격자의 우회 접속이므로 계정 탈취 여부를 함께 확인하세요.")
                     .path(req.getMethod() + " " + path).userAgent(ua).build());
         }
 

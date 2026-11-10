@@ -151,5 +151,8 @@ public class DetectionDto {
         private Map<String, Long> byCategory7d;
         private Map<String, Long> daily7d;
         private List<Map<String, Object>> topIps;
+        /** 기동 이후 타르핏(지연 + 미끼 데이터)으로 응답한 건수 */
+        private int tarpitServed;
+        private String responseMode;
     }
 }

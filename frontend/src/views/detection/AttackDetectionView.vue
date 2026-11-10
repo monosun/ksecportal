@@ -36,6 +36,9 @@
           <button class="card text-left hover:border-primary-300" @click="tab = 'blocks'">
             <div class="text-xs text-gray-500">차단 중인 IP</div>
             <div class="text-2xl font-semibold mt-1 text-orange-600">{{ summary?.activeBlocks ?? '-' }}</div>
+            <div v-if="summary?.responseMode === 'TARPIT'" class="text-[11px] text-gray-400 mt-1">
+              타르핏 응답 {{ summary.tarpitServed ?? 0 }}건(기동 이후)
+            </div>
           </button>
           <button class="card text-left hover:border-primary-300" @click="tab = 'live'">
             <div class="text-xs text-gray-500">현재 의심 IP(임계값 초과)</div>
@@ -363,6 +366,32 @@
               <div>
                 <label class="block text-xs text-gray-500 mb-1">자동 차단 시간(분, 0=무기한)</label>
                 <input v-model.number="settings.blockMinutes" type="number" min="0" class="input w-full text-sm" :disabled="!isAdmin" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">차단 IP 응답 방식</label>
+              <select v-model="settings.responseMode" class="input w-full text-sm" :disabled="!isAdmin">
+                <option value="TARPIT">타르핏 — 지연 후 미끼 데이터 응답(권장)</option>
+                <option value="BLOCK">즉시 차단 — 403 응답</option>
+              </select>
+              <p class="text-[11px] text-gray-400 mt-1">
+                타르핏은 차단 사실을 숨긴 채 응답을 늦추고 그럴듯한 가짜 목록을 돌려줘, 자동화 도구·AI 에이전트가 시간과 토큰을 소모하게 합니다.
+                가짜 레코드 ID 는 서명되어 있어 나중에 다른 IP·계정에서 조회되면 '미끼 데이터 재사용'으로 탐지합니다.
+                쓰기 요청은 일시 오류(503), 로그인은 실패로 응답하므로 실제 데이터는 바뀌지 않습니다.
+              </p>
+            </div>
+            <div v-if="settings.responseMode === 'TARPIT'" class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">최소 지연(초)</label>
+                <input v-model.number="settings.tarpitMinSeconds" type="number" min="0" max="20" class="input w-full text-sm" :disabled="!isAdmin" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">최대 지연(초, ≤20)</label>
+                <input v-model.number="settings.tarpitMaxSeconds" type="number" min="0" max="20" class="input w-full text-sm" :disabled="!isAdmin" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">미끼 목록 건수</label>
+                <input v-model.number="settings.decoyPageSize" type="number" min="10" max="200" class="input w-full text-sm" :disabled="!isAdmin" />
               </div>
             </div>
             <div>

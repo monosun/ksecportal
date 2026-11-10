@@ -2160,7 +2160,7 @@ http/https 만, 계정정보 포함 URL 거부, 호스트가 풀리는 **모든*
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/detection/summary` | `last24h`·`openCount`·`activeBlocks`·`bySeverity24h`·`byCategory7d`·`daily7d`·`topIps` |
+| GET | `/detection/summary` | `last24h`·`openCount`·`activeBlocks`·`bySeverity24h`·`byCategory7d`·`daily7d`·`topIps`·`responseMode`(`TARPIT`\|`BLOCK`)·`tarpitServed`(기동 이후 타르핏 응답 수) |
 | GET | `/detection/events` | 쿼리 `category`·`severity`·`status`·`ip`(부분 일치)·`days`·`page`·`size` — 최근 탐지 순 |
 | GET | `/detection/events/:id` | 이벤트 상세 |
 | PATCH | `/detection/events/:id/status` | `{ "status": "ACKNOWLEDGED\|FALSE_POSITIVE\|RESOLVED", "note": "..." }` |
@@ -2173,7 +2173,7 @@ http/https 만, 계정정보 포함 URL 거부, 호스트가 풀리는 **모든*
 | DELETE | `/detection/blocks/:id` | 차단 해제 |
 | DELETE | `/detection/login-blocks/:ip` | IP 로그인 일시 차단(크리덴셜 스터핑 대응) 해제 |
 | GET | `/detection/settings` | 설정 + `honeyToken`·`yourIp`(요청자 IP) |
-| PUT | `/detection/settings` | *(ADMIN)* `enabled`·`windowMinutes`·`scoreThreshold`·`autoBlockEnabled`·`autoBlockMinSeverity`·`blockMinutes`·`whitelistIps`(줄바꿈/쉼표, CIDR)·`honeyAccounts`·`loginWindowMinutes`·`loginFailThreshold`·`loginDistinctAccounts`·`loginLockMinutes`·`notifyMinSeverity`·`retentionDays` |
+| PUT | `/detection/settings` | *(ADMIN)* `enabled`·`windowMinutes`·`scoreThreshold`·`autoBlockEnabled`·`autoBlockMinSeverity`·`blockMinutes`·`whitelistIps`(줄바꿈/쉼표, CIDR)·`honeyAccounts`·`loginWindowMinutes`·`loginFailThreshold`·`loginDistinctAccounts`·`loginLockMinutes`·`notifyMinSeverity`·`retentionDays`·`responseMode`(`TARPIT`=지연+미끼 데이터, `BLOCK`=즉시 403)·`tarpitMinSeconds`·`tarpitMaxSeconds`(0~20)·`decoyPageSize`(10~200) |
 | POST | `/detection/settings/honey-token` | *(ADMIN)* 허니토큰 재발급 |
 
 **이벤트 유형(category)**: `HONEYPOT_SCAN`·`HONEYPOT_BAIT`·`LLM_AGENT`·`HONEYTOKEN`·`HONEY_ACCOUNT`·`BEHAVIOR`·`LOGIN_ATTACK`·`TEST`

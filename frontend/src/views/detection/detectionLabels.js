@@ -8,6 +8,7 @@ export const CATEGORY_LABEL = {
   HONEY_ACCOUNT: '미끼 계정 로그인',
   BEHAVIOR: '자동화 행위',
   LOGIN_ATTACK: '로그인 공격',
+  HONEY_DATA: '미끼 데이터 재사용',
   TEST: '테스트'
 }
 
@@ -19,6 +20,7 @@ export const CATEGORY_HINT = {
   HONEY_ACCOUNT: '존재하지 않는 미끼 계정으로 로그인 시도',
   BEHAVIOR: '속도·간격 균일성·404/403 열거·즉시 재시도·도구 UA 점수 초과',
   LOGIN_ATTACK: '한 IP 에서 여러 계정·다수 로그인 실패(크리덴셜 스터핑·무차별 대입)',
+  HONEY_DATA: '차단 IP 에게만 준 가짜 레코드 ID 를 다른 IP·계정에서 다시 조회(수집 데이터 재사용)',
   TEST: '알림 경로 점검용'
 }
 

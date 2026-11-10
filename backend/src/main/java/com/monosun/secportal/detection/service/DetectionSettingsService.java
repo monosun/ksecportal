@@ -23,6 +23,8 @@ public class DetectionSettingsService {
 
     private static final String P = "detection.";
     private static final String K_HONEY_TOKEN = P + "honey_token";
+    /** 미끼 데이터 ID 서명 키 — 화면·API 로 내보내지 않는다(허니토큰은 미끼 페이지에 노출되므로 따로 둔다) */
+    private static final String K_HONEY_DATA_SECRET = P + "honey_data_secret";
 
     /** 기본값 — 키 이름은 API 필드명과 같다 */
     private static final Map<String, String> DEFAULTS = new LinkedHashMap<>();
@@ -41,6 +43,10 @@ public class DetectionSettingsService {
         DEFAULTS.put("loginLockMinutes", "30");
         DEFAULTS.put("notifyMinSeverity", "HIGH");
         DEFAULTS.put("retentionDays", "365");
+        DEFAULTS.put("responseMode", "TARPIT");
+        DEFAULTS.put("tarpitMinSeconds", "3");
+        DEFAULTS.put("tarpitMaxSeconds", "15");
+        DEFAULTS.put("decoyPageSize", "50");
     }
 
     private final NotificationConfigRepository repo;
@@ -62,8 +68,18 @@ public class DetectionSettingsService {
             int loginDistinctAccounts,
             int loginLockMinutes,
             DetectionEvent.Severity notifyMinSeverity,
-            int retentionDays
-    ) {}
+            int retentionDays,
+            /** 차단 IP 응답 방식: BLOCK(즉시 403) / TARPIT(지연 + 미끼 데이터) */
+            String responseMode,
+            int tarpitMinSeconds,
+            int tarpitMaxSeconds,
+            int decoyPageSize,
+            String honeyDataSecret
+    ) {
+        public boolean tarpit() {
+            return "TARPIT".equals(responseMode);
+        }
+    }
 
     public Settings get() {
         Settings s = cached;
@@ -91,6 +107,16 @@ public class DetectionSettingsService {
                     token = repo.findById(K_HONEY_TOKEN).map(NotificationConfig::getConfigValue).orElse(token);
                 }
             }
+            String secret = v.get("honey_data_secret");
+            if (secret == null || secret.isBlank()) {
+                secret = newSecret();
+                try {
+                    repo.save(new NotificationConfig(K_HONEY_DATA_SECRET, secret));
+                } catch (Exception dup) {
+                    secret = repo.findById(K_HONEY_DATA_SECRET).map(NotificationConfig::getConfigValue).orElse(secret);
+                }
+            }
+            int tarpitMin = clamp(intVal(v, "tarpitMinSeconds"), 0, 20);
             cached = new Settings(
                     bool(v, "enabled"),
                     clamp(intVal(v, "windowMinutes"), 1, 60),
@@ -106,14 +132,21 @@ public class DetectionSettingsService {
                     clamp(intVal(v, "loginDistinctAccounts"), 2, 100),
                     clamp(intVal(v, "loginLockMinutes"), 1, 1440),
                     severity(v, "notifyMinSeverity"),
-                    clamp(intVal(v, "retentionDays"), 30, 3650)
+                    clamp(intVal(v, "retentionDays"), 30, 3650),
+                    "BLOCK".equalsIgnoreCase(v.get("responseMode")) ? "BLOCK" : "TARPIT",
+                    tarpitMin,
+                    // nginx 일반 API proxy_read_timeout(30s) 안에 응답해야 한다
+                    clamp(intVal(v, "tarpitMaxSeconds"), tarpitMin, 20),
+                    clamp(intVal(v, "decoyPageSize"), 10, 200),
+                    secret
             );
         } catch (Exception e) {
             log.warn("[탐지] 설정을 읽지 못해 기본값을 사용합니다: {}", e.getMessage());
             if (cached == null) {
                 Map<String, String> v = new HashMap<>(DEFAULTS);
                 cached = new Settings(true, 5, 60, true, DetectionEvent.Severity.CRITICAL, 60, List.of(),
-                        list(v.get("honeyAccounts")), null, 10, 10, 4, 30, DetectionEvent.Severity.HIGH, 365);
+                        list(v.get("honeyAccounts")), null, 10, 10, 4, 30, DetectionEvent.Severity.HIGH, 365,
+                        "BLOCK", 0, 0, 50, null);
             }
         }
         return cached;
@@ -138,6 +171,10 @@ public class DetectionSettingsService {
         m.put("loginLockMinutes", s.loginLockMinutes());
         m.put("notifyMinSeverity", s.notifyMinSeverity().name());
         m.put("retentionDays", s.retentionDays());
+        m.put("responseMode", s.responseMode());
+        m.put("tarpitMinSeconds", s.tarpitMinSeconds());
+        m.put("tarpitMaxSeconds", s.tarpitMaxSeconds());
+        m.put("decoyPageSize", s.decoyPageSize());
         return m;
     }
 
@@ -147,6 +184,9 @@ public class DetectionSettingsService {
             String value = String.valueOf(body.get(key)).trim();
             if (key.equals("whitelistIps") || key.equals("honeyAccounts")) {
                 value = String.join(",", list(value));
+            }
+            if (key.equals("responseMode") && !value.equals("BLOCK") && !value.equals("TARPIT")) {
+                throw new BusinessException("응답 방식 값이 올바르지 않습니다: " + value);
             }
             if (key.endsWith("Severity")) {
                 try {
@@ -174,6 +214,12 @@ public class DetectionSettingsService {
         StringBuilder sb = new StringBuilder("ksp_live_");
         for (byte x : b) sb.append(String.format("%02x", x));
         return sb.toString();
+    }
+
+    private static String newSecret() {
+        byte[] b = new byte[32];
+        new SecureRandom().nextBytes(b);
+        return HexFormat.of().formatHex(b);
     }
 
     private static List<String> list(String raw) {

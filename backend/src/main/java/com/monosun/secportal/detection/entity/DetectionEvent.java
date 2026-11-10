@@ -105,6 +105,8 @@ public class DetectionEvent {
         BEHAVIOR,
         /** 한 IP 에서 여러 계정·다수 로그인 실패(무차별 대입·크리덴셜 스터핑) */
         LOGIN_ATTACK,
+        /** 차단 IP 에게만 준 미끼 데이터(가짜 레코드 ID)를 다시 조회 — 수집한 데이터를 재사용한 공격자 */
+        HONEY_DATA,
         /** 수동 등록·알림 테스트 */
         TEST
     }
