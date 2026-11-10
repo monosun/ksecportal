@@ -60,3 +60,6 @@ capture/
 
 # scripts/build-release.sh 산출물(배포 패키지·아카이브)
 /dist/
+
+# oh-my-claudecode 로컬 상태
+.omc/
