@@ -2187,7 +2187,7 @@ http/https 만, 계정정보 포함 URL 거부, 호스트가 풀리는 **모든*
 
 ### 관리자 MFA 필수
 
-`GET/PUT /admin/security-config` 에 `requireAdminMfa`(boolean) 추가. 켜져 있으면 MFA 미등록 관리자(Okta 계정 제외)의
+`GET/PUT /admin/security-config` 에 `requireAdminMfa`(boolean, 기본 `true` — 저장된 값이 없으면 켜짐) 추가. 켜져 있으면 MFA 미등록 관리자(Okta 계정 제외)의
 `POST·PUT·PATCH·DELETE` 요청은 `/auth/**` 를 제외하고 `403` 으로 거절되며, `GET /auth/me`·로그인 응답의 `user.mfaSetupRequired` 가 `true` 가 됩니다.
 본인 MFA 가 없는 관리자가 켜려고 하면 `400` 으로 거부합니다.
 

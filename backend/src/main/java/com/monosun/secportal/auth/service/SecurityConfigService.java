@@ -17,6 +17,7 @@ public class SecurityConfigService {
     static final String KEY_REQUIRE_ADMIN_MFA = "security.mfa.require_admin";
     static final int DEFAULT_MAX_ATTEMPTS = 5;
     static final int DEFAULT_LOCKOUT_MINUTES = 10;
+    static final boolean DEFAULT_REQUIRE_ADMIN_MFA = true;
 
     private final NotificationConfigRepository repo;
 
@@ -32,11 +33,11 @@ public class SecurityConfigService {
                 .orElse(DEFAULT_LOCKOUT_MINUTES);
     }
 
-    /** 관리자(ADMIN) 계정 MFA 필수 여부 — 기본 꺼짐(켜면 MFA 미등록 관리자는 등록 전까지 변경 작업이 막힌다) */
+    /** 관리자(ADMIN) 계정 MFA 필수 여부 — 기본 켜짐(설정값이 없으면 필수). MFA 미등록 관리자는 등록 전까지 변경 작업이 막힌다 */
     public boolean isAdminMfaRequired() {
         return repo.findById(KEY_REQUIRE_ADMIN_MFA)
                 .map(c -> "true".equalsIgnoreCase(c.getConfigValue()))
-                .orElse(false);
+                .orElse(DEFAULT_REQUIRE_ADMIN_MFA);
     }
 
     @Transactional

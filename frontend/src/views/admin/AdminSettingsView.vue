@@ -1320,7 +1320,7 @@ async function testAiConnection() {
 }
 
 // ── 보안 설정 ──────────────────────────────────────
-const secCfg = ref({ maxAttempts: 5, lockoutMinutes: 10, requireAdminMfa: false })
+const secCfg = ref({ maxAttempts: 5, lockoutMinutes: 10, requireAdminMfa: true })
 const secError = ref('')
 const secSaving = ref(false)
 const secSaved = ref(false)
